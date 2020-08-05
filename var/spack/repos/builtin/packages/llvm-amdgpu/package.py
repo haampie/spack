@@ -21,6 +21,7 @@ class LlvmAmdgpu(CMakePackage):
     variant('build_type', default='Release', values=("Release", "Debug"), description='CMake build type')
 
     depends_on('cmake@3:', type='build')
+    depends_on('python', type='build')
 
     root_cmakelists_dir = 'llvm'
 
