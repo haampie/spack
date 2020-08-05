@@ -22,7 +22,7 @@ class Rocfft(CMakePackage):
 
     depends_on('boost')
     depends_on('fftw-api@3', type='build', when='@3.5:')
-    depends_on('cmake@3.5.2', type='build')
+    depends_on('cmake@3:', type='build')
     depends_on('rocm-cmake@3.5:', type='build', when='@3.5:')
     depends_on('hip@3.5:', type='build', when='@3.5:')
     depends_on('comgr@3.5:', type='build', when='@3.5:')

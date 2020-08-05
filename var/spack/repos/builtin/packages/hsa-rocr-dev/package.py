@@ -23,7 +23,7 @@ class HsaRocrDev(CMakePackage):
     variant('build_type', default='Release', values=("Release", "Debug"), description='CMake build type')
 
     depends_on('libelf@0.8:', type='link', when="@3.5:")
-    depends_on("cmake@3.5.2", type="build")
+    depends_on('cmake@3:', type="build")
     depends_on('hsakmt-roct@3.5:', type=('link', 'run'), when="@3.5:")
 
     root_cmakelists_dir = 'src'
