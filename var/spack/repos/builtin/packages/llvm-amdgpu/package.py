@@ -26,6 +26,8 @@ class LlvmAmdgpu(CMakePackage):
     depends_on("zlib")
     depends_on("ncurses+termlib")
 
+    patch('fix-system-zlib-ncurses.patch')
+
     root_cmakelists_dir = 'llvm'
 
     install_targets = ['clang-tidy', 'install']
