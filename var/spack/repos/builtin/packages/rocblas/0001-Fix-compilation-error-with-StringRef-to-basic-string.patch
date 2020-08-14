@@ -4,13 +4,13 @@ Date: Mon, 10 Aug 2020 23:39:22 +0200
 Subject: [PATCH] Fix compilation error with StringRef to basic string
 
 ---
- Tensile-rocm-3.5.0/Tensile/Source/lib/include/Tensile/llvm/YAML.hpp | 2 +-
+ Tensile/Tensile/Source/lib/include/Tensile/llvm/YAML.hpp | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/Tensile-rocm-3.5.0/Tensile/Source/lib/include/Tensile/llvm/YAML.hpp b/Tensile-rocm-3.5.0/Tensile/Source/lib/include/Tensile/llvm/YAML.hpp
+diff --git a/Tensile/Tensile/Source/lib/include/Tensile/llvm/YAML.hpp b/Tensile/Tensile/Source/lib/include/Tensile/llvm/YAML.hpp
 index 16e64ff9..0d00f470 100644
---- a/Tensile-rocm-3.5.0/Tensile/Source/lib/include/Tensile/llvm/YAML.hpp
-+++ b/Tensile-rocm-3.5.0/Tensile/Source/lib/include/Tensile/llvm/YAML.hpp
+--- a/Tensile/Tensile/Source/lib/include/Tensile/llvm/YAML.hpp
++++ b/Tensile/Tensile/Source/lib/include/Tensile/llvm/YAML.hpp
 @@ -261,7 +261,7 @@ namespace llvm
  
              static void inputOne(IO& io, StringRef key, Hide<T>& value)
