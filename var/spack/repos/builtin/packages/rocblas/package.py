@@ -19,7 +19,7 @@ class Rocblas(CMakePackage):
     version('develop', commit='9d981389e77950a7954e3c5405f1137d3c1a645a')
     version('3.5.0', sha256='8560fabef7f13e8d67da997de2295399f6ec595edfd77e452978c140d5f936f0')
 
-    amdgpu_targets = ('all', 'gfx803', 'gfx900', 'gfx906', 'gfx908')
+    amdgpu_targets = ('all', 'gfx000', 'gfx803', 'gfx900', 'gfx906', 'gfx908')
 
     variant('amdgpu_target', default='all', multi=True, values=amdgpu_targets)
 
@@ -35,14 +35,15 @@ class Rocblas(CMakePackage):
     depends_on('perl-file-which', type='build')
     depends_on('py-pyyaml', type='build')
     depends_on('py-wheel', type='build')
+    depends_on('py-msgpack', type='build')
 
     # Tensile uses LLVM
     depends_on('llvm-amdgpu')
 
     resource(name='Tensile',
-            git='https://github.com/ROCmSoftwarePlatform/Tensile.git',
-            commit='f842a1a4427624eff6cbddb2405c36dec9a210cd',
-            when='@3.5.0')
+             git='https://github.com/ROCmSoftwarePlatform/Tensile.git',
+             commit='f842a1a4427624eff6cbddb2405c36dec9a210cd',
+             when='@3.5.0')
 
     resource(name='Tensile',
              git='https://github.com/ROCmSoftwarePlatform/Tensile.git',
@@ -71,7 +72,9 @@ class Rocblas(CMakePackage):
             '-DTensile_COMPILER=hipcc',
             '-DTensile_ARCHITECTURE={0}'.format(archs),
             '-DTensile_LOGIC=asm_full',
-            '-DTensile_CODE_OBJECT_VERSION=V3'
+            '-DTensile_CODE_OBJECT_VERSION=V3',
+            '-DTENSILE_USE_MSGPACK=OFF',
+            '-DTENSILE_USE_LLVM=ON'
         ]
 
         return args
