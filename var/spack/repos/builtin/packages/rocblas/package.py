@@ -16,10 +16,10 @@ class Rocblas(CMakePackage):
 
     maintainers = ['haampie']
 
-    version('develop', commit='9d981389e77950a7954e3c5405f1137d3c1a645a')
+    version('develop', commit='76dc8eefd4166106d24489d4aae4e9e39d50c3de')
     version('3.5.0', sha256='8560fabef7f13e8d67da997de2295399f6ec595edfd77e452978c140d5f936f0')
 
-    amdgpu_targets = ('all', 'gfx000', 'gfx803', 'gfx900', 'gfx906', 'gfx908')
+    amdgpu_targets = ('all', 'gfx803', 'gfx900', 'gfx906', 'gfx908')
 
     variant('amdgpu_target', default='all', multi=True, values=amdgpu_targets)
 
@@ -47,10 +47,10 @@ class Rocblas(CMakePackage):
 
     resource(name='Tensile',
              git='https://github.com/ROCmSoftwarePlatform/Tensile.git',
-             commit='af71ea890a893e647bf2cf4571a90297d65689ca',
+             commit='a488f7dadba34f84b9658ba92ce9ec5a0615a087',
              when='@develop')
 
-    patch('0001-Fix-compilation-error-with-StringRef-to-basic-string.patch')
+    patch('0001-Fix-compilation-error-with-StringRef-to-basic-string.patch', when='@3.5.0')
     patch('0002-Define-the-Tensile_LIBRARY_FORMAT-variable.patch', when='@develop')
 
     def setup_build_environment(self, env):
