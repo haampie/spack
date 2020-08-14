@@ -35,7 +35,7 @@ class Rocblas(CMakePackage):
     depends_on('perl-file-which', type='build')
     depends_on('py-pyyaml', type='build')
     depends_on('py-wheel', type='build')
-    depends_on('py-msgpack', type='build')
+    depends_on('py-msgpack', type='build', when='@develop')
 
     # Tensile uses LLVM
     depends_on('llvm-amdgpu')
@@ -68,13 +68,12 @@ class Rocblas(CMakePackage):
             '-DBUILD_CLIENTS_SAMPLES=OFF',
             '-DRUN_HEADER_TESTING=OFF',
             '-DBUILD_WITH_TENSILE=ON',
+            '-DBUILD_WITH_TENSILE_HOST=OFF',
             '-DTensile_TEST_LOCAL_PATH={0}'.format(tensile),
             '-DTensile_COMPILER=hipcc',
             '-DTensile_ARCHITECTURE={0}'.format(archs),
             '-DTensile_LOGIC=asm_full',
             '-DTensile_CODE_OBJECT_VERSION=V3',
-            '-DTENSILE_USE_MSGPACK=OFF',
-            '-DTENSILE_USE_LLVM=ON'
         ]
 
         return args
