@@ -21,6 +21,8 @@ class Rocsolver(CMakePackage):
     depends_on('rocm-device-libs', type='build')
     depends_on('comgr', type='build')
 
+    depends_on('numactl', type='link', when='^hip@3.7.0')
+
     version('3.5.0', sha256='d655e8c762fb9e123b9fd7200b4258512ceef69973de4d0588c815bc666cb358')
 
     def cmake_args(self):

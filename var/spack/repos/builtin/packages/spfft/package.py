@@ -48,6 +48,7 @@ class Spfft(CMakePackage, CudaPackage):
     depends_on('hip', when='+rocm')
     depends_on('hsakmt-roct', when='+rocm', type='link')
     depends_on('hsa-rocr-dev', when='+rocm', type='link')
+    depends_on('numactl', type='link', when='^hip@3.7.0')
     variant('amdgpu_target', default=('gfx803', 'gfx900', 'gfx906'), multi=True, values=amdgpu_targets)
 
     depends_on('cuda@:10', when='@:0.9.11 +cuda')

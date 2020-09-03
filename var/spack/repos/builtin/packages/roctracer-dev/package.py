@@ -28,6 +28,8 @@ class RoctracerDev(CMakePackage):
         depends_on('rocminfo@' + ver, type='build', when='@' + ver)
         depends_on('hip@' + ver, type='build', when='@' + ver)
 
+    depends_on('numactl', type='link', when='^hip@3.7.0')
+
     def setup_build_environment(self, build_env):
         spec = self.spec
         build_env.set("HIP_PATH", spec['hip'].prefix)

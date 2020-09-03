@@ -96,6 +96,7 @@ class Sirius(CMakePackage, CudaPackage):
     depends_on('hsakmt-roct', when='+rocm', type='link')
     depends_on('hsa-rocr-dev', when='+rocm', type='link')
     depends_on('rocblas', when='+rocm')
+    depends_on('numactl', type='link', when='^hip@3.7.0')
 
     extends('python', when='+python')
 

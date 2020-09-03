@@ -21,6 +21,7 @@ class Hipblas(CMakePackage):
     depends_on('rocblas')
     depends_on('rocm-device-libs', type='build')
     depends_on('comgr', type='build')
+    depends_on('numactl', type='link', when='^hip@3.7.0')
 
     version('3.5.0', sha256='d451da80beb048767da71a090afceed2e111d01b3e95a7044deada5054d6e7b1')
 

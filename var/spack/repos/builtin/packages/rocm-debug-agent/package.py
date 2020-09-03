@@ -29,6 +29,7 @@ class RocmDebugAgent(CMakePackage):
 
     depends_on('rocm-dbgapi@3.7.0', type='link', when='@3.7.0')
     depends_on('hip@3.7.0', when='@3.7.0')
+    depends_on('numactl', type='link', when='^hip@3.7.0')
 
     # https://github.com/ROCm-Developer-Tools/rocr_debug_agent/pull/4
     patch('0001-Drop-overly-strict-Werror-flag.patch', when='@3.7.0')

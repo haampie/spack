@@ -32,6 +32,7 @@ class Rocblas(CMakePackage):
 
     # This is the default library format since 3.7.0
     depends_on('msgpack-c@3:', when='@3.7:')
+    depends_on('numactl', type='link', when='^hip@3.7.0')
 
     depends_on('python', type='build')
     depends_on('py-virtualenv', type='build')

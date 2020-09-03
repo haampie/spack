@@ -25,6 +25,8 @@ class Hipsparse(CMakePackage):
     depends_on('comgr', type='build')
     depends_on('git', type='build')
 
+    depends_on('numactl', type='link', when='^hip@3.7.0')
+
     patch('e79985dccde22d826aceb3badfc643a3227979d2.patch')
     patch('530047af4a0f437dafc02f76b3a17e3b1536c7ec.patch')
 

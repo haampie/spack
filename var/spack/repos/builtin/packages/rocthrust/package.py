@@ -30,6 +30,8 @@ class Rocthrust(CMakePackage):
         depends_on('hsa-rocr-dev@' + ver, type='build', when='@' + ver)
         depends_on('rocprim@' + ver, type='build', when='@' + ver)
 
+    depends_on('numactl', type='link', when='^hip@3.7.0')
+
     def setup_build_environment(self, env):
         env.set('CXX', self.spec['hip'].hipcc)
 
