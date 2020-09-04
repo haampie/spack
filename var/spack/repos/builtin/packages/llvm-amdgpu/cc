@@ -282,9 +282,14 @@ while [ -n "$1" ]; do
     rp=""
 
     case "$1" in
+        -target*)
+            target_was_used=true
+            arg="${1#-target}"
+            if [ -z "$arg" ]; then shift; arg="$1"; fi
+            other_args+=("-target$arg")
         -isystem*)
             arg="${1#-isystem}"
-	    isystem_was_used=true
+            isystem_was_used=true
             if [ -z "$arg" ]; then shift; arg="$1"; fi
             if system_dir "$arg"; then
                 isystem_system_includes+=("$arg")
@@ -417,7 +422,9 @@ case "$mode" in
             CXX)
                 flags=("${flags[@]}" "${SPACK_CXXFLAGS[@]}") ;;
         esac
-        flags=(${SPACK_TARGET_ARGS[@]} "${flags[@]}")
+        if [[ ! "$target_was_used" == "true" ]] ; then
+            flags=(${SPACK_TARGET_ARGS[@]} "${flags[@]}")
+        fi
         ;;
 esac
 
@@ -496,9 +503,9 @@ for dir in "${isystem_includes[@]}";         do args+=("-isystem$dir"); done
 IFS=':' read -ra spack_include_dirs <<< "$SPACK_INCLUDE_DIRS"
 if [[ $mode == cpp || $mode == cc || $mode == as || $mode == ccld ]]; then
     if [[ "$isystem_was_used" == "true" ]] ; then
-	for dir in "${spack_include_dirs[@]}";  do args+=("-isystem$dir"); done
+        for dir in "${spack_include_dirs[@]}";  do args+=("-isystem$dir"); done
     else
-	for dir in "${spack_include_dirs[@]}";  do args+=("-I$dir"); done
+        for dir in "${spack_include_dirs[@]}";  do args+=("-I$dir"); done
     fi
 fi
 
