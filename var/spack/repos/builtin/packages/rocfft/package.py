@@ -34,6 +34,7 @@ class Rocfft(CMakePackage):
         depends_on('rocm-device-libs@' + ver, type='build', when='@' + ver)
         depends_on('hip@' + ver, when='@' + ver)
         depends_on('comgr@' + ver, type='build', when='@' + ver)
+        depends_on('comgr@' + ver, when='@' + ver)
 
     depends_on('numactl', type='link', when='^hip@3.7.0')
 
