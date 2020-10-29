@@ -552,6 +552,10 @@ class Configuration(object):
            }
 
         """
+        return self._get_config_memoized(section, scope)
+
+    @llnl.util.lang.memoized
+    def _get_config_memoized(self, section, scope):
         _validate_section_name(section)
 
         if scope is None:
