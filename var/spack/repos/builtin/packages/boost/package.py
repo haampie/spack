@@ -539,3 +539,7 @@ class Boost(Package):
 
     def setup_run_environment(self, env):
         env.set('BOOST_ROOT', self.prefix)
+
+    def setup_dependent_build_environment(self, env, dependent_spec):
+        if '^cmake' in dependent_spec and '^boost@:1.69' in dependent_spec:
+            env.set('Boost_NO_BOOST_CMAKE', 'ON')
