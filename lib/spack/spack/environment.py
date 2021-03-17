@@ -655,7 +655,7 @@ class Environment(object):
         if init_file_dir == self.path:
             return
 
-        for name, entry in self.dev_specs.items():
+        for entry in self.dev_specs:
             dev_path = entry['path']
             expanded_path = os.path.normpath(os.path.join(
                 init_file_dir, entry['path']))
@@ -665,9 +665,9 @@ class Environment(object):
                 continue
 
             tty.debug("Expanding develop path for {0} to {1}".format(
-                name, expanded_path))
+                entry['spec'], expanded_path))
 
-            self.dev_specs[name]['path'] = expanded_path
+            entry['path'] = expanded_path
 
     def _re_read(self):
         """Reinitialize the environment object if it has been written (this
