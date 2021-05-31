@@ -321,7 +321,7 @@ class YamlDirectoryLayout(DirectoryLayout):
     def create_install_directory(self, spec):
         _check_concrete(spec)
 
-        prefix = self.check_installed(spec)
+        self.check_installed(spec)
 
         # Create install directory with properly configured permissions
         # Cannot import at top of file

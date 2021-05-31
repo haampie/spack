@@ -13,7 +13,6 @@ import llnl.util.lock as ulk
 
 import spack.binary_distribution
 import spack.compilers
-import spack.directory_layout as dl
 import spack.installer as inst
 import spack.package_prefs as prefs
 import spack.repo
