@@ -322,8 +322,6 @@ class YamlDirectoryLayout(DirectoryLayout):
         _check_concrete(spec)
 
         prefix = self.check_installed(spec)
-        if prefix:
-            raise InstallDirectoryAlreadyExistsError(prefix)
 
         # Create install directory with properly configured permissions
         # Cannot import at top of file
