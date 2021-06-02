@@ -95,6 +95,10 @@ the dependencies"""
     subparser.add_argument(
         '--dont-restage', action='store_true',
         help="if a partial install is detected, don't delete prior state")
+    subparser.add_argument(
+        '--include-env', action='store_true',
+        help='install build environment variables in the spack-build-env.txt file'
+    )
 
     cache_group = subparser.add_mutually_exclusive_group()
     cache_group.add_argument(
