@@ -1710,6 +1710,10 @@ class PackageBase(six.with_metaclass(PackageMeta, PackageViewMixin, object)):
             force (bool): Install again, even if already installed.
             install_deps (bool): Install dependencies before installing this
                 package
+            install_env_variables (bool): By default, the build environment
+                variables are not installed, but for debugging or
+                reproducibility it might be useful to retain them in the install
+                prefix as spack-build-env.txt.
             install_source (bool): By default, source is not installed, but
                 for debugging it might be useful to keep it around.
             keep_prefix (bool): Keep install prefix on failure. By default,

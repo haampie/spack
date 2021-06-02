@@ -39,6 +39,7 @@ def update_kwargs_from_args(args, kwargs):
         'keep_stage': args.keep_stage,
         'restage': not args.dont_restage,
         'install_source': args.install_source,
+        'install_env_variables': args.install_env_variables,
         'verbose': args.verbose,
         'fake': args.fake,
         'dirty': args.dirty,
@@ -95,10 +96,6 @@ the dependencies"""
     subparser.add_argument(
         '--dont-restage', action='store_true',
         help="if a partial install is detected, don't delete prior state")
-    subparser.add_argument(
-        '--include-env', action='store_true',
-        help='install build environment variables in the spack-build-env.txt file'
-    )
 
     cache_group = subparser.add_mutually_exclusive_group()
     cache_group.add_argument(
@@ -133,6 +130,10 @@ remote spec matches that of the local spec""")
     subparser.add_argument(
         '--source', action='store_true', dest='install_source',
         help="install source files in prefix")
+    subparser.add_argument(
+        '--env-variables', action='store_true', dest='install_env_variables',
+        help='install build environment variables in prefix'
+    )
     arguments.add_common_arguments(subparser, ['no_checksum', 'deprecated'])
     subparser.add_argument(
         '-v', '--verbose', action='store_true',

@@ -521,7 +521,7 @@ def install_msg(name, pid):
     return pre + colorize('@*{Installing} @*g{%s}' % name)
 
 
-def log(pkg):
+def log(pkg, install_env=False):
     """
     Copy provenance into the install directory on success
 
@@ -548,7 +548,8 @@ def log(pkg):
         fs.install(phase_log, log_file)
 
     # Archive the environment used for the build
-    fs.install(pkg.env_path, pkg.install_env_path)
+    if install_env:
+        fs.install(pkg.env_path, pkg.install_env_path)
 
     if os.path.exists(pkg.configure_args_path):
         # Archive the args used for the build
@@ -1680,6 +1681,7 @@ def build_process(pkg, kwargs):
     """
     fake = kwargs.get('fake', False)
     install_source = kwargs.get('install_source', False)
+    install_env = kwargs.get('install_env_variables', False)
     keep_stage = kwargs.get('keep_stage', False)
     skip_patch = kwargs.get('skip_patch', False)
     unmodified_env = kwargs.get('unmodified_env', {})
@@ -1786,7 +1788,7 @@ def build_process(pkg, kwargs):
 
             # After log, we can get all output/error files from the package stage
             combine_phase_logs(pkg.phase_log_files, pkg.log_path)
-            log(pkg)
+            log(pkg, install_env=install_env)
 
         # Run post install hooks before build stage is removed.
         spack.hooks.post_install(pkg.spec)
@@ -2067,6 +2069,7 @@ class BuildRequest(object):
                              ('fake', False),
                              ('full_hash_match', False),
                              ('install_deps', True),
+                             ('install_env_variables', False),
                              ('install_package', True),
                              ('install_source', False),
                              ('keep_prefix', False),
