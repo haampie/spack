@@ -124,31 +124,6 @@ def test_installfiles_analyzer(tmpdir, mock_fetch, install_mockery_mutable_confi
         assert key in basenames
 
 
-def test_environment_analyzer(tmpdir, mock_fetch, install_mockery_mutable_config):
-    """
-    test the environment variables analyzer.
-    """
-    install('libdwarf')
-    output_file = _run_analyzer("environment_variables", "libdwarf", tmpdir)
-    with open(output_file, 'r') as fd:
-        content = sjson.load(fd.read())
-
-    # Check a few expected keys
-    for key in ['SPACK_CC', 'SPACK_COMPILER_SPEC', 'SPACK_ENV_PATH']:
-        assert key in content
-
-    # The analyzer should return no result if the output file does not exist.
-    spec = Spec('libdwarf').concretized()
-    env_file = os.path.join(spec.package.prefix, '.spack', 'spack-build-env.txt')
-    assert os.path.exists(env_file)
-    os.remove(env_file)
-    analyzer = spack.analyzers.get_analyzer("environment_variables")
-    analyzer_dir = tmpdir.join('analyzers')
-    result = analyzer(spec, analyzer_dir).run()
-    assert "environment_variables" in result
-    assert not result['environment_variables']
-
-
 def test_list_analyzers():
     """
     test that listing analyzers shows all the possible analyzers.

@@ -374,8 +374,6 @@ as the package, with each analyzer owning it's own subfolder. for example:
     └── linux-ubuntu20.04-skylake
         └── gcc-9.3.0
             └── zlib-1.2.11-sl7m27mzkbejtkrajigj3a3m37ygv4u2
-                ├── environment_variables
-                │   └── spack-analyzer-environment-variables.json
                 ├── install_files
                 │   └── spack-analyzer-install-files.json
                 └── libabigail
