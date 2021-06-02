@@ -32,6 +32,8 @@ For example, here we see the results of running an analysis on zlib:
     └── linux-ubuntu20.04-skylake
         └── gcc-9.3.0
             └── zlib-1.2.11-sl7m27mzkbejtkrajigj3a3m37ygv4u2
+                ├── environment_variables
+                │   └── spack-analyzer-environment-variables.json
                 ├── install_files
                 │   └── spack-analyzer-install-files.json
                 └── libabigail
@@ -55,6 +57,7 @@ are available:
 
     $ spack analyze list-analyzers
     install_files            : install file listing read from install_manifest.json
+    environment_variables    : environment variables parsed from spack-build-env.txt
     config_args              : config args loaded from spack-configure-args.txt
     abigail                  : Application Binary Interface (ABI) features for objects
 
