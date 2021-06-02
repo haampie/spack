@@ -128,7 +128,8 @@ def dump_environment(path, environment=None):
     use_env = environment or os.environ
     hidden_vars = set(['PS1', 'PWD', 'OLDPWD', 'TERM_SESSION_ID'])
 
-    with open(path, 'w') as env_file:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT, 0o600)
+    with os.fdopen(fd, 'w') as env_file:
         for var, val in sorted(use_env.items()):
             env_file.write(''.join(['#' if var in hidden_vars else '',
                                     env_var_to_source_line(var, val),
