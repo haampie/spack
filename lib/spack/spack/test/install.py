@@ -405,6 +405,9 @@ def test_pkg_install_paths(install_mockery):
     log_path = os.path.join(spec.prefix, '.spack', _spack_build_logfile)
     assert spec.package.install_log_path == log_path
 
+    env_path = os.path.join(spec.prefix, '.spack', _spack_build_envfile)
+    assert spec.package.install_env_path == env_path
+
     args_path = os.path.join(spec.prefix, '.spack', _spack_configure_argsfile)
     assert spec.package.install_configure_args_path == args_path
 
@@ -421,6 +424,11 @@ def test_pkg_install_paths(install_mockery):
         last_log = 'build.txt'
         os.rename(older_log, last_log)
         assert spec.package.install_log_path.endswith(last_log)
+
+        # Check the old install environment file
+        last_env = 'build.env'
+        os.rename(last_log, last_env)
+        assert spec.package.install_env_path.endswith(last_env)
 
     # Cleanup
     shutil.rmtree(log_dir)
@@ -473,6 +481,7 @@ def test_log_install_with_build_files(install_mockery, monkeypatch):
     spack.installer.log(spec.package)
 
     assert os.path.exists(spec.package.install_log_path)
+    assert os.path.exists(spec.package.install_env_path)
     assert os.path.exists(spec.package.install_configure_args_path)
 
     archive_dir = os.path.join(install_path, 'archived-files')
