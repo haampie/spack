@@ -478,7 +478,7 @@ def test_log_install_with_build_files(install_mockery, monkeypatch):
     fs.touchp(config)
     spec.package.archive_files = ['missing', '..', config]
 
-    spack.installer.log(spec.package)
+    spack.installer.log(spec.package, install_env=True)
 
     assert os.path.exists(spec.package.install_log_path)
     assert os.path.exists(spec.package.install_env_path)

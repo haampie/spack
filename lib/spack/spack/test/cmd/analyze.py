@@ -128,7 +128,7 @@ def test_environment_analyzer(tmpdir, mock_fetch, install_mockery_mutable_config
     """
     test the environment variables analyzer.
     """
-    install('libdwarf')
+    install('--env-variables', 'libdwarf')
     output_file = _run_analyzer("environment_variables", "libdwarf", tmpdir)
     with open(output_file, 'r') as fd:
         content = sjson.load(fd.read())
