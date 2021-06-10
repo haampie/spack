@@ -593,7 +593,7 @@ class EnvironmentModifications(object):
 
         cmds = ''
 
-        for name in set(modifications):
+        for name in sorted(set(modifications)):
             new = new_env.get(name, None)
             old = env.get(name, None)
             if explicit or new != old:
