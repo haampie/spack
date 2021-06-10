@@ -1735,7 +1735,7 @@ def build_process(pkg, kwargs):
                 # and store these too.
                 with open(pkg.env_mods_path, 'w') as env_mods_file:
                     env_mods_file.write(
-                        env_mods.shell_modifications(explicit=True, env={}))
+                        env_mods.shell_modifications(explicit=True, env=unmodified_env))
 
                 for attr in ('configure_args', 'cmake_args'):
                     try:
