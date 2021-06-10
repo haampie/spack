@@ -176,17 +176,13 @@ def test_install_with_source(
                        os.path.join(src, 'configure'))
 
 
-@pytest.mark.parametrize('flag,has_file', [
-    ('--env-variables', True),
-    ('', False)
-])
 def test_install_env_variables(
-    flag, has_file, mock_packages, mock_archive, mock_fetch, config, install_mockery
+    mock_packages, mock_archive, mock_fetch, config, install_mockery
 ):
     spec = Spec('libdwarf')
     spec.concretize()
-    install(flag, 'libdwarf')
-    assert os.path.isfile(spec.package.install_env_path) == has_file
+    install('libdwarf')
+    assert os.path.isfile(spec.package.install_env_path)
 
 
 @pytest.mark.disable_clean_stage_check

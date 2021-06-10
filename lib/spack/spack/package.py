@@ -71,6 +71,9 @@ _spack_build_logfile = 'spack-build-out.txt'
 # Filename for the Spack build/install environment file.
 _spack_build_envfile = 'spack-build-env.txt'
 
+# Filename for the Spack build/install environment modifications file.
+_spack_build_envmodsfile = 'spack-build-env-mods.txt'
+
 # Filename for the Spack configure args file.
 _spack_configure_argsfile = 'spack-configure-args.txt'
 
@@ -1038,6 +1041,14 @@ class PackageBase(six.with_metaclass(PackageMeta, PackageViewMixin, object)):
             return os.path.join(self.stage.path, _spack_build_envfile)
 
     @property
+    def env_mods_path(self):
+        """
+        Return the build environment modifications file path associated with
+        staging.
+        """
+        return os.path.join(self.stage.path, _spack_build_envmodsfile)
+
+    @property
     def metadata_dir(self):
         """Return the install metadata directory."""
         return spack.store.layout.metadata_path(self.spec)
@@ -1710,10 +1721,6 @@ class PackageBase(six.with_metaclass(PackageMeta, PackageViewMixin, object)):
             force (bool): Install again, even if already installed.
             install_deps (bool): Install dependencies before installing this
                 package
-            install_env_variables (bool): By default, the build environment
-                variables are not installed, but for debugging or
-                reproducibility it might be useful to retain them in the install
-                prefix as spack-build-env.txt.
             install_source (bool): By default, source is not installed, but
                 for debugging it might be useful to keep it around.
             keep_prefix (bool): Keep install prefix on failure. By default,

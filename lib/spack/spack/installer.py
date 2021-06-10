@@ -521,7 +521,7 @@ def install_msg(name, pid):
     return pre + colorize('@*{Installing} @*g{%s}' % name)
 
 
-def log(pkg, install_env=False):
+def log(pkg):
     """
     Copy provenance into the install directory on success
 
@@ -547,9 +547,8 @@ def log(pkg, install_env=False):
         log_file = os.path.join(os.path.dirname(packages_dir), log_file)
         fs.install(phase_log, log_file)
 
-    # Archive the environment used for the build
-    if install_env:
-        fs.install(pkg.env_path, pkg.install_env_path)
+    # Archive the environment modifications for the build.
+    fs.install(pkg.env_mods_path, pkg.install_env_path)
 
     if os.path.exists(pkg.configure_args_path):
         # Archive the args used for the build
@@ -1681,10 +1680,13 @@ def build_process(pkg, kwargs):
     """
     fake = kwargs.get('fake', False)
     install_source = kwargs.get('install_source', False)
-    install_env = kwargs.get('install_env_variables', False)
     keep_stage = kwargs.get('keep_stage', False)
     skip_patch = kwargs.get('skip_patch', False)
     unmodified_env = kwargs.get('unmodified_env', {})
+    env_mods = kwargs.get(
+        'env_modifications',
+        spack.util.environment.EnvironmentModifications()
+    )
     verbose = kwargs.get('verbose', False)
 
     start_time = time.time()
@@ -1728,6 +1730,12 @@ def build_process(pkg, kwargs):
 
                 # Save the build environment in a file before building.
                 dump_environment(pkg.env_path)
+
+                # Apply the env variable modifications to an empty environment
+                # and store these too.
+                with open(pkg.env_mods_path, 'w') as env_mods_file:
+                    env_mods_file.write(
+                        env_mods.shell_modifications(explicit=True, env={}))
 
                 for attr in ('configure_args', 'cmake_args'):
                     try:
@@ -1788,7 +1796,7 @@ def build_process(pkg, kwargs):
 
             # After log, we can get all output/error files from the package stage
             combine_phase_logs(pkg.phase_log_files, pkg.log_path)
-            log(pkg, install_env=install_env)
+            log(pkg)
 
         # Run post install hooks before build stage is removed.
         spack.hooks.post_install(pkg.spec)
@@ -2069,7 +2077,6 @@ class BuildRequest(object):
                              ('fake', False),
                              ('full_hash_match', False),
                              ('install_deps', True),
-                             ('install_env_variables', False),
                              ('install_package', True),
                              ('install_source', False),
                              ('keep_prefix', False),

@@ -16,7 +16,6 @@ from spack.paths import build_env_path
 from spack.build_environment import dso_suffix, _static_to_shared_library
 from spack.build_environment import determine_number_of_jobs
 from spack.util.executable import Executable
-from spack.util.environment import EnvironmentModifications
 from llnl.util.filesystem import LibraryList, HeaderList
 
 
@@ -263,9 +262,8 @@ def test_set_build_environment_variables(
     setattr(dep_pkg, 'libs', dep_libs)
     try:
         pkg = root.package
-        env_mods = EnvironmentModifications()
-        spack.build_environment.set_build_environment_variables(
-            pkg, env_mods, dirty=False)
+        env_mods = spack.build_environment.set_build_environment_variables(
+            pkg, dirty=False)
 
         env_mods.apply_modifications()
 
@@ -323,9 +321,8 @@ dt-diamond-left:
         os.path, 'isdir', _trust_me_its_a_dir
     )
 
-    env_mods = EnvironmentModifications()
-    spack.build_environment.set_build_environment_variables(
-        top.package, env_mods, False)
+    env_mods = spack.build_environment.set_build_environment_variables(
+        top.package, False)
 
     env_mods.apply_modifications()
     link_dir_var = os.environ['SPACK_LINK_DIRS']
@@ -368,9 +365,8 @@ def test_setting_dtags_based_on_config(
     s.concretize()
     pkg = s.package
 
-    env = EnvironmentModifications()
     with spack.config.override('config:shared_linking', config_setting):
-        spack.build_environment.set_compiler_environment_variables(pkg, env)
+        env = spack.build_environment.set_compiler_environment_variables(pkg)
         modifications = env.group_by_name()
         assert 'SPACK_DTAGS_TO_STRIP' in modifications
         assert 'SPACK_DTAGS_TO_ADD' in modifications

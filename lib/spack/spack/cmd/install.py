@@ -39,7 +39,6 @@ def update_kwargs_from_args(args, kwargs):
         'keep_stage': args.keep_stage,
         'restage': not args.dont_restage,
         'install_source': args.install_source,
-        'install_env_variables': args.install_env_variables,
         'verbose': args.verbose,
         'fake': args.fake,
         'dirty': args.dirty,
@@ -130,10 +129,6 @@ remote spec matches that of the local spec""")
     subparser.add_argument(
         '--source', action='store_true', dest='install_source',
         help="install source files in prefix")
-    subparser.add_argument(
-        '--env-variables', action='store_true', dest='install_env_variables',
-        help='install build environment variables in prefix'
-    )
     arguments.add_common_arguments(subparser, ['no_checksum', 'deprecated'])
     subparser.add_argument(
         '-v', '--verbose', action='store_true',
