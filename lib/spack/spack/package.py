@@ -74,6 +74,9 @@ _spack_build_envfile = 'spack-build-env.txt'
 # Filename for the Spack build/install environment modifications file.
 _spack_build_envmodsfile = 'spack-build-env-mods.txt'
 
+# Filename of json with total build and phase times (seconds)
+_spack_times_log = 'install_times.json'
+
 # Filename for the Spack configure args file.
 _spack_configure_argsfile = 'spack-configure-args.txt'
 
@@ -702,7 +705,6 @@ class PackageBase(six.with_metaclass(PackageMeta, PackageViewMixin, object)):
 
         # Set up timing variables
         self._fetch_time = 0.0
-        self._total_time = 0.0
 
         if self.is_extension:
             spack.repo.get(self.extendee_spec)._check_extendable()
@@ -1102,6 +1104,11 @@ class PackageBase(six.with_metaclass(PackageMeta, PackageViewMixin, object)):
     def configure_args_path(self):
         """Return the configure args file path associated with staging."""
         return os.path.join(self.stage.path, _spack_configure_argsfile)
+
+    @property
+    def times_log_path(self):
+        """Return the times log json file."""
+        return os.path.join(self.metadata_dir, _spack_times_log)
 
     @property
     def install_configure_args_path(self):
@@ -1540,8 +1547,9 @@ class PackageBase(six.with_metaclass(PackageMeta, PackageViewMixin, object)):
             # should this attempt to download the source and set one? This
             # probably only happens for source repositories which are
             # referenced by branch name rather than tag or commit ID.
-            message = 'Missing a source id for {s.name}@{s.version}'
-            tty.warn(message.format(s=self))
+            if not self.spec.external:
+                message = 'Missing a source id for {s.name}@{s.version}'
+                tty.warn(message.format(s=self))
             hash_content.append(''.encode('utf-8'))
         else:
             hash_content.append(source_id.encode('utf-8'))
