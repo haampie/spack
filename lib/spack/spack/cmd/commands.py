@@ -14,9 +14,7 @@ import sys
 import llnl.util.filesystem as fs
 import llnl.util.tty as tty
 from llnl.util.argparsewriter import (
-    ArgparseCompletionWriter,
-    ArgparseRstWriter,
-    ArgparseWriter,
+    ArgparseWriter, ArgparseRstWriter, ArgparseCompletionWriter
 )
 from llnl.util.tty.colify import colify
 
@@ -24,6 +22,7 @@ import spack.cmd
 import spack.main
 import spack.paths
 from spack.main import section_descriptions
+
 
 description = "list available spack commands"
 section = "developer"

@@ -18,9 +18,11 @@ class Cbtf(CMakePackage):
     git      = "https://github.com/OpenSpeedShop/cbtf.git"
 
     version('develop', branch='master')
-    version('1.9.4.1', branch='1.9.4.1')
-    version('1.9.4', branch='1.9.4')
     version('1.9.3', branch='1.9.3')
+    version('1.9.2', branch='1.9.2')
+    version('1.9.1.2', branch='1.9.1.2')
+    version('1.9.1.1', branch='1.9.1.1')
+    version('1.9.1.0', branch='1.9.1.0')
 
     variant('cti', default=False,
             description="Build MRNet with the CTI startup option")
@@ -28,9 +30,8 @@ class Cbtf(CMakePackage):
     variant('runtime', default=False,
             description="build only the runtime libraries and collectors.")
 
-    variant('build_type', default='RelWithDebInfo',
-            description='The build type to build',
-            values=('Debug', 'Release', 'RelWithDebInfo'))
+    variant('build_type', default='None', values=('None',),
+            description='CMake build type')
 
     depends_on("cmake@3.0.2:", type='build')
 
@@ -40,7 +41,7 @@ class Cbtf(CMakePackage):
     # for rpc
     depends_on("libtirpc", type='link')
 
-    depends_on("boost@1.70.0:")
+    depends_on("boost@1.66.0:1.69.0")
 
     # TODO: replace this with an explicit list of components of Boost,
     # for instance depends_on('boost +filesystem')
@@ -50,8 +51,8 @@ class Cbtf(CMakePackage):
     # For MRNet
     depends_on("mrnet@5.0.1-3:+cti", when='@develop+cti')
     depends_on("mrnet@5.0.1-3:+lwthreads", when='@develop')
-    depends_on("mrnet@5.0.1-3+cti", when='@1.9.3:9999+cti')
-    depends_on("mrnet@5.0.1-3+lwthreads", when='@1.9.3:9999')
+    depends_on("mrnet@5.0.1-3+cti", when='@1.9.1.0:9999+cti')
+    depends_on("mrnet@5.0.1-3+lwthreads", when='@1.9.1.0:9999')
 
     # For Xerces-C
     depends_on("xerces-c")
@@ -72,7 +73,7 @@ class Cbtf(CMakePackage):
         # or BOOST_INCLUDEDIR).  Useful when specifying BOOST_ROOT.
         # Defaults to OFF.
 
-        compile_flags = "-O2 -g -Wall"
+        compile_flags = "-O2 -g"
 
         if spec.satisfies('+runtime'):
 

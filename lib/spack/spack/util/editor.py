@@ -20,6 +20,7 @@ import llnl.util.tty as tty
 import spack.config
 from spack.util.executable import which_string
 
+
 #: editors to try if VISUAL and EDITOR are not set
 _default_editors = ['vim', 'vi', 'emacs', 'nano']
 
@@ -64,7 +65,7 @@ def editor(*args, **kwargs):
     searching the full list above, we'll raise an error.
 
     Arguments:
-        args (list): args to pass to editor
+        args (list of str): args to pass to editor
 
     Optional Arguments:
         _exec_func (function): invoke this function instead of ``os.execv()``

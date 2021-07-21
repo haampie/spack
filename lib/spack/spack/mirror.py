@@ -11,14 +11,16 @@ the main server for a particular package is down.  Or, if the computer
 where spack is run is not connected to the internet, it allows spack
 to download packages directly from a mirror (e.g., on an intranet).
 """
-import operator
-import os
-import os.path
 import sys
+import os
 import traceback
+import os.path
+import operator
+
+import six
 
 import ruamel.yaml.error as yaml_error
-import six
+
 from ordereddict_backport import OrderedDict
 
 if sys.version_info >= (3, 5):
@@ -31,14 +33,14 @@ from llnl.util.filesystem import mkdirp
 
 import spack.config
 import spack.error
-import spack.fetch_strategy as fs
-import spack.spec
 import spack.url as url
+import spack.fetch_strategy as fs
 import spack.util.spack_json as sjson
 import spack.util.spack_yaml as syaml
 import spack.util.url as url_util
-from spack.util.spack_yaml import syaml_dict
+import spack.spec
 from spack.version import VersionList
+from spack.util.spack_yaml import syaml_dict
 
 
 def _display_mirror_entry(size, name, url, type_=None):
@@ -451,51 +453,6 @@ def create(path, specs, skip_unstable_versions=False):
         _add_single_spec(spec, mirror_cache, mirror_stats)
 
     return mirror_stats.stats()
-
-
-def add(name, url, scope):
-    """Add a named mirror in the given scope"""
-    mirrors = spack.config.get('mirrors', scope=scope)
-    if not mirrors:
-        mirrors = syaml_dict()
-
-    if name in mirrors:
-        tty.die("Mirror with name %s already exists." % name)
-
-    items = [(n, u) for n, u in mirrors.items()]
-    items.insert(0, (name, url))
-    mirrors = syaml_dict(items)
-    spack.config.set('mirrors', mirrors, scope=scope)
-
-
-def remove(name, scope):
-    """Remove the named mirror in the given scope"""
-    mirrors = spack.config.get('mirrors', scope=scope)
-    if not mirrors:
-        mirrors = syaml_dict()
-
-    if name not in mirrors:
-        tty.die("No mirror with name %s" % name)
-
-    old_value = mirrors.pop(name)
-    spack.config.set('mirrors', mirrors, scope=scope)
-
-    debug_msg_url = "url %s"
-    debug_msg = ["Removed mirror %s with"]
-    values = [name]
-
-    try:
-        fetch_value = old_value['fetch']
-        push_value = old_value['push']
-
-        debug_msg.extend(("fetch", debug_msg_url, "and push", debug_msg_url))
-        values.extend((fetch_value, push_value))
-    except TypeError:
-        debug_msg.append(debug_msg_url)
-        values.append(old_value)
-
-    tty.debug(" ".join(debug_msg) % tuple(values))
-    tty.msg("Removed mirror %s." % name)
 
 
 class MirrorStats(object):

@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import os
-
 from spack import *
 
 
@@ -33,8 +32,6 @@ class Pdt(AutotoolsPackage):
 
     variant('pic', default=False, description="Builds with pic")
 
-    patch('cray_configure.patch', when='%cce')
-
     def patch(self):
         spec = self.spec
         if spec.satisfies('%clang') or spec.satisfies('%apple-clang'):
@@ -53,8 +50,6 @@ class Pdt(AutotoolsPackage):
             options.append('-GNU')
         elif self.compiler.name == 'clang':
             options.append('-clang')
-        elif self.compiler.name == 'cce':
-            options.append('-CC')
         else:
             raise InstallError('Unknown/unsupported compiler family')
 

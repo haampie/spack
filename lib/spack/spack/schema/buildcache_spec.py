@@ -10,6 +10,7 @@
 """
 import spack.schema.spec
 
+
 schema = {
     '$schema': 'http://json-schema.org/schema#',
     'title': 'Spack buildcache spec.yaml schema',

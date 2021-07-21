@@ -11,9 +11,11 @@ import llnl.util.filesystem as fs
 
 import spack.util.executable
 import spack.util.gpg
-from spack.main import SpackCommand
+
 from spack.paths import mock_gpg_data_path, mock_gpg_keys_path
+from spack.main import SpackCommand
 from spack.util.executable import ProcessError
+
 
 #: spack command used by tests below
 gpg = SpackCommand('gpg')
@@ -39,20 +41,24 @@ def test_find_gpg(cmd_name, version, tmpdir, mock_gnupghome, monkeypatch):
     monkeypatch.setitem(os.environ, "PATH", str(tmpdir))
     if version == 'undetectable' or version.endswith('1.3.4'):
         with pytest.raises(spack.util.gpg.SpackGPGError):
-            spack.util.gpg.init(force=True)
+            spack.util.gpg.ensure_gpg(reevaluate=True)
     else:
-        spack.util.gpg.init(force=True)
-        assert spack.util.gpg.GPG is not None
-        assert spack.util.gpg.GPGCONF is not None
+        spack.util.gpg.ensure_gpg(reevaluate=True)
+        gpg_exe = spack.util.gpg.get_global_gpg_instance().gpg_exe
+        assert isinstance(gpg_exe, spack.util.executable.Executable)
+        gpgconf_exe = spack.util.gpg.get_global_gpg_instance().gpgconf_exe
+        assert isinstance(gpgconf_exe, spack.util.executable.Executable)
 
 
 def test_no_gpg_in_path(tmpdir, mock_gnupghome, monkeypatch):
     monkeypatch.setitem(os.environ, "PATH", str(tmpdir))
     with pytest.raises(spack.util.gpg.SpackGPGError):
-        spack.util.gpg.init(force=True)
+        spack.util.gpg.ensure_gpg(reevaluate=True)
 
 
 @pytest.mark.maybeslow
+@pytest.mark.skipif(not spack.util.gpg.has_gpg(),
+                    reason='These tests require gnupg2')
 def test_gpg(tmpdir, mock_gnupghome):
     # Verify a file with an empty keyring.
     with pytest.raises(ProcessError):
@@ -110,20 +116,6 @@ def test_gpg(tmpdir, mock_gnupghome):
     # Export the key for future use.
     export_path = tmpdir.join('export.testing.key')
     gpg('export', str(export_path))
-
-    # Test exporting the private key
-    private_export_path = tmpdir.join('export-secret.testing.key')
-    gpg('export', '--secret', str(private_export_path))
-
-    # Ensure we exported the right content!
-    with open(str(private_export_path), 'r') as fd:
-        content = fd.read()
-    assert "BEGIN PGP PRIVATE KEY BLOCK" in content
-
-    # and for the public key
-    with open(str(export_path), 'r') as fd:
-        content = fd.read()
-    assert "BEGIN PGP PUBLIC KEY BLOCK" in content
 
     # Create a second key for use in the tests.
     gpg('create',

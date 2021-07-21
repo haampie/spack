@@ -29,7 +29,10 @@ class Rmlab(CMakePackage):
     depends_on('pngwriter@0.6.0:', when='+png')
 
     def cmake_args(self):
+        spec = self.spec
+
         args = [
-            self.define_from_variant('Rmlab_USE_PNG', 'png')
+            '-DRmlab_USE_PNG={0}'.format(
+                'ON' if '+png' in spec else 'OFF')
         ]
         return args

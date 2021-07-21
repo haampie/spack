@@ -8,7 +8,6 @@ from __future__ import print_function
 import os
 
 import llnl.util.tty as tty
-
 import spack.config
 import spack.repo
 import spack.util.path

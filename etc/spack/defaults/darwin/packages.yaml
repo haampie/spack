@@ -21,10 +21,12 @@ packages:
     - gcc
     - intel
     providers:
-      elf: [libelf]
-      fuse: [macfuse]
-      unwind: [apple-libunwind]
-      uuid: [apple-libuuid]
+      elf:
+      - libelf
+      unwind:
+      - apple-libunwind
+      uuid:
+      - apple-libuuid
   apple-libunwind:
     buildable: false
     externals:

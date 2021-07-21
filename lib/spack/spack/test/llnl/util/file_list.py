@@ -3,19 +3,14 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import fnmatch
 import os
+import fnmatch
 
-import pytest
 import six
+import pytest
 
-from llnl.util.filesystem import (
-    HeaderList,
-    LibraryList,
-    find,
-    find_headers,
-    find_libraries,
-)
+from llnl.util.filesystem import LibraryList, HeaderList
+from llnl.util.filesystem import find_libraries, find_headers, find
 
 import spack.paths
 

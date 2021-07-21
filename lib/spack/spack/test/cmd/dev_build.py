@@ -4,13 +4,10 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import os
-
 import pytest
-
-import llnl.util.filesystem as fs
-
-import spack.environment as ev
 import spack.spec
+import llnl.util.filesystem as fs
+import spack.environment as ev
 from spack.main import SpackCommand
 
 dev_build = SpackCommand('dev-build')

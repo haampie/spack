@@ -32,8 +32,12 @@ class Clfft(CMakePackage):
     root_cmakelists_dir = 'src'
 
     def cmake_args(self):
+        spec = self.spec
+
         args = [
-            self.define_from_variant('BUILD_CLIENT', 'client'),
-            self.define_from_variant('BUILD_CALLBACK_CLIENT', 'client')
+            '-DBUILD_CLIENT:BOOL={0}'.format((
+                'ON' if '+client' in spec else 'OFF')),
+            '-DBUILD_CALLBACK_CLIENT:BOOL={0}'.format((
+                'ON' if '+client' in spec else 'OFF'))
         ]
         return args

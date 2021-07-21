@@ -22,6 +22,7 @@ class MsgpackC(CMakePackage):
         args = [
             "-DCMAKE_CXX_FLAGS=-Wno-implicit-fallthrough",
             "-DCMAKE_C_FLAGS=-Wno-implicit-fallthrough",
-            self.define('MSGPACK_BUILD_TESTS', self.run_tests)
+            '-DMSGPACK_BUILD_TESTS:BOOL={0}'.format(
+                'ON' if self.run_tests else 'OFF')
         ]
         return args

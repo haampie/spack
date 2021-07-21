@@ -3,15 +3,14 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import stat
-
 import pytest
+import stat
 
 import spack.config
 import spack.package_prefs
 import spack.repo
 import spack.util.spack_yaml as syaml
-from spack.config import ConfigError, ConfigScope
+from spack.config import ConfigScope, ConfigError
 from spack.spec import Spec
 from spack.version import Version
 

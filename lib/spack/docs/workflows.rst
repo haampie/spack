@@ -543,8 +543,7 @@ specified from the command line using the ``--projection-file`` option
 to the ``spack view`` command.
 
 The projections configuration file is a mapping of partial specs to
-spec format strings, defined by the :meth:`~spack.spec.Spec.format`
-function, as shown in the example below.
+spec format strings, as shown in the example below.
 
 .. code-block:: yaml
 

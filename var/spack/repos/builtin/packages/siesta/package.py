@@ -4,9 +4,8 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 
-import os
-
 from spack import *
+import os
 
 
 class Siesta(Package):
@@ -28,11 +27,6 @@ class Siesta(Package):
     depends_on('netcdf-fortran')
 
     phases = ['configure', 'build', 'install']
-
-    def flag_handler(self, name, flags):
-        if '%gcc@10:' in self.spec and name == 'fflags':
-            flags.append('-fallow-argument-mismatch')
-        return (flags, None, None)
 
     def configure(self, spec, prefix):
         sh = which('sh')

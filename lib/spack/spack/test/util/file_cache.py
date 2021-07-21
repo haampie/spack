@@ -7,7 +7,6 @@
 import os
 
 import pytest
-
 from spack.util.file_cache import FileCache
 
 

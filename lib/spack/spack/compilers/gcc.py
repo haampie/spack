@@ -7,6 +7,7 @@ import re
 
 import spack.compiler
 import spack.compilers.apple_clang as apple_clang
+
 from spack.version import ver
 
 

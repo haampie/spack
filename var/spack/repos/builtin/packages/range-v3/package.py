@@ -3,11 +3,11 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import os
-import shutil
-
 from spack import *
 from spack.pkg.builtin.boost import Boost
+
+import os
+import shutil
 
 
 class RangeV3(CMakePackage):

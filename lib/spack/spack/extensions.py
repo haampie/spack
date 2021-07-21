@@ -11,7 +11,6 @@ import sys
 import types
 
 import llnl.util.lang
-
 import spack.config
 import spack.error
 

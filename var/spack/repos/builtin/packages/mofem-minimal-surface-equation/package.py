@@ -45,7 +45,6 @@ class MofemMinimalSurfaceEquation(CMakePackage):
 
     def cmake_args(self):
         spec = self.spec
-        from_variant = self.define_from_variant
         source = self.stage.source_path
 
         options = []
@@ -56,10 +55,12 @@ class MofemMinimalSurfaceEquation(CMakePackage):
             '-DEXTERNAL_MODULES_BUILD=YES',
             '-DUM_INSTALL_BREFIX=%s' % spec['mofem-users-modules'].prefix,
             '-DEXTERNAL_MODULE_SOURCE_DIRS=%s' % source,
-            from_variant('STAND_ALLONE_USERS_MODULES', 'copy_user_modules')])
+            '-DSTAND_ALLONE_USERS_MODULES=%s' %
+            ('YES' if '+copy_user_modules' in spec else 'NO')])
 
         # build tests
-        options.append(self.define('MOFEM_UM_BUILD_TESTS', self.run_tests))
+        options.append('-DMOFEM_UM_BUILD_TESTS={0}'.format(
+            'ON' if self.run_tests else 'OFF'))
 
         return options
 

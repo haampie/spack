@@ -3,11 +3,10 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import os
-import platform
-import re
-
 from spack import *
+import os
+import re
+import platform
 
 
 class Hpcc(MakefilePackage):

@@ -6,7 +6,7 @@
 import os.path
 import re
 
-from llnl.util.filesystem import mkdirp, touch
+from llnl.util.filesystem import touch, mkdirp
 
 import spack.cmd.license
 import spack.paths

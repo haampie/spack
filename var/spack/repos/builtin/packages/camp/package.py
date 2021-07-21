@@ -22,12 +22,14 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
     # TODO: figure out gtest dependency and then set this default True.
     variant('tests', default=False, description='Build tests')
 
-    depends_on('cub', when='+cuda')
+    depends_on('blt', type='build')
+    depends_on('blt@0.3.7:', type='build', when='+rocm')
 
     def cmake_args(self):
         spec = self.spec
 
         options = []
+        options.append('-DBLT_SOURCE_DIR={0}'.format(spec['blt'].prefix))
 
         if '+cuda' in spec:
             options.extend([
@@ -56,6 +58,7 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
         else:
             options.append('-DENABLE_HIP=OFF')
 
-        options.append(self.define_from_variant('ENABLE_TESTS', 'tests'))
+        options.append('-DENABLE_TESTS={0}'.format(
+            'ON' if '+tests' in spec else 'OFF'))
 
         return options

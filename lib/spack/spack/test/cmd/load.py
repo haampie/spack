@@ -3,12 +3,10 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import os
-
 import pytest
-
+from spack.main import SpackCommand, SpackCommandError
 import spack.spec
 import spack.user_environment as uenv
-from spack.main import SpackCommand, SpackCommandError
 
 load = SpackCommand('load')
 unload = SpackCommand('unload')
@@ -23,9 +21,7 @@ def test_load(install_mockery, mock_fetch, mock_archive, mock_packages):
 
     CMAKE_PREFIX_PATH is the only prefix inspection guaranteed for fake
     packages, since it keys on the prefix instead of a subdir."""
-    install_out = install('mpileaks', output=str, fail_on_error=False)
-    print('spack install mpileaks')
-    print(install_out)
+    install('mpileaks')
     mpileaks_spec = spack.spec.Spec('mpileaks').concretized()
 
     sh_out = load('--sh', '--only', 'package', 'mpileaks')

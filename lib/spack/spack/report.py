@@ -7,12 +7,11 @@
 import codecs
 import collections
 import functools
-import os
 import time
 import traceback
+import os
 
 import llnl.util.lang
-
 import spack.build_environment
 import spack.fetch_strategy
 import spack.package

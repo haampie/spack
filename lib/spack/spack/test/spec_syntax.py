@@ -4,32 +4,25 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import itertools
 import os
-import shlex
-
 import pytest
+import shlex
 
 import llnl.util.filesystem as fs
 
 import spack.hash_types as ht
 import spack.repo
-import spack.spec as sp
 import spack.store
+import spack.spec as sp
 from spack.parse import Token
-from spack.spec import (
-    AmbiguousHashError,
-    DuplicateArchitectureError,
-    DuplicateCompilerSpecError,
-    DuplicateDependencyError,
-    InvalidHashError,
-    MultipleVersionError,
-    NoSuchHashError,
-    NoSuchSpecFileError,
-    RedundantSpecError,
-    Spec,
-    SpecFilenameError,
-    SpecParseError,
-)
+from spack.spec import Spec
+from spack.spec import SpecParseError, RedundantSpecError
+from spack.spec import AmbiguousHashError, InvalidHashError, NoSuchHashError
+from spack.spec import DuplicateArchitectureError
+from spack.spec import DuplicateDependencyError, DuplicateCompilerSpecError
+from spack.spec import SpecFilenameError, NoSuchSpecFileError
+from spack.spec import MultipleVersionError
 from spack.variant import DuplicateVariantError
+
 
 # Sample output for a complex lexing.
 complex_lex = [Token(sp.ID, 'mvapich_foo'),
@@ -359,10 +352,10 @@ class TestSpecSyntax(object):
     def test_ambiguous_hash(self, mutable_database):
         x1 = Spec('a')
         x1.concretize()
-        x1._hash = 'xyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy'
+        x1._hash = 'xy'
         x2 = Spec('a')
         x2.concretize()
-        x2._hash = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+        x2._hash = 'xx'
 
         mutable_database.add(x1, spack.store.layout)
         mutable_database.add(x2, spack.store.layout)
@@ -563,6 +556,10 @@ class TestSpecSyntax(object):
 
         with specfile.open('w') as f:
             f.write(s['libelf'].to_yaml(hash=ht.build_hash))
+
+        print("")
+        print("")
+        print("PARSING HERE")
 
         # Make sure we can use yaml path as dependency, e.g.:
         #     "spack spec libdwarf ^ /path/to/libelf.yaml"

@@ -2,13 +2,12 @@
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
-import collections
 import os.path
+import collections
 import re
 
-import llnl.util.tty as tty
-
 import spack.compiler
+import llnl.util.tty as tty
 
 
 class Xlf(Package):

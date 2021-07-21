@@ -4,9 +4,8 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 
-import re
-
 from spack import *
+import re
 
 
 class Texinfo(AutotoolsPackage, GNUMirrorPackage):

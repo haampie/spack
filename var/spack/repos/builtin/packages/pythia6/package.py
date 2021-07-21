@@ -3,13 +3,11 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+from spack import *
 import numbers
 import os
-
 from six import iteritems
 from six.moves.urllib.parse import urlparse
-
-from spack import *
 
 
 def _is_integral(x):

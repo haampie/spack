@@ -6,9 +6,8 @@ import itertools
 import textwrap
 from typing import List  # novm
 
-import six
-
 import llnl.util.lang
+import six
 
 import spack.config
 from spack.util.path import canonicalize_path

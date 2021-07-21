@@ -9,7 +9,6 @@ import sys
 import pytest
 
 import llnl.util.filesystem
-
 import spack.main
 import spack.version
 

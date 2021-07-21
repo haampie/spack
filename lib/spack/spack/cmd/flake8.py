@@ -9,6 +9,7 @@ import llnl.util.tty as tty
 
 import spack.cmd.style
 
+
 description = "alias for spack style (deprecated)"
 section = spack.cmd.style.section
 level = spack.cmd.style.level

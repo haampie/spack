@@ -4,8 +4,7 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import os
-
-from spack.util.executable import Executable, which
+from spack.util.executable import which, Executable
 
 
 def compile_c_and_execute(source_file, include_flags, link_flags):

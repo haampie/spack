@@ -3,15 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import pytest
-
-from spack.cmd import (
-    CommandNameError,
-    PythonNameError,
-    cmd_name,
-    python_name,
-    require_cmd_name,
-    require_python_name,
-)
+from spack.cmd import require_python_name, python_name, PythonNameError, \
+    require_cmd_name, cmd_name, CommandNameError
 
 
 def test_require_python_name():

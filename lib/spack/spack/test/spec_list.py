@@ -2,12 +2,10 @@
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
-import itertools
-
 import pytest
-
-from spack.spec import Spec
+import itertools
 from spack.spec_list import SpecList
+from spack.spec import Spec
 
 
 class TestSpecList(object):

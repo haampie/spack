@@ -5,9 +5,8 @@
 
 from __future__ import print_function
 
-import re
-
 import pytest
+import re
 
 import spack.main
 import spack.repo

@@ -7,15 +7,16 @@ import os
 
 import pytest
 
-from llnl.util.filesystem import mkdirp, touch, working_dir
+from llnl.util.filesystem import working_dir, touch, mkdirp
 
-import spack.config
 import spack.repo
-from spack.fetch_strategy import HgFetchStrategy
+import spack.config
 from spack.spec import Spec
 from spack.stage import Stage
-from spack.util.executable import which
 from spack.version import ver
+from spack.fetch_strategy import HgFetchStrategy
+from spack.util.executable import which
+
 
 pytestmark = pytest.mark.skipif(
     not which('hg'), reason='requires mercurial to be installed')

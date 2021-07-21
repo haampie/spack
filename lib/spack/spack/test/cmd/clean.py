@@ -4,11 +4,10 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import pytest
-
+import spack.stage
 import spack.caches
 import spack.main
 import spack.package
-import spack.stage
 
 clean = spack.main.SpackCommand('clean')
 

@@ -3,9 +3,9 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import os
-
 from spack import *
+import os
+import inspect
 
 
 class AoclSparse(CMakePackage):
@@ -15,12 +15,11 @@ class AoclSparse(CMakePackage):
     library supports SPMV function with CSR and ELLPACK formats."""
 
     homepage = "https://developer.amd.com/amd-aocl/aocl-sparse/"
-    url = "https://github.com/amd/aocl-sparse/archive/3.0.tar.gz"
+    url = "https://github.com/amd/aocl-sparse/archive/2.2.tar.gz"
     git = "https://github.com/amd/aocl-sparse.git"
 
     maintainers = ['amd-toolchain-support']
 
-    version('3.0',  sha256='1d04ba16e04c065051af916b1ed9afce50296edfa9b1513211a7378e1d6b952e')
     version('2.2',  sha256='33c2ed6622cda61d2613ee63ff12c116a6cd209c62e54307b8fde986cd65f664')
 
     conflicts("%gcc@:9.1.999", msg="Minimum required GCC version is 9.2.0")
@@ -30,10 +29,8 @@ class AoclSparse(CMakePackage):
             values=('Debug', 'Release'))
     variant('shared', default=True,
             description='Build shared library')
-    variant('ilp64', default=False,
-            description='Build with ILP64 support')
 
-    depends_on('boost', when='@2.2')
+    depends_on('boost')
 
     @property
     def build_directory(self):
@@ -42,19 +39,18 @@ class AoclSparse(CMakePackage):
         :return: directory where to build the package
         """
 
-        build_directory = self.stage.source_path
+        builddir = self.stage.source_path
 
         if self.spec.variants['build_type'].value == 'Debug':
-            build_directory = join_path(build_directory, 'build', 'debug')
+            builddir = join_path(self.stage.source_path, 'build', 'debug')
         else:
-            build_directory = join_path(build_directory, 'build', 'release')
+            builddir = join_path(self.stage.source_path, 'build', 'release')
 
-        return build_directory
+        mkdirp(builddir)
+        return builddir
 
-    def cmake_args(self):
+    def cmake(self, spec, prefix):
         """Runs ``cmake`` in the build directory"""
-        spec = self.spec
-
         args = [
             "../..",
             "-DCMAKE_INSTALL_PREFIX:PATH={0}".format(spec.prefix),
@@ -67,39 +63,44 @@ class AoclSparse(CMakePackage):
             args.append("-DCMAKE_BUILD_TYPE=Release")
 
         args.extend([
-            self.define_from_variant('BUILD_SHARED_LIBS', 'shared'),
-
-            "-DBUILD_CLIENTS_BENCHMARKS:BOOL=%s" % (
-                'ON' if self.run_tests else 'OFF')
+            "-DBUILD_SHARED_LIBS:BOOL=%s" % (
+                'ON' if '+shared' in spec else 'OFF'
+            )
         ])
 
-        if spec.satisfies('@3.0:'):
-            args.extend([
-                self.define_from_variant('BUILD_ILP64', 'ilp64')
-            ])
+        args.extend([
+            "-DBUILD_CLIENTS_BENCHMARKS:BOOL=%s" % (
+                'ON' if self.run_tests else 'OFF'
+            )
+        ])
 
-        return args
+        with working_dir(self.build_directory, create=True):
+            inspect.getmodule(self).cmake(*args)
 
+    # Check that self.prefix is there after installation
     @run_after('build')
     @on_package_attributes(run_tests=True)
     def check(self):
-        """ Simple test to test the built library by running
+        """ Simple test to test the installation by running
         one of the aocl-sparse examples, after compiling the
         library with benchmarks.
         """
         dso_suffix = 'so' if '+shared' in self.spec else 'a'
 
         if self.spec.variants['build_type'].value == 'Debug':
-            lib_path = join_path(self.build_directory,
+            build_path = join_path(self.stage.source_path, 'build', 'debug')
+            lib_path = join_path(build_path,
                                  'library',
                                  'libaoclsparse-d.{0}'.format(dso_suffix))
         else:
-            lib_path = join_path(self.build_directory,
+            build_path = join_path(self.stage.source_path, 'build', 'release')
+            lib_path = join_path(build_path,
                                  'library',
                                  'libaoclsparse.{0}'.format(dso_suffix))
 
-        test_bench_bin = join_path(self.build_directory, 'tests',
-                                   'staging', 'aoclsparse-bench')
-        test_args = " --function=csrmv --precision=d "
-        test_args += "--sizem=1000 --sizen=1000 --sizennz=4000 --verify=1 "
-        os.system(test_bench_bin + test_args + lib_path)
+        # with working_dir(join_path(build_path, 'tests', 'staging')):
+        bin_path = join_path(build_path, 'tests', 'staging', 'aoclsparse-bench')
+        bin_args = " --function=csrmv --precision=d "
+        bin_args = bin_args + "--sizem=1000 --sizen=1000 --sizennz=4000 --verify=1 "
+        unit_test = bin_path + bin_args + lib_path
+        os.system(unit_test)

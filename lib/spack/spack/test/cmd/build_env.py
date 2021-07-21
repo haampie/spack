@@ -3,12 +3,12 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import pytest
 from six.moves import cPickle
+import pytest
 
-from spack.main import SpackCommand
+from spack.main import SpackCommand, SpackCommandError
 
-build_env = SpackCommand('build-env')
+info = SpackCommand('build-env')
 
 
 @pytest.mark.parametrize('pkg', [
@@ -17,24 +17,17 @@ build_env = SpackCommand('build-env')
 ])
 @pytest.mark.usefixtures('config')
 def test_it_just_runs(pkg):
-    build_env(*pkg)
+    info(*pkg)
 
 
-@pytest.mark.usefixtures('config')
-def test_error_when_multiple_specs_are_given():
-    output = build_env('libelf libdwarf', fail_on_error=False)
-    assert 'only takes one spec' in output
-
-
-@pytest.mark.parametrize('args', [
-    ('--', '/bin/bash', '-c', 'echo test'),
-    ('--',),
-    (),
+@pytest.mark.parametrize('pkg,error_cls', [
+    ('zlib libszip', SpackCommandError),
+    ('', IndexError)
 ])
 @pytest.mark.usefixtures('config')
-def test_build_env_requires_a_spec(args):
-    output = build_env(*args, fail_on_error=False)
-    assert 'requires a spec' in output
+def test_it_just_fails(pkg, error_cls):
+    with pytest.raises(error_cls):
+        info(pkg)
 
 
 _out_file = 'env.out'
@@ -43,7 +36,7 @@ _out_file = 'env.out'
 @pytest.mark.usefixtures('config')
 def test_dump(tmpdir):
     with tmpdir.as_cwd():
-        build_env('--dump', _out_file, 'zlib')
+        info('--dump', _out_file, 'zlib')
         with open(_out_file) as f:
             assert(any(line.startswith('PATH=') for line in f.readlines()))
 
@@ -51,7 +44,7 @@ def test_dump(tmpdir):
 @pytest.mark.usefixtures('config')
 def test_pickle(tmpdir):
     with tmpdir.as_cwd():
-        build_env('--pickle', _out_file, 'zlib')
+        info('--pickle', _out_file, 'zlib')
         environment = cPickle.load(open(_out_file, 'rb'))
         assert(type(environment) == dict)
         assert('PATH' in environment)

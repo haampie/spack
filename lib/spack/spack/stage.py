@@ -14,32 +14,28 @@ import shutil
 import stat
 import sys
 import tempfile
+from six import string_types
+from six import iteritems
 from typing import Dict  # novm
 
-from six import iteritems, string_types
-
 import llnl.util.tty as tty
-from llnl.util.filesystem import (
-    can_access,
-    install,
-    install_tree,
-    mkdirp,
-    partition_path,
-    remove_linked_tree,
-)
+from llnl.util.filesystem import mkdirp, can_access, install, install_tree
+from llnl.util.filesystem import partition_path, remove_linked_tree
 
+import spack.paths
 import spack.caches
 import spack.cmd
 import spack.config
 import spack.error
-import spack.fetch_strategy as fs
 import spack.mirror
-import spack.paths
 import spack.util.lock
-import spack.util.path as sup
+import spack.fetch_strategy as fs
 import spack.util.pattern as pattern
+import spack.util.path as sup
 import spack.util.url as url_util
-from spack.util.crypto import bit_length, prefix_bits
+
+from spack.util.crypto import prefix_bits, bit_length
+
 
 # The well-known stage source subdirectory name.
 _source_path_subdir = 'spack-src'
@@ -48,8 +44,7 @@ _source_path_subdir = 'spack-src'
 stage_prefix = 'spack-stage-'
 
 
-def create_stage_root(path):
-    # type: (str) -> None
+def _create_stage_root(path):
     """Create the stage root directory and ensure appropriate access perms."""
     assert path.startswith(os.path.sep) and len(path.strip()) > 1
 
@@ -104,15 +99,6 @@ def create_stage_root(path):
             tty.warn("Expected user {0} to own {1}, but it is owned by {2}"
                      .format(user_uid, p, p_stat.st_uid))
 
-    spack_src_subdir = os.path.join(path, _source_path_subdir)
-    # When staging into a user-specified directory with `spack stage -p <PATH>`, we need
-    # to ensure the `spack-src` subdirectory exists, as we can't rely on it being
-    # created automatically by spack. It's not clear why this is the case for `spack
-    # stage -p`, but since `mkdirp()` is idempotent, this should not change the behavior
-    # for any other code paths.
-    if not os.path.isdir(spack_src_subdir):
-        mkdirp(spack_src_subdir, mode=stat.S_IRWXU)
-
 
 def _first_accessible_path(paths):
     """Find the first path that is accessible, creating it if necessary."""
@@ -124,7 +110,7 @@ def _first_accessible_path(paths):
                     return path
             else:
                 # Now create the stage root with the proper group/perms.
-                create_stage_root(path)
+                _create_stage_root(path)
                 return path
 
         except OSError as e:
@@ -565,9 +551,8 @@ class Stage(object):
         """Perform a fetch if the resource is not already cached
 
         Arguments:
-            mirror (spack.caches.MirrorCache): the mirror to cache this Stage's
-                resource in
-            stats (spack.mirror.MirrorStats): this is updated depending on whether the
+            mirror (MirrorCache): the mirror to cache this Stage's resource in
+            stats (MirrorStats): this is updated depending on whether the
                 caching operation succeeded or failed
         """
         if isinstance(self.default_fetcher, fs.BundleFetchStrategy):
@@ -836,7 +821,7 @@ def get_checksums_for_versions(
     Args:
         url_dict (dict): A dictionary of the form: version -> URL
         name (str): The name of the package
-        first_stage_function (typing.Callable): function that takes a Stage and a URL;
+        first_stage_function (callable): function that takes a Stage and a URL;
             this is run on the stage of the first URL downloaded
         keep_stage (bool): whether to keep staging area when command completes
         batch (bool): whether to ask user how many versions to fetch (false)

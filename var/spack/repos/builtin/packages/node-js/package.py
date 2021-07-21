@@ -3,10 +3,9 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import subprocess
-import sys
-
 from spack import *
+import sys
+import subprocess
 
 
 class NodeJs(Package):

@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import re
-
 import pytest
 
 from llnl.util.tty.color import color_when

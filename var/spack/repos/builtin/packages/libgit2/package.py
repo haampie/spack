@@ -96,6 +96,6 @@ class Libgit2(CMakePackage):
 
         # Control tests
         args.append(
-            self.define('BUILD_CLAR', self.run_tests))
+            '-DBUILD_CLAR={0}'.format('ON' if self.run_tests else 'OFF'))
 
         return args

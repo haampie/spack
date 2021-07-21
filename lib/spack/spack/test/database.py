@@ -9,11 +9,9 @@ both in memory and in its file
 """
 import datetime
 import functools
-import json
 import os
-
 import pytest
-
+import json
 try:
     import uuid
     _use_uuid = True
@@ -26,14 +24,15 @@ from jsonschema import validate
 import llnl.util.lock as lk
 from llnl.util.tty.colify import colify
 
+import spack.repo
+import spack.store
 import spack.database
 import spack.package
-import spack.repo
 import spack.spec
-import spack.store
-from spack.schema.database_index import schema
-from spack.util.executable import Executable
 from spack.util.mock_package import MockPackageMultiRepo
+from spack.util.executable import Executable
+from spack.schema.database_index import schema
+
 
 pytestmark = pytest.mark.db
 
@@ -425,7 +424,7 @@ def test_005_db_exists(database):
 def test_010_all_install_sanity(database):
     """Ensure that the install layout reflects what we think it does."""
     all_specs = spack.store.layout.all_specs()
-    assert len(all_specs) == 15
+    assert len(all_specs) == 14
 
     # Query specs with multiple configurations
     mpileaks_specs = [s for s in all_specs if s.satisfies('mpileaks')]
@@ -546,8 +545,7 @@ def test_041_ref_counts_deprecate(mutable_database):
 def test_050_basic_query(database):
     """Ensure querying database is consistent with what is installed."""
     # query everything
-    total_specs = len(spack.store.db.query())
-    assert total_specs == 17
+    assert len(spack.store.db.query()) == 16
 
     # query specs with multiple configurations
     mpileaks_specs = database.query('mpileaks')
@@ -573,10 +571,10 @@ def test_050_basic_query(database):
     assert len(database.query('mpileaks ^zmpi')) == 1
 
     # Query by date
-    assert len(database.query(start_date=datetime.datetime.min)) == total_specs
+    assert len(database.query(start_date=datetime.datetime.min)) == 16
     assert len(database.query(start_date=datetime.datetime.max)) == 0
     assert len(database.query(end_date=datetime.datetime.min)) == 0
-    assert len(database.query(end_date=datetime.datetime.max)) == total_specs
+    assert len(database.query(end_date=datetime.datetime.max)) == 16
 
 
 def test_060_remove_and_add_root_package(mutable_database):
@@ -640,6 +638,10 @@ def test_090_non_root_ref_counts(mutable_database):
     assert mpich_rec.ref_count == 0
 
 
+@pytest.mark.skipif(
+    os.environ.get('SPACK_TEST_SOLVER') == 'clingo',
+    reason='Test for Clingo are run in a container with root permissions'
+)
 def test_100_no_write_with_exception_on_remove(database):
     def fail_while_writing():
         with database.write_transaction():
@@ -657,6 +659,10 @@ def test_100_no_write_with_exception_on_remove(database):
         assert len(database.query('mpileaks ^zmpi', installed=any)) == 1
 
 
+@pytest.mark.skipif(
+    os.environ.get('SPACK_TEST_SOLVER') == 'clingo',
+    reason='Test for Clingo are run in a container with root permissions'
+)
 def test_110_no_write_with_exception_on_install(database):
     def fail_while_writing():
         with database.write_transaction():

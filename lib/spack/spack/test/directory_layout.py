@@ -8,15 +8,12 @@ This test verifies that the Spack directory layout works properly.
 """
 import os
 import os.path
-
 import pytest
 
 import spack.paths
 import spack.repo
-from spack.directory_layout import (
-    InvalidDirectoryLayoutParametersError,
-    YamlDirectoryLayout,
-)
+from spack.directory_layout import YamlDirectoryLayout
+from spack.directory_layout import InvalidDirectoryLayoutParametersError
 from spack.spec import Spec
 
 # number of packages to test (to reduce test time)

@@ -7,12 +7,12 @@ from __future__ import print_function
 
 import sys
 
-import llnl.util.tty as tty
 from llnl.util.tty.colify import colify
+import llnl.util.tty as tty
 
 import spack.cmd.common.arguments as arguments
 import spack.repo
-from spack.version import infinity_versions, ver
+from spack.version import VersionList, ver
 
 description = "list available versions of a package"
 section = "packaging"
@@ -66,10 +66,7 @@ def versions(parser, args):
     if args.new:
         if sys.stdout.isatty():
             tty.msg('New remote versions (not yet checksummed):')
-        numeric_safe_versions = list(filter(
-            lambda v: str(v) not in infinity_versions,
-            safe_versions))
-        highest_safe_version = max(numeric_safe_versions)
+        highest_safe_version = VersionList(safe_versions).highest_numeric()
         remote_versions  = set([ver(v) for v in set(fetched_versions)
                                 if v > highest_safe_version])
     else:

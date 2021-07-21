@@ -30,7 +30,8 @@ class Assimp(CMakePackage):
     def cmake_args(self):
         args = [
             '-DASSIMP_BUILD_TESTS=OFF',
-            self.define_from_variant('BUILD_SHARED_LIBS', 'shared'),
+            '-DBUILD_SHARED_LIBS:BOOL=%s' % (
+                'ON' if '+shared' in self.spec else 'OFF'),
         ]
         return args
 

@@ -17,8 +17,8 @@ configuration system behaves.  The scopes are:
 And corresponding :ref:`per-platform scopes <platform-scopes>`. Important
 functions in this module are:
 
-* :func:`~spack.config.Configuration.get_config`
-* :func:`~spack.config.Configuration.update_config`
+* :py:func:`get_config`
+* :py:func:`update_config`
 
 ``get_config`` reads in YAML data for a particular scope and returns
 it. Callers can then modify the data and write it back with
@@ -35,36 +35,35 @@ import functools
 import os
 import re
 import sys
+import multiprocessing
 from contextlib import contextmanager
+from six import iteritems
+from ordereddict_backport import OrderedDict
 from typing import List  # novm
 
 import ruamel.yaml as yaml
-from ordereddict_backport import OrderedDict
 from ruamel.yaml.error import MarkedYAMLError
-from six import iteritems
 
 import llnl.util.lang
 import llnl.util.tty as tty
 from llnl.util.filesystem import mkdirp
 
+import spack.paths
 import spack.architecture
 import spack.compilers
-import spack.paths
 import spack.schema
-import spack.schema.bootstrap
 import spack.schema.compilers
-import spack.schema.config
-import spack.schema.env
 import spack.schema.mirrors
-import spack.schema.modules
-import spack.schema.packages
 import spack.schema.repos
+import spack.schema.packages
+import spack.schema.modules
+import spack.schema.config
 import spack.schema.upstreams
+import spack.schema.env
+from spack.error import SpackError
 
 # Hacked yaml for configuration files preserves line numbers.
 import spack.util.spack_yaml as syaml
-from spack.error import SpackError
-from spack.util.cpus import cpus_available
 
 #: Dict from section names -> schema for that section
 section_schemas = {
@@ -75,7 +74,6 @@ section_schemas = {
     'modules': spack.schema.modules.schema,
     'config': spack.schema.config.schema,
     'upstreams': spack.schema.upstreams.schema,
-    'bootstrap': spack.schema.bootstrap.schema
 }
 
 # Same as above, but including keys for environments
@@ -112,7 +110,7 @@ config_defaults = {
         'verify_ssl': True,
         'checksum': True,
         'dirty': False,
-        'build_jobs': min(16, cpus_available()),
+        'build_jobs': min(16, multiprocessing.cpu_count()),
         'build_stage': '$tempdir/spack-stage',
         'concretizer': 'original',
     }
@@ -131,7 +129,7 @@ def first_existing(dictionary, keys):
     try:
         return next(k for k in keys if k in dictionary)
     except StopIteration:
-        raise KeyError("None of %s is in dict!" % str(keys))
+        raise KeyError("None of %s is in dict!" % keys)
 
 
 class ConfigScope(object):
@@ -243,18 +241,11 @@ class SingleFileScope(ConfigScope):
         #      }
         #   }
         # }
-
-        # This bit ensures we have read the file and have
-        # the raw data in memory
         if self._raw_data is None:
             self._raw_data = read_config_file(self.path, self.schema)
             if self._raw_data is None:
                 return None
 
-        # Here we know we have the raw data and ensure we
-        # populate the sections dictionary, which may be
-        # cleared by the clear() method
-        if not self.sections:
             section_data = self._raw_data
             for key in self.yaml_path:
                 if section_data is None:
@@ -263,7 +254,6 @@ class SingleFileScope(ConfigScope):
 
             for section_key, data in section_data.items():
                 self.sections[section_key] = {section_key: data}
-
         return self.sections.get(section, None)
 
     def _write_section(self, section):
@@ -363,10 +353,6 @@ class InternalConfigScope(ConfigScope):
 
     def __repr__(self):
         return '<InternalConfigScope: %s>' % self.name
-
-    def clear(self):
-        # no cache to clear here.
-        pass
 
     @staticmethod
     def _process_dict_keyname_overrides(data):
@@ -573,17 +559,16 @@ class Configuration(object):
         YAML config file that looks like this::
 
            config:
-             install_tree:
-               root: $spack/opt/spack
-             build_stage:
-             - $tmpdir/$user/spack-stage
+             install_tree: $spack/opt/spack
+             module_roots:
+               lmod:   $spack/share/spack/lmod
 
         ``get_config('config')`` will return::
 
-           { 'install_tree': {
-                 'root': '$spack/opt/spack',
+           { 'install_tree': '$spack/opt/spack',
+             'module_roots: {
+                 'lmod': '$spack/share/spack/lmod'
              }
-             'build_stage': ['$tmpdir/$user/spack-stage']
            }
 
         """
@@ -651,11 +636,7 @@ class Configuration(object):
 
         while parts:
             key = parts.pop(0)
-            # cannot use value.get(key, default) in case there is another part
-            # and default is not a dict
-            if key not in value:
-                return default
-            value = value[key]
+            value = value.get(key, default)
 
         return value
 
@@ -722,7 +703,7 @@ def override(path_or_scope, value=None):
 
     Arguments:
         path_or_scope (ConfigScope or str): scope or single option to override
-        value (object or None): value for the single option
+        value (object, optional): value for the single option
 
     Temporarily push a scope on the current configuration, then remove it
     after the context completes. If a single option is provided, create
@@ -937,7 +918,6 @@ def validate(data, schema, filename=None):
     on Spack YAML structures.
     """
     import jsonschema
-
     # validate a copy to avoid adding defaults
     # This allows us to round-trip data without adding to it.
     test_data = copy.deepcopy(data)
@@ -1163,7 +1143,7 @@ def default_modify_scope(section='config'):
     priority scope.
 
     Arguments:
-        section (bool): Section for which to get the default scope.
+        section (boolean): Section for which to get the default scope.
             If this is not 'compilers', a general (non-platform) scope is used.
     """
     if section == 'compilers':

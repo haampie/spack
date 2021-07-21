@@ -4,9 +4,9 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import collections
 import errno
+import hashlib
 import glob
 import grp
-import hashlib
 import itertools
 import numbers
 import os
@@ -19,11 +19,10 @@ import tempfile
 from contextlib import contextmanager
 
 import six
-
 from llnl.util import tty
 from llnl.util.lang import dedupe, memoized
-
 from spack.util.executable import Executable
+
 
 if sys.version_info >= (3, 3):
     from collections.abc import Sequence  # novm
@@ -444,7 +443,7 @@ def copy_tree(src, dest, symlinks=True, ignore=None, _permissions=False):
         src (str): the directory to copy
         dest (str): the destination directory
         symlinks (bool): whether or not to preserve symlinks
-        ignore (typing.Callable): function indicating which files to ignore
+        ignore (function): function indicating which files to ignore
         _permissions (bool): for internal use only
 
     Raises:
@@ -518,7 +517,7 @@ def install_tree(src, dest, symlinks=True, ignore=None):
         src (str): the directory to install
         dest (str): the destination directory
         symlinks (bool): whether or not to preserve symlinks
-        ignore (typing.Callable): function indicating which files to ignore
+        ignore (function): function indicating which files to ignore
 
     Raises:
         IOError: if *src* does not match any files or directories
@@ -557,12 +556,12 @@ def mkdirp(*paths, **kwargs):
         paths (str): paths to create with mkdirp
 
     Keyword Aguments:
-        mode (permission bits or None): optional permissions to set
+        mode (permission bits or None, optional): optional permissions to set
             on the created directory -- use OS default if not provided
-        group (group name or None): optional group for permissions of
+        group (group name or None, optional): optional group for permissions of
             final created directory -- use OS default if not provided. Only
             used if world write permissions are not set
-        default_perms (str or None): one of 'parents' or 'args'. The default permissions
+        default_perms ('parents' or 'args', optional): The default permissions
             that are set for directories that are not themselves an argument
             for mkdirp. 'parents' means intermediate directories get the
             permissions of their direct parent directory, 'args' means
@@ -866,7 +865,7 @@ def traverse_tree(source_root, dest_root, rel_path='', **kwargs):
     Keyword Arguments:
         order (str): Whether to do pre- or post-order traversal. Accepted
             values are 'pre' and 'post'
-        ignore (typing.Callable): function indicating which files to ignore
+        ignore (function): function indicating which files to ignore
         follow_nonexisting (bool): Whether to descend into directories in
             ``src`` that do not exit in ``dest``. Default is True
         follow_links (bool): Whether to descend into symlinks in ``src``
@@ -1114,11 +1113,11 @@ def find(root, files, recursive=True):
     Parameters:
         root (str): The root directory to start searching from
         files (str or Sequence): Library name(s) to search for
-        recursive (bool): if False search only root folder,
+        recurse (bool, optional): if False search only root folder,
             if True descends top-down from the root. Defaults to True.
 
     Returns:
-        list: The files that have been found
+        list of strings: The files that have been found
     """
     if isinstance(files, six.string_types):
         files = [files]
@@ -1200,7 +1199,7 @@ class FileList(Sequence):
         ['/dir1', '/dir2']
 
         Returns:
-            list: A list of directories
+            list of strings: A list of directories
         """
         return list(dedupe(
             os.path.dirname(x) for x in self.files if os.path.dirname(x)
@@ -1218,7 +1217,7 @@ class FileList(Sequence):
         ['a.h', 'b.h']
 
         Returns:
-            list: A list of base-names
+            list of strings: A list of base-names
         """
         return list(dedupe(os.path.basename(x) for x in self.files))
 
@@ -1305,7 +1304,7 @@ class HeaderList(FileList):
         """Stable de-duplication of the headers.
 
         Returns:
-            list: A list of header files
+            list of strings: A list of header files
         """
         return self.files
 
@@ -1318,7 +1317,7 @@ class HeaderList(FileList):
         ['a', 'b']
 
         Returns:
-            list: A list of files without extensions
+            list of strings: A list of files without extensions
         """
         names = []
 
@@ -1409,9 +1408,9 @@ def find_headers(headers, root, recursive=False):
     =======  ====================================
 
     Parameters:
-        headers (str or list): Header name(s) to search for
+        headers (str or list of str): Header name(s) to search for
         root (str): The root directory to start searching from
-        recursive (bool): if False search only root folder,
+        recursive (bool, optional): if False search only root folder,
             if True descends top-down from the root. Defaults to False.
 
     Returns:
@@ -1447,7 +1446,7 @@ def find_all_headers(root):
     in the directory passed as argument.
 
     Args:
-        root (str): directory where to look recursively for header files
+        root (path): directory where to look recursively for header files
 
     Returns:
         List of all headers found in ``root`` and subdirectories.
@@ -1467,7 +1466,7 @@ class LibraryList(FileList):
         """Stable de-duplication of library files.
 
         Returns:
-            list: A list of library files
+            list of strings: A list of library files
         """
         return self.files
 
@@ -1480,7 +1479,7 @@ class LibraryList(FileList):
         ['a', 'b']
 
         Returns:
-            list: A list of library names
+            list of strings: A list of library names
         """
         names = []
 
@@ -1565,8 +1564,8 @@ def find_system_libraries(libraries, shared=True):
     =======  ====================================
 
     Parameters:
-        libraries (str or list): Library name(s) to search for
-        shared (bool): if True searches for shared libraries,
+        libraries (str or list of str): Library name(s) to search for
+        shared (bool, optional): if True searches for shared libraries,
             otherwise for static. Defaults to True.
 
     Returns:
@@ -1616,11 +1615,11 @@ def find_libraries(libraries, root, shared=True, recursive=False):
     =======  ====================================
 
     Parameters:
-        libraries (str or list): Library name(s) to search for
+        libraries (str or list of str): Library name(s) to search for
         root (str): The root directory to start searching from
-        shared (bool): if True searches for shared libraries,
+        shared (bool, optional): if True searches for shared libraries,
             otherwise for static. Defaults to True.
-        recursive (bool): if False search only root folder,
+        recursive (bool, optional): if False search only root folder,
             if True descends top-down from the root. Defaults to False.
 
     Returns:

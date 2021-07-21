@@ -3,21 +3,20 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import collections
-import filecmp
 import os
-
+import filecmp
 import pytest
+import collections
 
-from llnl.util.filesystem import mkdirp, working_dir
+from llnl.util.filesystem import working_dir, mkdirp
 
 import spack.patch
 import spack.paths
 import spack.repo
 import spack.util.compression
-from spack.spec import Spec
-from spack.stage import Stage
 from spack.util.executable import Executable
+from spack.stage import Stage
+from spack.spec import Spec
 
 # various sha256 sums (using variables for legibility)
 

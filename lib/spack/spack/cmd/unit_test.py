@@ -3,13 +3,13 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from __future__ import division, print_function
+from __future__ import print_function
+from __future__ import division
 
-import argparse
 import collections
-import re
 import sys
-
+import re
+import argparse
 import pytest
 from six import StringIO
 

@@ -46,7 +46,6 @@ class MofemUsersModules(CMakePackage):
 
     def cmake_args(self):
         spec = self.spec
-        from_variant = self.define_from_variant
 
         options = []
 
@@ -54,10 +53,12 @@ class MofemUsersModules(CMakePackage):
         options.extend([
             '-DMOFEM_DIR=%s' % spec['mofem-cephas'].prefix.users_module,
             '-DWITH_SPACK=YES',
-            from_variant('STAND_ALLONE_USERS_MODULES', 'copy_user_modules')])
+            '-DSTAND_ALLONE_USERS_MODULES=%s' %
+            ('YES' if '+copy_user_modules' in spec else 'NO')])
 
         # build tests
-        options.append(self.define('MOFEM_UM_BUILD_TESTS', self.run_tests))
+        options.append('-DMOFEM_UM_BUILD_TESTS={0}'.format(
+            'ON' if self.run_tests else 'OFF'))
 
         return options
 

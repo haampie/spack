@@ -11,9 +11,10 @@ import subprocess
 import pytest
 
 import spack.cmd
+from spack.cmd.commands import _positional_to_subroutine
 import spack.main
 import spack.paths
-from spack.cmd.commands import _positional_to_subroutine
+
 
 commands = spack.main.SpackCommand('commands')
 

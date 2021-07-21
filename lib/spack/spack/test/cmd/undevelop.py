@@ -3,8 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import spack.environment as ev
 import spack.spec
+import spack.environment as ev
 from spack.main import SpackCommand
 
 undevelop = SpackCommand('undevelop')

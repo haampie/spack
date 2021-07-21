@@ -6,14 +6,13 @@ import os
 
 import ordereddict_backport
 import pytest
-
-import llnl.util.tty as tty
-
 import spack.config
 import spack.paths
-import spack.util.s3
 import spack.util.web
+import spack.util.s3
 from spack.version import ver
+
+import llnl.util.tty as tty
 
 
 def _create_url(relative_url):
@@ -216,11 +215,6 @@ class MockPaginator(object):
         return MockPages()
 
 
-class MockClientError(Exception):
-    def __init__(self):
-        self.response = {'Error': {'Code': 'NoSuchKey'}}
-
-
 class MockS3Client(object):
     def get_paginator(self, *args, **kwargs):
         return MockPaginator()
@@ -238,12 +232,6 @@ class MockS3Client(object):
 
     def delete_object(self, *args, **kwargs):
         pass
-
-    def get_object(self, Bucket=None, Key=None):
-        self.ClientError = MockClientError
-        if Bucket == 'my-bucket' and Key == 'subdirectory/my-file':
-            return True
-        raise self.ClientError
 
 
 def test_remove_s3_url(monkeypatch, capfd):
@@ -266,21 +254,3 @@ def test_remove_s3_url(monkeypatch, capfd):
     assert('Failed to delete keyone (Access Denied)' in err)
     assert('Deleted keythree' in err)
     assert('Deleted keytwo' in err)
-
-
-def test_s3_url_exists(monkeypatch, capfd):
-    def mock_create_s3_session(url):
-        return MockS3Client()
-    monkeypatch.setattr(
-        spack.util.s3, 'create_s3_session', mock_create_s3_session)
-
-    fake_s3_url_exists = 's3://my-bucket/subdirectory/my-file'
-    assert(spack.util.web.url_exists(fake_s3_url_exists))
-
-    fake_s3_url_does_not_exist = 's3://my-bucket/subdirectory/my-notfound-file'
-    assert(not spack.util.web.url_exists(fake_s3_url_does_not_exist))
-
-
-def test_s3_url_parsing():
-    assert(spack.util.s3._parse_s3_endpoint_url("example.com") == 'https://example.com')
-    assert(spack.util.s3._parse_s3_endpoint_url("http://example.com") == 'http://example.com')

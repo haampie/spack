@@ -9,20 +9,19 @@ import contextlib
 import inspect
 import json
 import os
-import os.path
-import platform
 import re
-import socket
 import sys
+import os.path
 
 import six
-from six.moves import cPickle
-from six.moves import shlex_quote as cmd_quote
 
 import llnl.util.tty as tty
+import spack.util.executable as executable
+
 from llnl.util.lang import dedupe
 
-import spack.util.executable as executable
+from six.moves import shlex_quote as cmd_quote
+from six.moves import cPickle
 
 system_paths = ['/', '/usr', '/usr/local']
 suffixes = ['bin', 'bin64', 'include', 'lib', 'lib64']
@@ -140,40 +139,6 @@ def pickle_environment(path, environment=None):
                  open(path, 'wb'), protocol=2)
 
 
-def get_host_environment_metadata():
-    """Get the host environment, reduce to a subset that we can store in
-    the install directory, and add the spack version.
-    """
-    import spack.main
-    environ = get_host_environment()
-    return {"host_os": environ['os'],
-            "platform": environ['platform'],
-            "host_target": environ['target'],
-            "hostname": environ['hostname'],
-            "spack_version": spack.main.get_version(),
-            "kernel_version": platform.version()}
-
-
-def get_host_environment():
-    """Return a dictionary (lookup) with host information (not including the
-    os.environ).
-    """
-    import spack.architecture as architecture
-    import spack.spec
-    arch = architecture.Arch(
-        architecture.platform(), 'default_os', 'default_target')
-    arch_spec = spack.spec.Spec('arch=%s' % arch)
-    return {
-        'target': str(arch.target),
-        'os': str(arch.os),
-        'platform': str(arch.platform),
-        'arch': arch_spec,
-        'architecture': arch_spec,
-        'arch_str': str(arch),
-        'hostname': socket.gethostname()
-    }
-
-
 @contextlib.contextmanager
 def set_env(**kwargs):
     """Temporarily sets and restores environment variables.
@@ -244,16 +209,12 @@ class NameValueModifier(object):
 class SetEnv(NameValueModifier):
 
     def execute(self, env):
-        tty.debug("SetEnv: {0}={1}".format(self.name, str(self.value)),
-                  level=3)
         env[self.name] = str(self.value)
 
 
 class AppendFlagsEnv(NameValueModifier):
 
     def execute(self, env):
-        tty.debug("AppendFlagsEnv: {0}={1}".format(self.name, str(self.value)),
-                  level=3)
         if self.name in env and env[self.name]:
             env[self.name] += self.separator + str(self.value)
         else:
@@ -263,7 +224,6 @@ class AppendFlagsEnv(NameValueModifier):
 class UnsetEnv(NameModifier):
 
     def execute(self, env):
-        tty.debug("UnsetEnv: {0}".format(self.name), level=3)
         # Avoid throwing if the variable was not set
         env.pop(self.name, None)
 
@@ -271,8 +231,6 @@ class UnsetEnv(NameModifier):
 class RemoveFlagsEnv(NameValueModifier):
 
     def execute(self, env):
-        tty.debug("RemoveFlagsEnv: {0}-{1}".format(self.name, str(self.value)),
-                  level=3)
         environment_value = env.get(self.name, '')
         flags = environment_value.split(
             self.separator) if environment_value else []
@@ -284,15 +242,12 @@ class SetPath(NameValueModifier):
 
     def execute(self, env):
         string_path = concatenate_paths(self.value, separator=self.separator)
-        tty.debug("SetPath: {0}={1}".format(self.name, string_path), level=3)
         env[self.name] = string_path
 
 
 class AppendPath(NameValueModifier):
 
     def execute(self, env):
-        tty.debug("AppendPath: {0}+{1}".format(self.name, str(self.value)),
-                  level=3)
         environment_value = env.get(self.name, '')
         directories = environment_value.split(
             self.separator) if environment_value else []
@@ -303,8 +258,6 @@ class AppendPath(NameValueModifier):
 class PrependPath(NameValueModifier):
 
     def execute(self, env):
-        tty.debug("PrependPath: {0}+{1}".format(self.name, str(self.value)),
-                  level=3)
         environment_value = env.get(self.name, '')
         directories = environment_value.split(
             self.separator) if environment_value else []
@@ -315,8 +268,6 @@ class PrependPath(NameValueModifier):
 class RemovePath(NameValueModifier):
 
     def execute(self, env):
-        tty.debug("RemovePath: {0}-{1}".format(self.name, str(self.value)),
-                  level=3)
         environment_value = env.get(self.name, '')
         directories = environment_value.split(
             self.separator) if environment_value else []
@@ -328,7 +279,6 @@ class RemovePath(NameValueModifier):
 class DeprioritizeSystemPaths(NameModifier):
 
     def execute(self, env):
-        tty.debug("DeprioritizeSystemPaths: {0}".format(self.name), level=3)
         environment_value = env.get(self.name, '')
         directories = environment_value.split(
             self.separator) if environment_value else []
@@ -340,8 +290,6 @@ class DeprioritizeSystemPaths(NameModifier):
 class PruneDuplicatePaths(NameModifier):
 
     def execute(self, env):
-        tty.debug("PruneDuplicatePaths: {0}".format(self.name),
-                  level=3)
         environment_value = env.get(self.name, '')
         directories = environment_value.split(
             self.separator) if environment_value else []
@@ -623,7 +571,7 @@ class EnvironmentModifications(object):
 
         Args:
             filename (str): the file to be sourced
-            *arguments (list): arguments to pass on the command line
+            *arguments (list of str): arguments to pass on the command line
 
         Keyword Args:
             shell (str): the shell to use (default: ``bash``)
@@ -640,8 +588,6 @@ class EnvironmentModifications(object):
             clean (bool): in addition to removing empty entries,
                 also remove duplicate entries (default: False).
         """
-        tty.debug("EnvironmentModifications.from_sourcing_file: {0}"
-                  .format(filename))
         # Check if the file actually exists
         if not os.path.isfile(filename):
             msg = 'Trying to source non-existing file: {0}'.format(filename)
@@ -867,7 +813,7 @@ def inspect_path(root, inspections, exclude=None):
             modifications are not performed immediately, but stored in a
             command object that is returned to client
 
-        exclude (typing.Callable): optional callable. If present it must accept an
+        exclude (callable): optional callable. If present it must accept an
             absolute path and return True if it should be excluded from the
             inspection
 
@@ -920,7 +866,7 @@ def preserve_environment(*variables):
     explicitly unset on exit.
 
     Args:
-        variables (list): list of environment variables to be preserved
+        variables (list of str): list of environment variables to be preserved
     """
     cache = {}
     for var in variables:
@@ -996,9 +942,7 @@ def environment_after_sourcing_files(*files, **kwargs):
             source_file, suppress_output,
             concatenate_on_success, dump_environment,
         ])
-        output = shell(
-            source_file_arguments, output=str, env=environment, ignore_quotes=True
-        )
+        output = shell(source_file_arguments, output=str, env=environment)
         environment = json.loads(output)
 
         # If we're in python2, convert to str objects instead of unicode
@@ -1031,9 +975,9 @@ def sanitize(environment, blacklist, whitelist):
 
     Args:
         environment (dict): input dictionary
-        blacklist (list): literals or regex patterns to be
+        blacklist (list of str): literals or regex patterns to be
             blacklisted
-        whitelist (list): literals or regex patterns to be
+        whitelist (list of str): literals or regex patterns to be
             whitelisted
     """
 

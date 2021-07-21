@@ -3,14 +3,14 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import os
 import sys
+import os
 
 import spack.cmd
 import spack.cmd.common.arguments as arguments
-import spack.error
-import spack.user_environment as uenv
 import spack.util.environment
+import spack.user_environment as uenv
+import spack.error
 
 description = "remove package from the user environment"
 section = "user environment"

@@ -5,7 +5,6 @@
 import os.path
 
 import pytest
-
 import spack.main
 
 repo = spack.main.SpackCommand('repo')

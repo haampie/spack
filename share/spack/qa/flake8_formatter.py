@@ -1,8 +1,7 @@
 import re
 import sys
-from collections import defaultdict
-
 import pycodestyle
+from collections import defaultdict
 from flake8.formatting.default import Pylint
 from flake8.style_guide import Violation
 

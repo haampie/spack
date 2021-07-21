@@ -75,7 +75,8 @@ class MofemCephas(CMakePackage):
             '-DBOOST_DIR=%s' % spec['boost'].prefix])
 
         # build tests
-        options.append(self.define('MOFEM_BUILD_TESTS', self.run_tests))
+        options.append('-DMOFEM_BUILD_TESTS={0}'.format(
+            'ON' if self.run_tests else 'OFF'))
 
         # variant packages
         if '+adol-c' in spec:
@@ -92,5 +93,6 @@ class MofemCephas(CMakePackage):
 
         # copy users modules, i.e. stand alone vs linked users modules
         options.append(
-            self.define_from_variant('STAND_ALLONE_USERS_MODULES', 'copy_user_modules'))
+            '-DSTAND_ALLONE_USERS_MODULES=%s' %
+            ('YES' if '+copy_user_modules' in spec else 'NO'))
         return options

@@ -13,9 +13,8 @@ class PySphinxcontribQthelp(PythonPackage):
     homepage = "http://sphinx-doc.org/"
     pypi = "sphinxcontrib-qthelp/sphinxcontrib-qthelp-1.0.2.tar.gz"
 
-    # 'sphinx' requires 'sphinxcontrib-qthelp' at build-time, but
-    # 'sphinxcontrib-qthelp' requires 'sphinx' at run-time. Don't bother trying to
-    # import any modules.
+    # Sphinx requires sphinxcontrib-qthelp at build-time, but
+    # sphinxcontrib-qthelp requires sphinx at run-time
     import_modules = []
 
     version('1.0.2', sha256='79465ce11ae5694ff165becda529a600c754f4bc459778778c7017374d4d406f')

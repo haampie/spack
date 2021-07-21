@@ -6,7 +6,6 @@
 """Test Spack's URL handling utility functions."""
 import os
 import os.path
-
 import spack.paths
 import spack.util.url as url_util
 

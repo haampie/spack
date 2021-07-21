@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import json
-
 from spack import *
+import json
 
 
 class PyChainer(PythonPackage):

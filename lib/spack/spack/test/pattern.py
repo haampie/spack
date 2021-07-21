@@ -5,7 +5,6 @@
 
 
 import pytest
-
 import spack.util.pattern as pattern
 
 

@@ -121,14 +121,10 @@ override the ``meson_args`` method like so:
 .. code-block:: python
 
    def meson_args(self):
-       return ['--warnlevel=3']
+       return ['--default-library=both']
 
 
 This method can be used to pass flags as well as variables.
-
-Note that the ``MesonPackage`` base class already defines variants for
-``buildtype``, ``default_library`` and ``strip``, which are mapped to default
-Meson arguments, meaning that you don't have to specify these.
 
 ^^^^^^^^^^^^^^^^^^^^^^
 External documentation

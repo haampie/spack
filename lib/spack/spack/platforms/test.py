@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import platform
-
-from spack.architecture import OperatingSystem, Platform, Target
+from spack.architecture import Platform, Target
+from spack.architecture import OperatingSystem
 
 
 class Test(Platform):

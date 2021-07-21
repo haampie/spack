@@ -5,8 +5,9 @@
 
 from six import string_types
 
-import spack.architecture
 from spack import *
+import spack.architecture
+
 from spack.pkg.builtin.mock.multimethod_base import MultimethodBase
 
 

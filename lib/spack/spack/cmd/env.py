@@ -8,20 +8,21 @@ import shutil
 import sys
 from collections import namedtuple
 
-import llnl.util.filesystem as fs
 import llnl.util.tty as tty
+import llnl.util.filesystem as fs
 from llnl.util.tty.colify import colify
 from llnl.util.tty.color import colorize
 
-import spack.cmd.common.arguments
-import spack.cmd.common.arguments as arguments
-import spack.cmd.install
-import spack.cmd.modules
-import spack.cmd.uninstall
 import spack.config
-import spack.environment as ev
 import spack.schema.env
+import spack.cmd.common.arguments
+import spack.cmd.install
+import spack.cmd.uninstall
+import spack.cmd.modules
+import spack.cmd.common.arguments as arguments
+import spack.environment as ev
 import spack.util.string as string
+
 
 description = "manage virtual environments"
 section = "environments"
@@ -362,9 +363,6 @@ def env_loads_setup_parser(subparser):
     """list modules for an installed environment '(see spack module loads)'"""
     subparser.add_argument(
         'env', nargs='?', help='name of env to generate loads file for')
-    subparser.add_argument(
-        '-n', '--module-set-name', default='default',
-        help='module set for which to generate load operations')
     subparser.add_argument(
         '-m', '--module-type', choices=('tcl', 'lmod'),
         help='type of module system to generate loads for')

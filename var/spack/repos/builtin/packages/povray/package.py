@@ -3,14 +3,12 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-# For getting username for defaulting COMPILED_BY
-import getpass
-
-# For getting fqdn for defaulting COMPILED_BY
-import socket
-
 from spack import *
 from spack.pkg.builtin.boost import Boost
+# For getting fqdn for defaulting COMPILED_BY
+import socket
+# For getting username for defaulting COMPILED_BY
+import getpass
 
 
 class Povray(AutotoolsPackage):

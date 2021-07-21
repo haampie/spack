@@ -3,10 +3,9 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import os
-import platform
-
 from spack import *
+import platform
+import os
 
 
 class IbmJava(Package):

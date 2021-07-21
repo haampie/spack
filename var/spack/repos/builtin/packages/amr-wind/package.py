@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import itertools
-
 from spack import *
+import itertools
 
 
 def process_amrex_constraints():

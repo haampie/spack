@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from os import symlink
-
 from spack import *
+from os import symlink
 
 
 class Circos(Package):

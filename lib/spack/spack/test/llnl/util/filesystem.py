@@ -12,7 +12,6 @@ import sys
 import pytest
 
 import llnl.util.filesystem as fs
-
 import spack.paths
 
 

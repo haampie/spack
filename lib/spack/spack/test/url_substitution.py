@@ -8,7 +8,6 @@
 import os
 
 import pytest
-
 import spack.url
 
 

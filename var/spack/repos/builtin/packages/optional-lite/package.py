@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from shutil import copytree
-
 from spack import *
+from shutil import copytree
 
 
 class OptionalLite(CMakePackage):

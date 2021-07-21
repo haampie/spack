@@ -48,6 +48,9 @@ class Butterflypack(CMakePackage):
     def cmake_args(self):
         spec = self.spec
 
+        def on_off(varstr):
+            return 'ON' if varstr in spec else 'OFF'
+
         args = [
             '-DCMAKE_C_COMPILER=%s' % spec['mpi'].mpicc,
             '-DCMAKE_Fortran_COMPILER=%s' % spec['mpi'].mpifc,
@@ -57,7 +60,7 @@ class Butterflypack(CMakePackage):
             '-DTPL_SCALAPACK_LIBRARIES=%s' % spec['scalapack'].
             libs.joined(";"),
             '-DTPL_ARPACK_LIBRARIES=%s' % spec['arpack-ng'].libs.joined(";"),
-            self.define_from_variant('BUILD_SHARED_LIBS', 'shared'),
+            '-DBUILD_SHARED_LIBS=%s' % on_off('+shared'),
         ]
 
         return args

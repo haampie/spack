@@ -3,13 +3,11 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import os
 import platform
 import sys
-
-import llnl.util.tty as tty
-
+import os
 from spack import *
+import llnl.util.tty as tty
 
 
 class Namd(MakefilePackage, CudaPackage):

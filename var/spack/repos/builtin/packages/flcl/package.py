@@ -23,6 +23,7 @@ class Flcl(CMakePackage):
 
     def cmake_args(self):
         args = []
-        args.append(self.define('BUILD_TESTING', self.run_tests))
+        args.append('-DBUILD_TESTING:BOOL={0}'.format(
+                    'ON' if self.run_tests else 'OFF'))
 
         return args

@@ -32,6 +32,7 @@ class Paradiseo(CMakePackage):
     variant('edo',      default=True,
             description='Compile with (Experimental) EDO module')
 
+    # variant('doc', default=False, description='Compile with documentation')
     variant('openmp',   default=False, description='Enable OpenMP support')
     variant('gnuplot',  default=False, description='Enable GnuPlot support')
 
@@ -40,6 +41,7 @@ class Paradiseo(CMakePackage):
 
     # Optional dependencies
     depends_on("mpi", when="+mpi")
+    depends_on("doxygen", when='+doc', type='build')
     depends_on("gnuplot", when='+gnuplot')
     depends_on("eigen", when='+edo', type='build')
     depends_on("boost~mpi", when='+edo~mpi')
@@ -57,13 +59,18 @@ class Paradiseo(CMakePackage):
     patch('fix_tutorials.patch')
 
     def cmake_args(self):
+        spec = self.spec
+
         return [
             '-DINSTALL_TYPE:STRING=MIN',
-            self.define_from_variant('MPI', 'mpi'),
+            '-DMPI:BOOL=%s' % ('TRUE' if '+mpi' in spec else 'FALSE'),
             # Note: This requires a C++11 compatible compiler
-            self.define_from_variant('SMP', 'smp'),
-            self.define_from_variant('EDO', 'edo'),
-            self.define('ENABLE_CMAKE_TESTING', self.run_tests),
-            self.define_from_variant('ENABLE_OPENMP', 'openmp'),
-            self.define_from_variant('ENABLE_GNUPLOT', 'gnuplot')
+            '-DSMP:BOOL=%s' % ('TRUE' if '+smp' in spec else 'FALSE'),
+            '-DEDO:BOOL=%s' % ('TRUE' if '+edo' in spec else 'FALSE'),
+            '-DENABLE_CMAKE_TESTING:BOOL=%s' % (
+                'TRUE' if self.run_tests else 'FALSE'),
+            '-DENABLE_OPENMP:BOOL=%s' % (
+                'TRUE' if '+openmp' in spec else 'FALSE'),
+            '-DENABLE_GNUPLOT:BOOL=%s' % (
+                'TRUE' if '+gnuplot' in spec else 'FALSE')
         ]

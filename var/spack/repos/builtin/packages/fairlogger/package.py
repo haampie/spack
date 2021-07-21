@@ -74,7 +74,8 @@ class Fairlogger(CMakePackage):
         if cxxstd != 'default':
             args.append('-DCMAKE_CXX_STANDARD=%s' % cxxstd)
         if self.spec.satisfies('@1.4:'):
-            args.append(self.define_from_variant('USE_BOOST_PRETTY_FUNCTION', 'pretty'))
+            args.append('-DUSE_BOOST_PRETTY_FUNCTION=%s' %
+                        ('ON' if '+pretty' in self.spec else 'OFF'))
         if self.spec.satisfies('@1.6:'):
             args.append('-DUSE_EXTERNAL_FMT=ON')
         if self.spec.satisfies('^boost@:1.69.99'):

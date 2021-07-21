@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import inspect
-
 from spack import *
+import inspect
 
 
 class PerlBioperl(PerlPackage):

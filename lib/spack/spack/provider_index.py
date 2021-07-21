@@ -6,7 +6,6 @@
 import itertools
 
 import six
-
 import spack.error
 import spack.util.spack_json as sjson
 

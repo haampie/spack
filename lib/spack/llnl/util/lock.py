@@ -3,30 +3,20 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import errno
-import fcntl
 import os
-import socket
+import fcntl
+import errno
 import time
+import socket
 from datetime import datetime
 
 import llnl.util.tty as tty
-
 import spack.util.string
 
-__all__ = [
-    'Lock',
-    'LockDowngradeError',
-    'LockUpgradeError',
-    'LockTransaction',
-    'WriteTransaction',
-    'ReadTransaction',
-    'LockError',
-    'LockTimeoutError',
-    'LockPermissionError',
-    'LockROFileError',
-    'CantCreateLockError'
-]
+
+__all__ = ['Lock', 'LockTransaction', 'WriteTransaction', 'ReadTransaction',
+           'LockError', 'LockTimeoutError',
+           'LockPermissionError', 'LockROFileError', 'CantCreateLockError']
 
 #: Mapping of supported locks to description
 lock_type = {fcntl.LOCK_SH: 'read', fcntl.LOCK_EX: 'write'}
@@ -274,7 +264,7 @@ class Lock(object):
         self.old_host = self.host
 
         self.pid = os.getpid()
-        self.host = socket.gethostname()
+        self.host = socket.getfqdn()
 
         # write pid, host to disk to sync over FS
         self._file.seek(0)
@@ -411,7 +401,7 @@ class Lock(object):
         """Releases a read lock.
 
         Arguments:
-            release_fn (typing.Callable): function to call *before* the last recursive
+            release_fn (callable): function to call *before* the last recursive
                 lock (read or write) is released.
 
         If the last recursive lock will be released, then this will call
@@ -447,7 +437,7 @@ class Lock(object):
         """Releases a write lock.
 
         Arguments:
-            release_fn (typing.Callable): function to call before the last recursive
+            release_fn (callable): function to call before the last recursive
                 write is released.
 
         If the last recursive *write* lock will be released, then this
@@ -543,10 +533,10 @@ class LockTransaction(object):
     Arguments:
         lock (Lock): underlying lock for this transaction to be accquired on
             enter and released on exit
-        acquire (typing.Callable or contextlib.contextmanager): function to be called
-            after lock is acquired, or contextmanager to enter after acquire and leave
+        acquire (callable or contextmanager): function to be called after lock
+            is acquired, or contextmanager to enter after acquire and leave
             before release.
-        release (typing.Callable): function to be called before release. If
+        release (callable): function to be called before release. If
             ``acquire`` is a contextmanager, this will be called *after*
             exiting the nexted context and before the lock is released.
         timeout (float): number of seconds to set for the timeout when

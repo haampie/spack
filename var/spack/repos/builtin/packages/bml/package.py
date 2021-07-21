@@ -34,7 +34,8 @@ class Bml(CMakePackage):
 
     def cmake_args(self):
         args = [
-            self.define_from_variant('BUILD_SHARED_LIBS', 'shared')
+            '-DBUILD_SHARED_LIBS={0}'.format(
+                'ON' if '+shared' in self.spec else 'OFF')
         ]
         spec = self.spec
         if '+mpi' in spec:

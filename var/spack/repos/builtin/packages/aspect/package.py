@@ -35,7 +35,8 @@ class Aspect(CMakePackage):
 
     def cmake_args(self):
         return [
-            self.define_from_variant('ASPECT_USE_FP_EXCEPTIONS', 'fpe')
+            '-DASPECT_USE_FP_EXCEPTIONS=%s' %
+            ('ON' if '+fpe' in self.spec else 'OFF')
         ]
 
     def setup_run_environment(self, env):

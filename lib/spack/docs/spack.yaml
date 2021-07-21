@@ -14,6 +14,6 @@
 #
 spack:
   specs:
-  - "py-sphinx@3.4:"
+  - py-sphinx
   - py-sphinxcontrib-programoutput
   - py-sphinx-rtd-theme

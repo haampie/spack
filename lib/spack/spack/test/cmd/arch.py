@@ -5,6 +5,7 @@
 
 from spack.main import SpackCommand
 
+
 arch = SpackCommand('arch')
 
 

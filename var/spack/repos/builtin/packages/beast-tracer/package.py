@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from os import path
-
 from spack import *
+from os import path
 
 
 class BeastTracer(Package):

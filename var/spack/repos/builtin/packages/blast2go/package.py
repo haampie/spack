@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import archspec
-
 from spack import *
+import archspec
 
 
 class Blast2go(Package):

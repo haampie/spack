@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import llnl.util.tty as tty
-
 from spack import *
+import llnl.util.tty as tty
 
 
 class Swiftsim(AutotoolsPackage):

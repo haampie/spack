@@ -88,7 +88,3 @@ class Pgi(Compiler):
                                       'the C11 standard',
                                       'c11_flag',
                                       '< 15.3')
-
-    @property
-    def stdcxx_libs(self):
-        return ('-pgc++libs',)

@@ -6,10 +6,8 @@
 import os
 
 import pytest
-
-from llnl.util.filesystem import mkdirp, touchp, working_dir
+from llnl.util.filesystem import working_dir, mkdirp, touchp
 from llnl.util.link_tree import LinkTree
-
 from spack.stage import Stage
 
 

@@ -9,6 +9,7 @@ import spack.cmd
 import spack.cmd.common.arguments as arguments
 import spack.environment as ev
 
+
 description = 'remove specs from an environment'
 section = "environments"
 level = "long"

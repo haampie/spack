@@ -3,8 +3,9 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import spack.paths
 from spack import *
+
+import spack.paths
 
 
 class UrlListTest(Package):

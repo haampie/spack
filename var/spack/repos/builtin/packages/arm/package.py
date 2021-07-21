@@ -6,7 +6,6 @@ import os.path
 import re
 
 import llnl.util.tty as tty
-
 import spack.compiler
 import spack.util.executable
 

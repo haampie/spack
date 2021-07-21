@@ -8,6 +8,7 @@ import pytest
 from spack.main import SpackCommand, SpackCommandError
 from spack.spec import Spec
 
+
 extensions = SpackCommand('extensions')
 
 

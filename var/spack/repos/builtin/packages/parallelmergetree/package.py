@@ -17,30 +17,18 @@ class Parallelmergetree(CMakePackage):
 
     maintainers = ['spetruzza']
 
-    version('1.0.2',
-            git='https://bitbucket.org/cedmav/parallelmergetree.git',
-            tag='v1.0.2',
+    version('develop',
+            commit='6774ed74fd13b9747ac792978a676ce6e8b05cab',
             submodules=True)
 
-    version('1.0.0',
-            git='https://bitbucket.org/cedmav/parallelmergetree.git',
-            tag='v1.0.0',
-            submodules=True)
-
-    depends_on('babelflow')
+    depends_on('babelflow@develop')
 
     variant("shared", default=True, description="Build ParallelMergeTree as shared libs")
 
     def cmake_args(self):
-        args = []
-
-        if "+shared" in self.spec:
-            args.append('-DBUILD_SHARED_LIBS=ON')
-        else:
-            args.append('-DBUILD_SHARED_LIBS=OFF')
-
-        args.append('-DLIBRARY_ONLY=ON')
-        args.append('-DBabelFlow_DIR={0}'.format(
-                    self.spec['babelflow'].prefix))
-
+        args = [
+            '-DBUILD_SHARED_LIBS:BOOL={0}'.format(
+                'ON' if '+shared' in spec else 'OFF'),
+            '-DLIBRARY_ONLY=ON'
+        ]
         return args

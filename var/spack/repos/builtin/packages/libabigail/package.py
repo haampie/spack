@@ -20,9 +20,6 @@ class Libabigail(AutotoolsPackage):
     depends_on('libdwarf')
     depends_on('libxml2')
 
-    # Libabigail won't generate it's bin without Python
-    depends_on('python@3.8:')
-
     # Documentation dependencies
     depends_on('doxygen', type="build", when="+docs")
     depends_on('py-sphinx', type='build', when="+docs")

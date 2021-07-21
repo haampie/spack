@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import platform
-
 from spack import *
+import platform
 
 _versions = {
     '0.79.47': {

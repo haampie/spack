@@ -9,8 +9,8 @@ include TCL non-hierarchical modules, LUA hierarchical modules, and others.
 
 from __future__ import absolute_import
 
-from .lmod import LmodModulefileWriter
 from .tcl import TclModulefileWriter
+from .lmod import LmodModulefileWriter
 
 __all__ = [
     'TclModulefileWriter',

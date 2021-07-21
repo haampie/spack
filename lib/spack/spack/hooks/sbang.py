@@ -5,12 +5,12 @@
 
 import filecmp
 import os
-import re
 import stat
+import re
 import sys
 
-import llnl.util.filesystem as fs
 import llnl.util.tty as tty
+import llnl.util.filesystem as fs
 
 import spack.modules
 import spack.paths

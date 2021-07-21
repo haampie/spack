@@ -12,6 +12,10 @@ The following configuration options are unsupported (set to `OFF`) due to missin
 
 Requires `libgapiUI` from ALICE.
 
+#### `dcache`
+
+DCache support depends on `libdcap` from DESY.
+
 #### `gfal`
 
 #### `http`
@@ -24,7 +28,11 @@ Monitoring with Monalisa depends on `libapmoncpp`.
 
 #### `odbc`
 
+#### `oracle`
+
 #### `tcmalloc`
+
+#### `veccore`
 
 #### `xinetd`
 

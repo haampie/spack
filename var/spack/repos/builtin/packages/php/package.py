@@ -3,8 +3,9 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import spack.hooks.sbang as sbang
 from spack import *
+
+import spack.hooks.sbang as sbang
 
 
 class Php(AutotoolsPackage):

@@ -32,7 +32,6 @@ class Neuron(CMakePackage):
     variant("python",        default=True,  description="Enable python")
     variant("rx3d",          default=False,  description="Enable cython translated 3-d rxd")
     variant("tests",         default=False, description="Enable unit tests")
-    variant("caliper",       default=False, description="Add LLNL/Caliper support")
 
     depends_on("bison",     type="build")
     depends_on("flex",      type="build")
@@ -44,8 +43,6 @@ class Neuron(CMakePackage):
     depends_on("python@2.7:", when="+python")
     depends_on("py-pytest",   when="+python+tests")
     depends_on("readline")
-    depends_on("caliper",     when="+caliper")
-    depends_on("py-numpy",    type='run')
 
     conflicts("+rx3d",        when="~python")
 
@@ -82,9 +79,6 @@ class Neuron(CMakePackage):
 
         if "+legacy-unit" in spec:
             args.append('-DNRN_DYNAMIC_UNITS_USE_LEGACY=ON')
-
-        if "+caliper" in spec:
-            args.append('-DCORENRN_CALIPER_PROFILING=ON')
 
         return args
 

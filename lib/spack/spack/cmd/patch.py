@@ -5,9 +5,10 @@
 
 import llnl.util.tty as tty
 
+import spack.repo
 import spack.cmd
 import spack.cmd.common.arguments as arguments
-import spack.repo
+
 
 description = "patch expanded archive sources in preparation for install"
 section = "build"

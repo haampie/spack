@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from os.path import split
-
 from spack import *
+from os.path import split
 
 
 class Anaconda2(Package):

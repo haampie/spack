@@ -30,7 +30,8 @@ class Cminpack(CMakePackage):
 
     def cmake_args(self):
         args = [
-            self.define_from_variant('BUILD_SHARED_LIBS', 'shared'),
+            '-DBUILD_SHARED_LIBS=%s' % (
+                'ON' if '+shared' in self.spec else 'OFF'),
             '-DUSE_BLAS=%s' % (
                 'ON' if 'blas' in self.spec else 'OFF')
         ]

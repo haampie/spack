@@ -3,9 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import datetime
-
 from spack import *
+import datetime
 
 
 class HttpPing(MakefilePackage):

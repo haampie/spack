@@ -6,7 +6,6 @@
 import os
 
 import pytest
-
 import llnl.util.tty as tty
 
 
