@@ -31,7 +31,7 @@ class Percept(CMakePackage):
     # See https://github.com/spack/spack/pull/22303 for reference
     depends_on(Boost.with_default_variants)
     depends_on('yaml-cpp+pic~shared@0.5.3:')
-    depends_on('trilinos~shared+exodus+tpetra+epetra+epetraext+muelu+belos+ifpack2+amesos2+zoltan+stk+boost~superlu-dist+superlu+hdf5+zlib+pnetcdf+aztec+sacado~openmp+shards+intrepid+cgns@master,12.14.1:')
+    depends_on('trilinos~shared+exodus+netcdf+mpi+tpetra+epetra+epetraext+muelu+belos+ifpack2+amesos2+zoltan+stk+boost~superlu-dist+superlu+hdf5+zlib+pnetcdf+aztec+sacado~openmp+shards+intrepid+cgns@master,12.14.1:')
 
     def cmake_args(self):
         spec = self.spec

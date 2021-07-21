@@ -3,9 +3,10 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import platform
+
 from spack import *
 from spack.pkg.builtin.boost import Boost
-import platform
 
 _versions = {
     'v5.2.1': {

@@ -3,9 +3,10 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+from os import symlink
+
 from spack import *
 from spack.pkg.builtin.boost import Boost
-from os import symlink
 
 
 class Bridger(MakefilePackage, SourceforgePackage):

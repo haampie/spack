@@ -26,7 +26,7 @@ class Libpulsar(CMakePackage):
     # See https://github.com/spack/spack/pull/22303 for reference
     depends_on(Boost.with_default_variants)
     depends_on('protobuf')
-    depends_on('pkg-config')
+    depends_on('pkgconfig')
     depends_on('openssl')
     depends_on('cmake @3.14:', type='build')
     depends_on('curl', type=('build', 'link'))

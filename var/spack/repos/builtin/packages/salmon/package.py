@@ -3,6 +3,9 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import re
+
+import spack
 from spack.pkg.builtin.boost import Boost
 
 
@@ -24,18 +27,12 @@ class Salmon(CMakePackage):
             values=('DEBUG', 'RELEASE'))
 
     depends_on('tbb')
-    depends_on('boost@:1.66.0', when='@:0.14.1')
 
     # TODO: replace this with an explicit list of components of Boost,
     # for instance depends_on('boost +filesystem')
     # See https://github.com/spack/spack/pull/22303 for reference
-    depends_on(Boost.with_default_variants, when='@:0.14.1')
-    depends_on('boost@1.72.0', when='@1.4.0')
-
-    # TODO: replace this with an explicit list of components of Boost,
-    # for instance depends_on('boost +filesystem')
-    # See https://github.com/spack/spack/pull/22303 for reference
-    depends_on(Boost.with_default_variants, when='@1.4.0')
+    depends_on(re.sub(r'^boost', 'boost@1.66.0', Boost.with_default_variants), when='@:0.14.1')
+    depends_on(re.sub(r'^boost', 'boost@1.72.0', Boost.with_default_variants), when='@1.4.0')
     depends_on('cereal')
     depends_on('jemalloc')
     depends_on('xz')
@@ -88,6 +85,11 @@ class Salmon(CMakePackage):
                         'scripts/fetchPufferfish.sh')
             symlink('./salmon-v{0}.zip'.format(self.version),
                     './external/pufferfish.zip')
+            # Fix issues related to lto-wrapper during install
+            filter_file('INTERPROCEDURAL_OPTIMIZATION True',
+                        'INTERPROCEDURAL_OPTIMIZATION False',
+                        'src/CMakeLists.txt', string=True)
+            filter_file('curl -k.*', '', 'scripts/fetchPufferfish.sh')
 
     def cmake_args(self):
         args = [

@@ -3,9 +3,12 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import re
+
+import llnl.util.tty as tty
+
 from spack import *
 from spack.pkg.builtin.boost import Boost
-import llnl.util.tty as tty
 
 
 class Qmcpack(CMakePackage, CudaPackage):
@@ -23,6 +26,7 @@ class Qmcpack(CMakePackage, CudaPackage):
     # can occasionally change.
     # NOTE: 12/19/2017 QMCPACK 3.0.0 does not build properly with Spack.
     version('develop')
+    version('3.11.0', tag='v3.11.0')
     version('3.10.0', tag='v3.10.0')
     version('3.9.2', tag='v3.9.2')
     version('3.9.1', tag='v3.9.1')
@@ -42,7 +46,7 @@ class Qmcpack(CMakePackage, CudaPackage):
             description='The build type to build',
             values=('Debug', 'Release', 'RelWithDebInfo'))
     variant('mpi', default=True, description='Build with MPI support')
-    variant('phdf5', default=True, description='Build with parallel collective I/O')
+    variant('phdf5', default=False, description='Build with parallel collective I/O')
     variant('complex', default=False,
             description='Build the complex (general twist/k-point) version')
     variant('mixed', default=False,
@@ -150,8 +154,8 @@ class Qmcpack(CMakePackage, CudaPackage):
     # TODO: replace this with an explicit list of components of Boost,
     # for instance depends_on('boost +filesystem')
     # See https://github.com/spack/spack/pull/22303 for reference
-    depends_on(Boost.with_default_variants)
-    depends_on('boost@1.61.0:', when='@3.6.0:')
+    depends_on(Boost.with_default_variants, type='build')
+    depends_on(re.sub(r'^boost', 'boost@1.61.0', Boost.with_default_variants), when='@3.6.0:', type='build')
     depends_on('libxml2')
     depends_on('mpi', when='+mpi')
     depends_on('python@3:', when='@3.9:')

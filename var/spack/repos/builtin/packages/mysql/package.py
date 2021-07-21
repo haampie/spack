@@ -2,10 +2,11 @@
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
-from spack import *
-from spack.pkg.builtin.boost import Boost
 import os
 import tempfile
+
+from spack import *
+from spack.pkg.builtin.boost import Boost
 
 
 class Mysql(CMakePackage):
@@ -80,40 +81,24 @@ class Mysql(CMakePackage):
     # Each version of MySQL requires a specific version of boost
     # See BOOST_PACKAGE_NAME in cmake/boost.cmake
     # 8.0.19+
-    depends_on('boost@1.70.0 cxxstd=98', type='build', when='@8.0.19: cxxstd=98')
-    depends_on('boost@1.70.0 cxxstd=11', type='build', when='@8.0.19: cxxstd=11')
-    depends_on('boost@1.70.0 cxxstd=14', type='build', when='@8.0.19: cxxstd=14')
-    depends_on('boost@1.70.0 cxxstd=17', type='build', when='@8.0.19: cxxstd=17')
-    # 8.0.16--8.0.18
-    depends_on('boost@1.69.0 cxxstd=98', type='build', when='@8.0.16:8.0.18 cxxstd=98')
-    depends_on('boost@1.69.0 cxxstd=11', type='build', when='@8.0.16:8.0.18 cxxstd=11')
-    depends_on('boost@1.69.0 cxxstd=14', type='build', when='@8.0.16:8.0.18 cxxstd=14')
-    depends_on('boost@1.69.0 cxxstd=17', type='build', when='@8.0.16:8.0.18 cxxstd=17')
-    # 8.0.14--8.0.15
-    depends_on('boost@1.68.0 cxxstd=98', type='build', when='@8.0.14:8.0.15 cxxstd=98')
-    depends_on('boost@1.68.0 cxxstd=11', type='build', when='@8.0.14:8.0.15 cxxstd=11')
-    depends_on('boost@1.68.0 cxxstd=14', type='build', when='@8.0.14:8.0.15 cxxstd=14')
-    depends_on('boost@1.68.0 cxxstd=17', type='build', when='@8.0.14:8.0.15 cxxstd=17')
-    # 8.0.12--8.0.13
-    depends_on('boost@1.67.0 cxxstd=98', type='build', when='@8.0.12:8.0.13 cxxstd=98')
-    depends_on('boost@1.67.0 cxxstd=11', type='build', when='@8.0.12:8.0.13 cxxstd=11')
-    depends_on('boost@1.67.0 cxxstd=14', type='build', when='@8.0.12:8.0.13 cxxstd=14')
-    depends_on('boost@1.67.0 cxxstd=17', type='build', when='@8.0.12:8.0.13 cxxstd=17')
-    # 8.0.11
-    depends_on('boost@1.66.0 cxxstd=98', type='build', when='@8.0.11 cxxstd=98')
-    depends_on('boost@1.66.0 cxxstd=11', type='build', when='@8.0.11 cxxstd=11')
-    depends_on('boost@1.66.0 cxxstd=14', type='build', when='@8.0.11 cxxstd=14')
-    depends_on('boost@1.66.0 cxxstd=17', type='build', when='@8.0.11 cxxstd=17')
-    # 5.7.X
-    depends_on('boost@1.59.0 cxxstd=98', when='@5.7.0:5.7.999 cxxstd=98')
-    depends_on('boost@1.59.0 cxxstd=11', when='@5.7.0:5.7.999 cxxstd=11')
-    depends_on('boost@1.59.0 cxxstd=14', when='@5.7.0:5.7.999 cxxstd=14')
-    depends_on('boost@1.59.0 cxxstd=17', when='@5.7.0:5.7.999 cxxstd=17')
-
-    # TODO: replace this with an explicit list of components of Boost,
-    # for instance depends_on('boost +filesystem')
-    # See https://github.com/spack/spack/pull/22303 for reference
-    depends_on(Boost.with_default_variants, when='@5.7:')
+    for std in (98, 11, 14, 17):
+        for boost_ver, args in {
+                '1.70.0' : {'type':'build', 'when':'@8.0.19'},
+                '1.69.0' : {'type':'build', 'when':'@8.0.16:8.0.18'},
+                '1.68.0' : {'type':'build', 'when':'@8.0.14:8.0.15'},
+                '1.67.0' : {'type':'build', 'when':'@8.0.12:8.0.13'},
+                '1.66.0' : {'type':'build', 'when':'@8.0.11'},
+                '1.59.0' : {'type':'build', 'when':'@5.7.0:5.7.999'},
+        }.items():
+            if 'when' in args:
+                args['when'] = '%s cxxstd=%d' % (args['when'], std)
+            # TODO: replace this with an explicit list of components of Boost,
+            # for instance depends_on('boost +filesystem')
+            # See https://github.com/spack/spack/pull/22303 for reference
+            depends_on(re.sub(r'^boost',
+                              'boost@%s cxxstd=%d' % (boost_ver,std),
+                              Boost.with_default_variants),
+                       **args)
 
     depends_on('rpcsvc-proto')
     depends_on('ncurses')

@@ -3,11 +3,13 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import glob
+import os
+
+import llnl.util.tty as tty
+
 from spack import *
 from spack.pkg.builtin.boost import Boost
-import os
-import glob
-import llnl.util.tty as tty
 
 
 # This application uses cmake to build, but they wrap it with a

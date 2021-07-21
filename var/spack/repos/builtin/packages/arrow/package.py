@@ -2,7 +2,6 @@
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
-
 from spack import *
 from spack.pkg.builtin.boost import Boost
 
@@ -38,7 +37,7 @@ class Arrow(CMakePackage, CudaPackage):
     depends_on('rapidjson')
     depends_on('snappy~shared')
     depends_on('zlib+pic')
-    depends_on('zstd+pic')
+    depends_on('zstd')
     depends_on('thrift+pic', when='+parquet')
     depends_on('orc', when='+orc')
 

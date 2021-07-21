@@ -3,10 +3,11 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from spack import *
-from spack.pkg.builtin.boost import Boost
 import glob
 import os
+
+from spack import *
+from spack.pkg.builtin.boost import Boost
 
 
 class Magics(CMakePackage):

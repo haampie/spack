@@ -3,11 +3,11 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import glob
+import os.path
+
 from spack import *
 from spack.pkg.builtin.boost import Boost
-import os.path
-import glob
-
 
 class Express(CMakePackage):
     """eXpress is a streaming tool for quantifying the abundances of a set of
