@@ -1483,7 +1483,7 @@ _spack_python() {
 }
 
 _spack_read_external_db() {
-    SPACK_COMPREPLY="-h --help --test --file --apply-updates"
+    SPACK_COMPREPLY="-h --help --file --apply-updates"
 }
 
 _spack_reindex() {
@@ -1707,7 +1707,7 @@ _spack_undevelop() {
 _spack_uninstall() {
     if $list_options
     then
-        SPACK_COMPREPLY="-h --help -f --force -R --dependents -y --yes-to-all -a --all"
+        SPACK_COMPREPLY="-h --help -f --force -R --dependents -y --yes-to-all -a --all --origin"
     else
         _installed_packages
     fi
