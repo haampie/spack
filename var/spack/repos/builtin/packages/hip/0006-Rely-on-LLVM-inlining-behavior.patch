@@ -1,0 +1,29 @@
+From a0b2fa4910a3d4bc1906bd50881d4356d5c8c847 Mon Sep 17 00:00:00 2001
+From: Harmen Stoppels <harmenstoppels@gmail.com>
+Date: Fri, 3 Sep 2021 11:05:01 +0200
+Subject: [PATCH] Rely on LLVM inlining behavior
+
+---
+ bin/hipcc | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/bin/hipcc b/bin/hipcc
+index 41f43da0..a07dc349 100755
+--- a/bin/hipcc
++++ b/bin/hipcc
+@@ -674,12 +674,6 @@ if ($HIP_PLATFORM eq "amd") {
+         $HIPCFLAGS .= " -O3";
+         $HIPLDFLAGS .= " -O3";
+     }
+-    if (!$funcSupp and $optArg ne "-O0" and $hasHIP) {
+-        $HIPCXXFLAGS .= " -mllvm -amdgpu-early-inline-all=true -mllvm -amdgpu-function-calls=false";
+-        if ($needLDFLAGS and not $needCXXFLAGS) {
+-            $HIPLDFLAGS .= " -mllvm -amdgpu-early-inline-all=true -mllvm -amdgpu-function-calls=false";
+-        }
+-    }
+ 
+     if ($hasHIP) {
+         if ($DEVICE_LIB_PATH ne "$ROCM_PATH/amdgcn/bitcode") {
+-- 
+2.25.1
+
