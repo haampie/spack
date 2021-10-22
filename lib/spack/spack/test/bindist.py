@@ -538,7 +538,7 @@ def test_generate_indices_exception(monkeypatch, capfd):
 
 
 @pytest.mark.usefixtures('mock_fetch', 'install_mockery')
-def test_update_sbang(tmpdir, test_mirror):
+def test_update_sbang(tmpdir, default_config, test_mirror):
     """Test the creation and installation of buildcaches with default rpaths
     into the non-default directory layout scheme, triggering an update of the
     sbang.
