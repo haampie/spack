@@ -209,6 +209,7 @@ jobs:
       run: |
           whoami && echo $HOME && cd $HOME
           git clone "${{ github.server_url }}/${{ github.repository }}.git" && cd spack
+          . .github/workflows/setup_git.sh
           git fetch origin "${{ github.ref }}:test-branch"
           git checkout test-branch
           bin/spack unit-test -x
@@ -221,6 +222,7 @@ jobs:
       run: |
           whoami && echo $HOME && cd $HOME
           git clone "${{ github.server_url }}/${{ github.repository }}.git" && cd spack
+          . .github/workflows/setup_git.sh
           git fetch origin "${{ github.ref }}:test-branch"
           git checkout test-branch
           bin/spack unit-test -x -m "not maybeslow" -k "package_sanity"
