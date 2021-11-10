@@ -5,6 +5,7 @@
 from __future__ import print_function
 
 import argparse
+import os
 import sys
 
 import llnl.util.tty as tty
@@ -13,8 +14,8 @@ import llnl.util.tty.colify as colify
 import spack
 import spack.cmd
 import spack.cmd.common.arguments
-import spack.detection
 import spack.cray_manifest as cray_manifest
+import spack.detection
 import spack.error
 import spack.util.environment
 
@@ -105,163 +106,6 @@ def external_read_cray_manifest(args):
             .format(cray_manifest.default_path))
 
     cray_manifest.read(path, True)
-
-
-def _group_by_prefix(paths):
-    groups = defaultdict(set)
-    for p in paths:
-        groups[os.path.dirname(p)].add(p)
-    return groups.items()
-
-
-def _convert_to_iterable(single_val_or_multiple):
-    x = single_val_or_multiple
-    if x is None:
-        return []
-    elif isinstance(x, six.string_types):
-        return [x]
-    elif isinstance(x, spack.spec.Spec):
-        # Specs are iterable, but a single spec should be converted to a list
-        return [x]
-
-    try:
-        iter(x)
-        return x
-    except TypeError:
-        return [x]
-
-
-def _determine_base_dir(prefix):
-    # Given a prefix where an executable is found, assuming that prefix ends
-    # with /bin/, strip off the 'bin' directory to get a Spack-compatible
-    # prefix
-    assert os.path.isdir(prefix)
-    if os.path.basename(prefix) == 'bin':
-        return os.path.dirname(prefix)
-
-
-def _get_predefined_externals():
-    # Pull from all scopes when looking for preexisting external package
-    # entries
-    pkg_config = spack.config.get('packages')
-    already_defined_specs = set()
-    for pkg_name, per_pkg_cfg in pkg_config.items():
-        for item in per_pkg_cfg.get('externals', []):
-            already_defined_specs.add(spack.spec.Spec(item['spec']))
-    return already_defined_specs
-
-
-def _update_pkg_config(scope, pkg_to_entries, not_buildable):
-    predefined_external_specs = _get_predefined_externals()
-
-    pkg_to_cfg, all_new_specs = {}, []
-    for pkg_name, ext_pkg_entries in pkg_to_entries.items():
-        new_entries = list(
-            e for e in ext_pkg_entries
-            if (e.spec not in predefined_external_specs))
-
-        pkg_config = _generate_pkg_config(new_entries)
-        all_new_specs.extend([
-            spack.spec.Spec(x['spec']) for x in pkg_config.get('externals', [])
-        ])
-        if not_buildable:
-            pkg_config['buildable'] = False
-        pkg_to_cfg[pkg_name] = pkg_config
-
-    pkgs_cfg = spack.config.get('packages', scope=scope)
-
-    pkgs_cfg = spack.config.merge_yaml(pkgs_cfg, pkg_to_cfg)
-    spack.config.set('packages', pkgs_cfg, scope=scope)
-
-    return all_new_specs
-
-
-def _get_external_packages(packages_to_check, system_path_to_exe=None):
-    if not system_path_to_exe:
-        system_path_to_exe = _get_system_executables()
-
-    exe_pattern_to_pkgs = defaultdict(list)
-    for pkg in packages_to_check:
-        if hasattr(pkg, 'executables'):
-            for exe in pkg.executables:
-                exe_pattern_to_pkgs[exe].append(pkg)
-
-    pkg_to_found_exes = defaultdict(set)
-    for exe_pattern, pkgs in exe_pattern_to_pkgs.items():
-        compiled_re = re.compile(exe_pattern)
-        for path, exe in system_path_to_exe.items():
-            if compiled_re.search(exe):
-                for pkg in pkgs:
-                    pkg_to_found_exes[pkg].add(path)
-
-    pkg_to_entries = defaultdict(list)
-    resolved_specs = {}  # spec -> exe found for the spec
-
-    for pkg, exes in pkg_to_found_exes.items():
-        if not hasattr(pkg, 'determine_spec_details'):
-            tty.warn("{0} must define 'determine_spec_details' in order"
-                     " for Spack to detect externally-provided instances"
-                     " of the package.".format(pkg.name))
-            continue
-
-        # TODO: iterate through this in a predetermined order (e.g. by package
-        # name) to get repeatable results when there are conflicts. Note that
-        # if we take the prefixes returned by _group_by_prefix, then consider
-        # them in the order that they appear in PATH, this should be sufficient
-        # to get repeatable results.
-        for prefix, exes_in_prefix in _group_by_prefix(exes):
-            # TODO: multiple instances of a package can live in the same
-            # prefix, and a package implementation can return multiple specs
-            # for one prefix, but without additional details (e.g. about the
-            # naming scheme which differentiates them), the spec won't be
-            # usable.
-            specs = _convert_to_iterable(
-                pkg.determine_spec_details(prefix, exes_in_prefix))
-
-            if not specs:
-                tty.debug(
-                    'The following executables in {0} were decidedly not '
-                    'part of the package {1}: {2}'
-                    .format(prefix, pkg.name, ', '.join(
-                        _convert_to_iterable(exes_in_prefix)))
-                )
-
-            for spec in specs:
-                pkg_prefix = _determine_base_dir(prefix)
-
-                if not pkg_prefix:
-                    tty.debug("{0} does not end with a 'bin/' directory: it"
-                              " cannot be added as a Spack package"
-                              .format(prefix))
-                    continue
-
-                if spec in resolved_specs:
-                    prior_prefix = ', '.join(
-                        _convert_to_iterable(resolved_specs[spec]))
-
-                    tty.debug(
-                        "Executables in {0} and {1} are both associated"
-                        " with the same spec {2}"
-                        .format(prefix, prior_prefix, str(spec)))
-                    continue
-                else:
-                    resolved_specs[spec] = prefix
-
-                try:
-                    spec.validate_detection()
-                except Exception as e:
-                    msg = ('"{0}" has been detected on the system but will '
-                           'not be added to packages.yaml [reason={1}]')
-                    tty.warn(msg.format(spec, str(e)))
-                    continue
-
-                if spec.external_path:
-                    pkg_prefix = spec.external_path
-
-                pkg_to_entries[pkg.name].append(
-                    ExternalPackageEntry(spec=spec, base_dir=pkg_prefix))
-
-    return pkg_to_entries
 
 
 def external_list(args):
