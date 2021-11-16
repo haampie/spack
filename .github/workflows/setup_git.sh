@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
+set -xe
 git config --global user.email "spack@example.com"
 git config --global user.name "Test User"
 
