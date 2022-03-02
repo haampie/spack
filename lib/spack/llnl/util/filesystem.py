@@ -941,6 +941,67 @@ def traverse_tree(source_root, dest_root, rel_path='', follow_nonexisting=True,
         yield (source_path, dest_path)
 
 
+def visit_directory_tree(root, visitor, rel_path=''):
+    """
+    Recurses the directory root depth-first through a visitor pattern
+
+    The visitor interface is as follows:
+    - handle_file(root, rel_path) -> void
+    - before_enter_dir(root, rel_path) -> bool
+      descends into this diretory iff True is returned
+    - after_enter_dir(root, rel_path) -> void
+    - before_enter_symlinked_dir(root, rel_path) -> bool
+      descends into this diretory iff True is returned
+    - after_enter_symlinked_dir(root, rel_path) -> void
+    """
+    dir = os.path.join(root, rel_path)
+
+    for f in os.listdir(dir):
+        rel_child = os.path.join(rel_path, f)
+        child = os.path.join(dir, f)
+
+        st, lst = None, None
+        is_link, is_dir = False, False
+
+        # lstat first to avoid having to stat when not a symlink
+        try:
+            lst = os.lstat(child)
+            is_link = stat.S_ISLNK(lst.st_mode)
+        except OSError:
+            pass
+
+        # if lstat succeeded and we don't have a link, check wether we have a dir
+        if lst is not None and not is_link:
+            is_dir = stat.S_ISDIR(lst.st_mode)
+
+        # if lstat succeeded and we have a symlink, we must verify it's a dir
+        # through a stat call.
+        if lst is not None and is_link:
+            # if it was a symlink, do an actual stat
+            try:
+                st = os.stat(child)
+                is_dir = stat.S_ISDIR(st.st_mode)
+            except OSError:
+                pass
+
+        # if neither lstat nor stat worked, then we can't do anything... maybe the
+        # files don't exist anymore.
+        if lst is None and st is None:
+            continue
+
+        if not is_dir:
+            # Handle files
+            visitor.handle_file(root, rel_child)
+        elif not is_link and visitor.before_enter_dir(root, rel_child):
+            # Handle ordinary directories
+            visit_directory_tree(root, visitor, rel_child)
+            visitor.after_enter_dir(root, rel_child)
+        elif is_link and visitor.before_enter_symlinked_dir(root, rel_child):
+            # Handle symlinked directories
+            visit_directory_tree(root, visitor, rel_child)
+            visitor.after_enter_symlinked_dir(root, rel_child)
+
+
 def set_executable(path):
     mode = os.stat(path).st_mode
     if mode & stat.S_IRUSR:

@@ -10,6 +10,7 @@ from __future__ import print_function
 import filecmp
 import os
 import shutil
+import stat
 
 import llnl.util.tty as tty
 from llnl.util.filesystem import mkdirp, touch, traverse_tree
@@ -27,6 +28,86 @@ def remove_link(src, dest):
     # conflicting file
     if filecmp.cmp(src, dest, shallow=True):
         os.remove(dest)
+
+
+class MergeVisitor(object):
+    def __init__(self, dst, link=None):
+        if not os.path.isdir(dst):
+            raise IOError("No such directory '{0}'".format(dst))
+        self.link = os.symlink if link is None else link
+        self.dst = dst
+
+    def before_enter_dir(self, root, rel_path):
+        """
+        Make the directory dst / rel_path if it does not exist yet.
+        """
+        dst = os.path.join(self.dst, rel_path)
+        # We can't make a dir if the destination is a symlink or file
+        is_link, is_dir, exists = False, False, False
+        try:
+            dst_st = os.lstat(dst)
+            is_link, is_dir = stat.S_ISLNK(dst_st.st_mode), stat.S_ISDIR(dst_st.st_mode)
+            exists = True
+        except IOError:
+            pass
+
+        # If nothing is there, create a dir.
+        if not exists:
+            os.mkdir(dst)
+            return True
+
+        # If there is symlink or file, error.
+        if is_link or not is_dir:
+            print("Can't create dir because file/symlink blocks")
+            return False
+
+        # Otherwise, there was a directory already, so nothing to do.
+        return True
+
+    def after_enter_dir(self, root, rel_path):
+        pass
+
+    def before_enter_symlinked_dir(self, root, rel_path):
+        """
+        Replace symlinked dirs with actual directories when possible, otherwise
+        handle it as a file (i.e. we link to the symlink).
+
+        Transforming symlinks into dirs makes it more likely we can merge directories,
+        e.g. when ./lib -> ./subdir/lib.
+
+        We only do this when the symlink is pointing into a subdirectory from the
+        symlink's directory, to avoid potential infinite recursion.
+        """
+        src = os.path.join(root, rel_path)
+        real_parent = os.path.realpath(os.path.dirname(src))
+        real_child = os.path.realpath(src)
+
+        if real_child.startswith(real_parent):
+            return self.before_enter_dir(root, rel_path)
+        else:
+            self.handle_file(root, rel_path)
+            return False
+
+    def after_enter_symlinked_dir(self, root, rel_path):
+        pass
+
+    def handle_file(self, root, rel_path):
+        src = os.path.join(root, rel_path)
+        dst = os.path.join(self.dst, rel_path)
+        is_link, is_dir, exists = False, False, False
+        try:
+            dst_st = os.lstat(dst)
+            is_link, is_dir = stat.S_ISLNK(dst_st.st_mode), stat.S_ISDIR(dst_st.st_mode)
+            exists = True
+        except IOError:
+            pass
+
+        if not exists:
+            self.link(os.path.abspath(src), dst)
+        elif is_link or is_dir:
+            print("Can't create file, blocked by symlink/dir")
+        else:
+            print("Unknown issue when merging...")
 
 
 class LinkTree(object):
