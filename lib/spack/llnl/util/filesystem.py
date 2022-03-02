@@ -924,6 +924,7 @@ def traverse_tree(source_root, dest_root, rel_path='', follow_nonexisting=True,
 
                 # Only follow symlinked subdirectories to avoid recursion
                 if not source_child_real.startswith(source_path_real):
+                    yield (source_child, dest_child)
                     continue
 
             for t in traverse_tree(source_root, dest_root, rel_child,
