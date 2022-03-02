@@ -873,7 +873,9 @@ def traverse_tree(source_root, dest_root, rel_path='', follow_nonexisting=True,
         ignore (typing.Callable): function indicating which files to ignore
         follow_nonexisting (bool): Whether to descend into directories in
             ``src`` that do not exit in ``dest``. Default is True
-        follow_links (bool): Whether to descend into symlinks in ``src``
+        follow_links (bool): Follow links to deeper nested directories relative to
+            the directory of the symlink. Symlinks to directories outside the directory
+            of the symlink are yielded as files and will not be followed.
     """
     # Yield in pre or post order?
     if order not in ('pre', 'post'):
@@ -890,7 +892,8 @@ def traverse_tree(source_root, dest_root, rel_path='', follow_nonexisting=True,
     source_path = os.path.join(source_root, rel_path)
     dest_path = os.path.join(dest_root, rel_path)
 
-    canonical_real_source_path = os.path.realpath(source_path)
+    # Avoid calls to lstat on every path component, only compute realpath
+    source_path_real = None
 
     # preorder yields directories before children
     if order == 'pre':
@@ -915,11 +918,12 @@ def traverse_tree(source_root, dest_root, rel_path='', follow_nonexisting=True,
                     yield (source_child, dest_child)
                     continue
 
-                # isdir already made sure the symlink exists
-                symlink_dir_realpath = os.path.realpath(source_child)
+                if source_path_real is None:
+                    source_path_real = os.path.realpath(source_path)
+                source_child_real = os.path.realpath(source_child)
 
-                # Symlink to dir out of the prefix
-                if not symlink_dir_realpath.startswith(canonical_real_source_path):
+                # Only follow symlinked subdirectories to avoid recursion
+                if not source_child_real.startswith(source_path_real):
                     continue
 
             for t in traverse_tree(source_root, dest_root, rel_child,
