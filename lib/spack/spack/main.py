@@ -611,7 +611,7 @@ class SpackCommand(object):
 
         out = StringIO()
         try:
-            with log_output(out):
+            with log_output(out, echo=True):
                 self.returncode = _invoke_command(
                     self.command, self.parser, args, unknown)
 
