@@ -28,12 +28,15 @@ installations of packages in a Spack instance.
 """
 
 import copy
+import ctypes
 import glob
 import heapq
 import itertools
 import os
 import shutil
+import subprocess
 import sys
+import tempfile
 import time
 from collections import defaultdict
 
@@ -1833,6 +1836,60 @@ class BuildProcessInstaller(object):
         pid = '{0}: '.format(os.getpid()) if tty.show_pid() else ''
         self.pre = '{0}{1}:'.format(pid, pkg.name)
         self.pkg_id = package_id(pkg)
+
+        # Make the spack prefix readonly, but mount the new prefix back.
+        if spack.config.get('config:unshare', False):
+            CLONE_NEWNS   = 0x00020000
+            CLONE_NEWUSER = 0x10000000
+
+            uid, gid = os.geteuid(), os.getegid()
+            libc = ctypes.CDLL('libc.so.6')
+
+            root = spack.store.root
+            mutable_paths = [
+                '.spack-db',
+                os.path.relpath(pkg.spec.prefix, root)
+            ]
+            immutable_paths = []
+            for s in pkg.spec.traverse(root=False, post=True):
+                if s.external:
+                    continue
+                immutable_paths.append(os.path.relpath(s.prefix, root))
+
+            # Switch to root
+            libc.unshare(ctypes.c_int(CLONE_NEWUSER | CLONE_NEWNS))
+            with open('/proc/self/setgroups', 'w') as f:
+                f.write('deny')
+            with open('/proc/self/uid_map', 'w') as f:
+                f.write('0 {0} 1'.format(uid))
+            with open('/proc/self/gid_map', 'w') as f:
+                f.write('0 {0} 1'.format(gid))
+
+            new_root = tempfile.mkdtemp()
+            for p in mutable_paths + immutable_paths:
+                fs.mkdirp(os.path.join(new_root, p))
+            for p in mutable_paths:
+                subprocess.check_call([
+                    'mount', '-o', 'rw,bind',
+                    os.path.join(root, p),
+                    os.path.join(new_root, p)])
+            for p in immutable_paths:
+                subprocess.check_call([
+                    'mount', '-o', 'ro,bind',
+                    os.path.join(root, p),
+                    os.path.join(new_root, p)])
+
+            subprocess.check_call(['mount', '--rbind', new_root, root])
+
+            libc.unshare(ctypes.c_int(CLONE_NEWUSER | CLONE_NEWNS))
+            with open('/proc/self/setgroups', 'w') as f:
+                f.write('deny')
+            with open('/proc/self/uid_map', 'w') as f:
+                f.write('{0} 0 1'.format(uid))
+            with open('/proc/self/gid_map', 'w') as f:
+                f.write('{0} 0 1'.format(gid))
+
+            libc.unshare(ctypes.c_int(CLONE_NEWUSER | CLONE_NEWNS))
 
     def run(self):
         """Main entry point from ``build_process`` to kick off install in child."""
