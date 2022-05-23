@@ -1126,8 +1126,7 @@ class PackageBase(six.with_metaclass(PackageMeta, PackageViewMixin, object)):
             self.spec)
         # Construct a path where the stage should build..
         s = self.spec
-        stage_name = "{0}{1}-{2}-{3}".format(stage_prefix, s.name, s.version,
-                                             s.dag_hash())
+        stage_name = "{0}{1}-{2}".format(stage_prefix, s.name, s.version)
 
         stage = Stage(fetcher, mirror_paths=mirror_paths, name=stage_name,
                       path=self.path, search_fn=self._download_search)

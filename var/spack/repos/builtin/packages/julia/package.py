@@ -140,6 +140,20 @@ class Julia(MakefilePackage):
             time = (os.path.getatime(f), os.path.getmtime(f))
             os.utime(os.path.join("base", "Makefile"), time)
 
+    def flag_handler(self, name, flags):
+        if name in ('cflags', 'cxxflags'):
+            flags.append('-O3')
+            flags.append('-mllvm -vp-counters-per-site=3')
+            flags.append('-fprofile-generate=/tmp/tmp.T2O5M713Ti/profile/julia')
+            #flags.append('-fprofile-use=/tmp/tmp.T2O5M713Ti/profile/julia/julia.prof')
+            return (None, flags, None)
+        if name == 'ldflags':
+            flags.append('-fuse-ld=lld')
+            flags.append('-flto=thin')
+            flags.append('-Wl,-O3')
+            return (None, flags, None)
+        return (flags, None, None)
+
     def setup_build_environment(self, env):
         # this is a bit ridiculous, but we are setting runtime linker paths to
         # dependencies so that libwhich can locate them.
