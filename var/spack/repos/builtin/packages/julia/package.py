@@ -118,7 +118,6 @@ class Julia(MakefilePackage):
     depends_on('unwind')
     depends_on('utf8proc')
     depends_on('zlib +shared +pic +optimize')
-    depends_on('ca-certificates-mozilla')
 
     # Patches for julia
     patch('julia-1.6-system-libwhich-and-p7zip-symlink.patch', when='@1.6.0:1.6')
@@ -232,9 +231,3 @@ class Julia(MakefilePackage):
         with open('Make.user', 'w') as f:
             f.write('\n'.join(options) + '\n')
 
-    @run_after('install')
-    def setup_certificates(self):
-        install(
-            os.path.join(self.spec['ca-certificates-mozilla'].prefix.share, 'cacert.pem'),
-            self.prefix.share.julia
-        )
