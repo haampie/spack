@@ -143,9 +143,10 @@ class Julia(MakefilePackage):
     def flag_handler(self, name, flags):
         if name in ('cflags', 'cxxflags'):
             flags.append('-O3')
-            flags.append('-mllvm -vp-counters-per-site=3')
-            flags.append('-fprofile-generate=/tmp/tmp.T2O5M713Ti/profile/julia')
-            #flags.append('-fprofile-use=/tmp/tmp.T2O5M713Ti/profile/julia/julia.prof')
+            flags.append('-DNDEBUG')
+            flags.extend(['-Xclang', '-mllvm', '-Xclang', '-vp-counters-per-site=3'])
+            #flags.append('-fprofile-generate=/tmp/tmp.T2O5M713Ti/profile/julia')
+            flags.append('-fprofile-use=/tmp/tmp.T2O5M713Ti/profile/julia/julia.prof')
             return (None, flags, None)
         if name == 'ldflags':
             flags.append('-fuse-ld=lld')

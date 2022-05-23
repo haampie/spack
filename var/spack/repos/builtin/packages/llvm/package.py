@@ -567,13 +567,12 @@ class Llvm(CMakePackage, CudaPackage):
             define("LIBOMP_USE_HWLOC", True),
             define("LIBOMP_HWLOC_INSTALL_DIR", spec["hwloc"].prefix),
             # LTO and PGO
-            define("LLVM_ENABLE_DUMP", True),
             define("LLVM_ENABLE_LTO", "Thin"),
             define("LLVM_USE_LINKER", "lld"),
-            #define("LLVM_PROFDATA_FILE", "/tmp/tmp.T2O5M713Ti/profile/llvm/llvm.prof"),
-            define("LLVM_BUILD_INSTRUMENTED", "IR"),
-            define("LLVM_PROFILE_DATA_DIR", "/tmp/tmp.T2O5M713Ti/profile/llvm"),
-            define("LLVM_VP_COUNTERS_PER_SITE", "3"),
+            define("LLVM_PROFDATA_FILE", "/tmp/tmp.T2O5M713Ti/profile/llvm/llvm.prof"),
+            #define("LLVM_BUILD_INSTRUMENTED", "IR"),
+            #define("LLVM_PROFILE_DATA_DIR", "/tmp/tmp.T2O5M713Ti/profile/llvm"),
+            #define("LLVM_VP_COUNTERS_PER_SITE", "3"),
         ]
 
         version_suffix = spec.variants['version_suffix'].value
