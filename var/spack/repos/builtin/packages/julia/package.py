@@ -130,6 +130,9 @@ class Julia(MakefilePackage):
     # only applied to libllvm when it's vendored by julia).
     patch('revert-fix-rpath-of-libllvm.patch', when='@1.7.0:1.7')
 
+    # Allow build with clang.
+    patch('gcc-ifdef.patch', when='@1.7.0:1.7')
+
     def patch(self):
         # The system-libwhich-libblastrampoline.patch causes a rebuild of docs as it
         # touches the main Makefile, so we reset the a/m-time to doc/_build's.
@@ -215,6 +218,9 @@ class Julia(MakefilePackage):
                 '1' if spec.variants['precompile'].value else '0'),
         ]
 
+        options.append('USEGCC:={}'.format('1' if '%gcc' in spec else '0'))
+        options.append('USECLANG:={}'.format('1' if '%clang' in spec else '0'))
+
         # libm or openlibm?
         if spec.variants['openlibm'].value:
             options.append('USE_SYSTEM_LIBM=0')
@@ -225,3 +231,4 @@ class Julia(MakefilePackage):
 
         with open('Make.user', 'w') as f:
             f.write('\n'.join(options) + '\n')
+
