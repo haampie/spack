@@ -118,6 +118,7 @@ class Julia(MakefilePackage):
     depends_on('unwind')
     depends_on('utf8proc')
     depends_on('zlib +shared +pic +optimize')
+    depends_on('ca-certificates-mozilla')
 
     # Patches for julia
     patch('julia-1.6-system-libwhich-and-p7zip-symlink.patch', when='@1.6.0:1.6')
@@ -129,6 +130,8 @@ class Julia(MakefilePackage):
     # Don't make julia run patchelf --set-rpath on llvm (presumably this should've
     # only applied to libllvm when it's vendored by julia).
     patch('revert-fix-rpath-of-libllvm.patch', when='@1.7.0:1.7')
+
+    patch('gcc-ifdef.patch', when='@1.7.2')
 
     def patch(self):
         # The system-libwhich-libblastrampoline.patch causes a rebuild of docs as it
@@ -215,6 +218,9 @@ class Julia(MakefilePackage):
                 '1' if spec.variants['precompile'].value else '0'),
         ]
 
+        options.append('USEGCC:={}'.format('1' if '%gcc' in spec else '0'))
+        options.append('USECLANG:={}'.format('1' if '%clang' in spec else '0'))
+
         # libm or openlibm?
         if spec.variants['openlibm'].value:
             options.append('USE_SYSTEM_LIBM=0')
@@ -225,3 +231,10 @@ class Julia(MakefilePackage):
 
         with open('Make.user', 'w') as f:
             f.write('\n'.join(options) + '\n')
+
+    @run_after('install')
+    def setup_certificates(self):
+        install(
+            os.path.join(self.spec['ca-certificates-mozilla'].prefix.share, 'cacert.pem'),
+            self.prefix.share.julia
+        )
