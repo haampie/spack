@@ -23,6 +23,8 @@ class P7zip(MakefilePackage):
     # all3 includes 7z, 7za, and 7zr
     build_targets = ['all3']
 
+    conflicts('%clang')
+
     def edit(self, spec, prefix):
         if 'platform=darwin' in self.spec:
             if '%gcc' in self.spec:

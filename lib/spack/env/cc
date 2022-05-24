@@ -749,18 +749,26 @@ extend args_list other_args_list
 # Inject SPACK_LDLIBS, if supplied
 extend args_list libs_list "-l"
 
-# Force lld, use -O3 in the linker, enable profiling
-case "$mode" in
-    cc|ccld)
-        extend args_list SPACK_EXTRA_CFLAGS
+# When using clang or clang++ force lld, use -O3 in the linker, enable profiling
+case "${0##*/}" in
+    clang|clang++)
+        case "$mode" in
+            cc|ccld)
+                if [ -n "$SPACK_PROFILE_GENERATE" ]; then
+                    append args_list "-fprofile-generate=$SPACK_PROFILE_GENERATE"
+                elif [ -f "$SPACK_PROFILE_USE" ]; then
+                    append args_list "-fprofile-use=$SPACK_PROFILE_USE"
+                fi
+                ;;
+        esac
+
+        if [ "$mode" = "ccld" ]; then
+            append args_list "-fuse-ld=lld"
+            append args_list "-flto=thin"
+            append args_list "-Wl,-O3"
+        fi
         ;;
 esac
-
-if [ "$mode" = "ccld" ]; then
-    append args_list "-fuse-ld=lld"
-    append args_list "-flto=thin"
-    append args_list "-Wl,-O3"
-fi
 
 full_command_list="$command"
 extend full_command_list args_list
