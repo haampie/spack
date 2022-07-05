@@ -1604,29 +1604,31 @@ class Environment(object):
         # three lines we remove any already-installed root specs from the list
         # to install.  However, uninstalled_specs() only considers root specs,
         # so this will allow dep specs to be unnecessarily re-installed.
-        uninstalled_roots = self.uninstalled_specs()
-        specs_to_install = specs or uninstalled_roots
-        specs_to_install = [s for s in specs_to_install
-                            if s not in self.roots() or s in uninstalled_roots]
+        with spack.store.db.read_transaction():
+            uninstalled_roots = self.uninstalled_specs()
+            specs_to_install = specs or uninstalled_roots
+            specs_to_install = [s for s in specs_to_install
+                                if s not in self.roots() or s in uninstalled_roots]
 
-        # ensure specs already installed are marked explicit
-        all_specs = specs or [cs for _, cs in self.concretized_specs()]
-        specs_installed = [s for s in all_specs if s.installed]
-        with spack.store.db.write_transaction():  # do all in one transaction
-            for spec in specs_installed:
-                spack.store.db.update_explicit(spec, True)
+            # ensure specs already installed are marked explicit
+            all_specs = specs or [cs for _, cs in self.concretized_specs()]
+            specs_installed = [s for s in all_specs if s.installed]
+            if specs_installed:
+                with spack.store.db.write_transaction():  # do all in one transaction
+                    for spec in specs_installed:
+                        spack.store.db.update_explicit(spec, True)
+
+            specs_to_overwrite = self._get_overwrite_specs()
+
+        install_args['overwrite'] = install_args.get(
+            'overwrite', []) + specs_to_overwrite
 
         if not specs_to_install:
             tty.msg('All of the packages are already installed')
         else:
             tty.debug('Processing {0} uninstalled specs'.format(len(specs_to_install)))
 
-        specs_to_overwrite = self._get_overwrite_specs()
-        tty.debug('{0} specs need to be overwritten'.format(
-            len(specs_to_overwrite)))
-
-        install_args['overwrite'] = install_args.get(
-            'overwrite', []) + specs_to_overwrite
+        tty.debug('{0} specs need to be overwritten'.format(len(specs_to_overwrite)))
 
         installs = []
         for spec in specs_to_install:
