@@ -1596,40 +1596,9 @@ class Environment(object):
 
     def install_specs(self, specs=None, **install_args):
         tty.debug('Assessing installation status of environment packages')
-        # If "spack install" is invoked repeatedly for a large environment
-        # where all specs are already installed, the operation can take
-        # a large amount of time due to repeatedly acquiring and releasing
-        # locks, this does an initial check across all specs within a single
-        # DB read transaction to reduce time spent in this case. In the next
-        # three lines we remove any already-installed root specs from the list
-        # to install.  However, uninstalled_specs() only considers root specs,
-        # so this will allow dep specs to be unnecessarily re-installed.
-        uninstalled_roots = self.uninstalled_specs()
-        specs_to_install = specs or uninstalled_roots
-        specs_to_install = [s for s in specs_to_install
-                            if s not in self.roots() or s in uninstalled_roots]
-
-        # ensure specs already installed are marked explicit
-        all_specs = specs or [cs for _, cs in self.concretized_specs()]
-        specs_installed = [s for s in all_specs if s.installed]
-        with spack.store.db.write_transaction():  # do all in one transaction
-            for spec in specs_installed:
-                spack.store.db.update_explicit(spec, True)
-
-        if not specs_to_install:
-            tty.msg('All of the packages are already installed')
-        else:
-            tty.debug('Processing {0} uninstalled specs'.format(len(specs_to_install)))
-
-        specs_to_overwrite = self._get_overwrite_specs()
-        tty.debug('{0} specs need to be overwritten'.format(
-            len(specs_to_overwrite)))
-
-        install_args['overwrite'] = install_args.get(
-            'overwrite', []) + specs_to_overwrite
 
         installs = []
-        for spec in specs_to_install:
+        for spec in specs:
             installs.append((spec.package, install_args))
 
         try:
@@ -1637,7 +1606,7 @@ class Environment(object):
             builder.install()
         finally:
             # Ensure links are set appropriately
-            for spec in specs_to_install:
+            for spec in specs:
                 if spec.installed:
                     self.new_installs.append(spec)
                     try:
