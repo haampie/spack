@@ -5606,3 +5606,30 @@ class InvalidSpecDetected(spack.error.SpecError):
 class SpliceError(spack.error.SpecError):
     """Raised when a splice is not possible due to dependency or provider
     satisfaction mismatch. The resulting splice would be unusable."""
+
+
+def traverse_breadth_first(specs, key=id, deptype="all"):
+    visited = set()
+    queue = [([], s) for s in specs]
+    while len(queue):
+        order, spec = queue.pop(0)
+        identifier = key(spec)
+        if identifier in visited:
+            continue
+        visited.add(identifier)
+        for (i, s) in enumerate(spec.dependencies(deptype=deptype)):
+            queue.append((order + [i], s))
+        yield order, spec
+
+
+def tree_breadth_first(specs):
+    return "\n".join(
+        [
+            "    " * (len(path) - 1)
+            + "    ^" * min(1, len(path))
+            + spec.format(default_format, color=True)
+            for (path, spec) in sorted(
+                [x for x in traverse_breadth_first(specs)], key=lambda x: x[0]
+            )
+        ]
+    )
