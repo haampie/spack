@@ -734,6 +734,9 @@ class DependencySpec(object):
     def canonical(self):
         return self.parent.dag_hash(), self.spec.dag_hash(), self.deptypes
 
+    def flip(self):
+        return DependencySpec(parent=self.spec, spec=self.parent, deptypes=self.deptypes)
+
 
 _valid_compiler_flags = ["cflags", "cxxflags", "fflags", "ldflags", "ldlibs", "cppflags"]
 
