@@ -4594,79 +4594,7 @@ class Spec(object):
             return None
 
     def tree(self, **kwargs):
-        """Prints out this spec and its dependencies, tree-formatted
-        with indentation."""
-        color = kwargs.pop("color", clr.get_color_when())
-        depth = kwargs.pop("depth", False)
-        hashes = kwargs.pop("hashes", False)
-        hlen = kwargs.pop("hashlen", None)
-        status_fn = kwargs.pop("status_fn", False)
-        cover = kwargs.pop("cover", "nodes")
-        indent = kwargs.pop("indent", 0)
-        fmt = kwargs.pop("format", default_format)
-        prefix = kwargs.pop("prefix", None)
-        show_types = kwargs.pop("show_types", False)
-        deptypes = kwargs.pop("deptypes", "all")
-        recurse_dependencies = kwargs.pop("recurse_dependencies", True)
-        breadth_first = kwargs.pop("breadth_first", False)
-        lang.check_kwargs(kwargs, self.tree)
-
-        out = ""
-
-        if breadth_first and cover in ("nodes", "edges"):
-            generator = spack.traverse.traverse_breadth_first_tree(
-                [self], cover=cover, deptype=deptypes
-            )
-        else:
-            generator = self.traverse_edges(order="pre", cover=cover, depth=True, deptype=deptypes)
-
-        for d, dep_spec in generator:
-            node = dep_spec.spec
-
-            if prefix is not None:
-                out += prefix(node)
-            out += " " * indent
-
-            if depth:
-                out += "%-4d" % d
-
-            if status_fn:
-                status = status_fn(node)
-                if node.installed_upstream:
-                    out += clr.colorize("@g{[^]}  ", color=color)
-                elif status is None:
-                    out += clr.colorize("@K{ - }  ", color=color)  # !installed
-                elif status:
-                    out += clr.colorize("@g{[+]}  ", color=color)  # installed
-                else:
-                    out += clr.colorize("@r{[-]}  ", color=color)  # missing
-
-            if hashes:
-                out += clr.colorize("@K{%s}  ", color=color) % node.dag_hash(hlen)
-
-            if show_types:
-                if cover == "nodes":
-                    # when only covering nodes, we merge dependency types
-                    # from all dependents before showing them.
-                    types = [ds.deptypes for ds in node.edges_from_dependents()]
-                else:
-                    # when covering edges or paths, we show dependency
-                    # types only for the edge through which we visited
-                    types = [dep_spec.deptypes]
-
-                type_chars = dp.deptype_chars(*types)
-                out += "[%s]  " % type_chars
-
-            out += "    " * d
-            if d > 0:
-                out += "^"
-            out += node.format(fmt, color=color) + "\n"
-
-            # Check if we wanted just the first line
-            if not recurse_dependencies:
-                break
-
-        return out
+        return tree_of_specs([self], **kwargs)
 
     def __repr__(self):
         return str(self)
@@ -5405,6 +5333,90 @@ def parse(string):
     For creating one spec, see Spec() constructor.
     """
     return SpecParser().parse(string)
+
+
+def tree_of_specs(specs, **kwargs):
+    """Prints out a list of specs and their dependencies, tree-formatted
+    with indentation."""
+    color = kwargs.pop("color", clr.get_color_when())
+    depth = kwargs.pop("depth", False)
+    hashes = kwargs.pop("hashes", False)
+    hlen = kwargs.pop("hashlen", None)
+    status_fn = kwargs.pop("status_fn", False)
+    cover = kwargs.pop("cover", "nodes")
+    indent = kwargs.pop("indent", 0)
+    fmt = kwargs.pop("format", default_format)
+    prefix = kwargs.pop("prefix", None)
+    show_types = kwargs.pop("show_types", False)
+    deptypes = kwargs.pop("deptypes", "all")
+    recurse_dependencies = kwargs.pop("recurse_dependencies", True)
+    breadth_first = kwargs.pop("breadth_first", False)
+    lang.check_kwargs(kwargs, tree_of_specs)
+
+    out = ""
+
+    def _dfs_multiple_specs(specs):
+        visited = set()
+        for s in specs:
+            for item in s.traverse_edges(
+                visited=visited, order="pre", cover=cover, depth=True, deptype=deptypes
+            ):
+                yield item
+
+    if breadth_first and cover in ("nodes", "edges"):
+        generator = spack.traverse.traverse_breadth_first_tree(
+            specs, cover=cover, deptype=deptypes
+        )
+    else:
+        generator = _dfs_multiple_specs()
+
+    for d, dep_spec in generator:
+        node = dep_spec.spec
+
+        if prefix is not None:
+            out += prefix(node)
+        out += " " * indent
+
+        if depth:
+            out += "%-4d" % d
+
+        if status_fn:
+            status = status_fn(node)
+            if node.installed_upstream:
+                out += clr.colorize("@g{[^]}  ", color=color)
+            elif status is None:
+                out += clr.colorize("@K{ - }  ", color=color)  # !installed
+            elif status:
+                out += clr.colorize("@g{[+]}  ", color=color)  # installed
+            else:
+                out += clr.colorize("@r{[-]}  ", color=color)  # missing
+
+        if hashes:
+            out += clr.colorize("@K{%s}  ", color=color) % node.dag_hash(hlen)
+
+        if show_types:
+            if cover == "nodes":
+                # when only covering nodes, we merge dependency types
+                # from all dependents before showing them.
+                types = [ds.deptypes for ds in node.edges_from_dependents()]
+            else:
+                # when covering edges or paths, we show dependency
+                # types only for the edge through which we visited
+                types = [dep_spec.deptypes]
+
+            type_chars = dp.deptype_chars(*types)
+            out += "[%s]  " % type_chars
+
+        out += "    " * d
+        if d > 0:
+            out += "^"
+        out += node.format(fmt, color=color) + "\n"
+
+        # Check if we wanted just the first line
+        if not recurse_dependencies:
+            break
+
+    return out
 
 
 def save_dependency_specfiles(

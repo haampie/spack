@@ -2225,18 +2225,15 @@ def display_specs(concretized_specs):
             `Environment.concretize()`
     """
 
-    def _tree_to_display(spec):
-        return spec.tree(
-            recurse_dependencies=True,
+    sys.stdout.write(
+        spack.spec.tree_of_specs(
+            [root for _, root in concretized_specs],
             status_fn=spack.spec.Spec.install_status,
             hashlen=7,
             hashes=True,
+            breadth_first=True,
         )
-
-    for user_spec, concrete_spec in concretized_specs:
-        tty.msg("Concretized {0}".format(user_spec))
-        sys.stdout.write(_tree_to_display(concrete_spec))
-        print("")
+    )
 
 
 def _concretize_from_constraints(spec_constraints, tests=False):
