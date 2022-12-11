@@ -117,7 +117,7 @@ def test_archive_file_errors(tmpdir, mock_archive, _fetch_method):
                 assert stage is not None
                 assert fetcher.archive_file is None
                 with pytest.raises(fs.NoArchiveFileError):
-                    fetcher.archive(url_lib.path_to_file_url(testpath))
+                    fetcher.archive(url_util.path_to_file_url(testpath))
                 with pytest.raises(fs.NoArchiveFileError):
                     fetcher.expand()
                 with pytest.raises(fs.NoArchiveFileError):
