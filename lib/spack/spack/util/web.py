@@ -17,6 +17,7 @@ import sys
 import traceback
 from html.parser import HTMLParser
 from urllib.error import URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 import llnl.util.lang
@@ -143,10 +144,10 @@ def read_from_url(url, accept_content_type=None):
 
 
 def push_to_url(local_file_path, remote_path, keep_original=True, extra_args=None):
-    remote_url = url_util.parse(remote_path)
+    remote_url = urlparse(remote_path)
 
-    # Apparently in some code paths no file:// scheme is set (it's just a path).
     if not remote_url.scheme:
+        # Assume path if no scheme
         remote_file_path = remote_path
     else:
         remote_file_path = url_util.local_file_path(remote_url)
