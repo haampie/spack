@@ -16,6 +16,7 @@ import spack.fetch_strategy
 import spack.paths
 import spack.util.file_cache
 import spack.util.path
+import spack.util.url as url_util
 
 
 def misc_cache_location():
@@ -67,7 +68,7 @@ class MirrorCache(object):
         # normally be cached (e.g. the current tip of an hg/git branch)
         dst = os.path.join(self.root, relative_dest)
         mkdirp(os.path.dirname(dst))
-        fetcher.archive(dst)
+        fetcher.archive(url_util.path_to_file_url(dst))
 
     def symlink(self, mirror_ref):
         """Symlink a human readible path in our mirror to the actual
