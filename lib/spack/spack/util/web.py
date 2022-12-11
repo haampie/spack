@@ -145,7 +145,12 @@ def read_from_url(url, accept_content_type=None):
 def push_to_url(local_file_path, remote_path, keep_original=True, extra_args=None):
     remote_url = url_util.parse(remote_path)
 
-    remote_file_path = url_util.local_file_path(remote_url)
+    # Apparently in some code paths no file:// scheme is set (it's just a path).
+    if not remote_url.scheme:
+        remote_file_path = remote_path
+    else:
+        remote_file_path = url_util.local_file_path(remote_url)
+
     if remote_file_path is not None:
         mkdirp(os.path.dirname(remote_file_path))
         if keep_original:
