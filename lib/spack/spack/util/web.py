@@ -351,7 +351,7 @@ def url_exists(url, curl=None):
 
     Returns (bool): True if it exists; False otherwise.
     """
-    tty.debug("Checking existence of {0}".format(url))
+    print("Checking existence of {0}".format(url))
     url_result = url_util.parse(url)
 
     # Use curl if configured to do so
