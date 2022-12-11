@@ -17,7 +17,6 @@ import spack.fetch_strategy as fs
 import spack.repo
 import spack.util.crypto as crypto
 import spack.util.executable
-import spack.util.url as url_util
 import spack.util.web as web_util
 from spack.spec import Spec
 from spack.stage import Stage
@@ -117,7 +116,7 @@ def test_archive_file_errors(tmpdir, mock_archive, _fetch_method):
                 assert stage is not None
                 assert fetcher.archive_file is None
                 with pytest.raises(fs.NoArchiveFileError):
-                    fetcher.archive(url_util.path_to_file_url(testpath))
+                    fetcher.archive(testpath)
                 with pytest.raises(fs.NoArchiveFileError):
                     fetcher.expand()
                 with pytest.raises(fs.NoArchiveFileError):

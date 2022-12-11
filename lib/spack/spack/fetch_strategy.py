@@ -486,7 +486,9 @@ class URLFetchStrategy(FetchStrategy):
         if not self.archive_file:
             raise NoArchiveFileError("Cannot call archive() before fetching.")
 
-        web_util.push_to_url(self.archive_file, destination, keep_original=True)
+        web_util.push_to_url(
+            self.archive_file, url_util.path_to_file_url(destination), keep_original=True
+        )
 
     @_needs_stage
     def check(self):
@@ -1665,7 +1667,7 @@ class FsCache(object):
 
         dst = os.path.join(self.root, relative_dest)
         mkdirp(os.path.dirname(dst))
-        fetcher.archive(url_util.path_to_file_url(dst))
+        fetcher.archive(dst)
 
     def fetcher(self, target_path, digest, **kwargs):
         path = os.path.join(self.root, target_path)
