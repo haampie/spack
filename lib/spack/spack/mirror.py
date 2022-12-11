@@ -673,7 +673,7 @@ def push_url_from_directory(output_directory):
     scheme = url_util.parse(output_directory, scheme="<missing>").scheme
     if scheme != "<missing>":
         raise ValueError("expected a local path, but got a URL instead")
-    mirror_url = "file://" + url_util.path_to_file_url(output_directory)
+    mirror_url = url_util.path_to_file_url(output_directory)
     mirror = spack.mirror.MirrorCollection().lookup(mirror_url)
     return url_util.format(mirror.push_url)
 
