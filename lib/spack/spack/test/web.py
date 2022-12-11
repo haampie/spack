@@ -16,12 +16,13 @@ import spack.mirror
 import spack.paths
 import spack.util.s3
 import spack.util.web
+import spack.util.url as url_util
 from spack.version import ver
 
 
 def _create_url(relative_url):
-    web_data_path = posixpath.join(spack.paths.test_path, "data", "web")
-    return "file://" + posixpath.join(web_data_path, relative_url)
+    web_data_path = os.path.join(spack.paths.test_path, "data", "web")
+    return url_util.path_to_file_url(os.path.join(web_data_path, relative_url))
 
 
 root = _create_url("index.html")

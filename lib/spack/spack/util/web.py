@@ -143,9 +143,6 @@ def read_from_url(url, accept_content_type=None):
 
 
 def push_to_url(local_file_path, remote_path, keep_original=True, extra_args=None):
-    if sys.platform == "win32":
-        if remote_path[1] == ":":
-            remote_path = "file://" + remote_path
     remote_url = url_util.parse(remote_path)
 
     remote_file_path = url_util.local_file_path(remote_url)

@@ -12,6 +12,7 @@ import posixpath
 import re
 import sys
 import urllib.parse
+import urllib.request
 
 from spack.util.path import (
     canonicalize_path,
@@ -60,6 +61,14 @@ def local_file_path(url):
         return url.path
 
     return None
+
+
+def path_to_file_url(path):
+    return urllib.parse.urljoin('file:', urllib.request.pathname2url(path))
+
+
+def file_url_string_to_path(url):
+    return urllib.request.url2pathname(urllib.parse.urlparse(url).path)
 
 
 def parse(url, scheme="file"):

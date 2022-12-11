@@ -20,6 +20,7 @@ from spack.spec import Spec
 from spack.stage import Stage
 from spack.util.executable import Executable
 from spack.util.path import is_windows
+import spack.util.url as url_util
 
 # various sha256 sums (using variables for legibility)
 # many file based shas will differ between Windows and other platforms
@@ -87,7 +88,7 @@ data_path = os.path.join(spack.paths.test_path, "data", "patch")
 )
 def test_url_patch(mock_patch_stage, filename, sha256, archive_sha256, config):
     # Make a patch object
-    url = "file://" + filename
+    url = url_util.path_to_file_url(filename)
     s = Spec("patch").concretized()
     patch = spack.patch.UrlPatch(s.package, url, sha256=sha256, archive_sha256=archive_sha256)
 

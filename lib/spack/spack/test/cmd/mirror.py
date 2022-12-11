@@ -10,6 +10,7 @@ import pytest
 
 import spack.cmd.mirror
 import spack.config
+import spack.util.url as url_util
 import spack.environment as ev
 from spack.main import SpackCommand, SpackCommandError
 
@@ -89,7 +90,7 @@ def source_for_pkg_with_hash(mock_packages, tmpdir):
     local_path = os.path.join(str(tmpdir), local_url_basename)
     with open(local_path, "w") as f:
         f.write(s.package.hashed_content)
-    local_url = "file://" + local_path
+    local_url = url_util.path_to_file_url(local_path)
     s.package.versions[spack.version.Version("1.0")]["url"] = local_url
 
 
