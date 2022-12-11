@@ -53,12 +53,7 @@ def local_file_path(url):
         url = parse(url)
 
     if url.scheme == "file":
-        if is_windows:
-            pth = convert_to_platform_path(url.netloc + url.path)
-            if re.search(r"^\\[A-Za-z]:", pth):
-                pth = pth.lstrip("\\")
-            return pth
-        return url.path
+        return urllib.request.url2pathname(url.path)
 
     return None
 
