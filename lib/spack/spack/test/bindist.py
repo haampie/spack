@@ -20,6 +20,7 @@ import spack.mirror
 import spack.repo
 import spack.store
 import spack.util.gpg
+import spack.util.url as url_util
 import spack.util.web as web_util
 from spack.binary_distribution import get_buildfile_manifest
 from spack.directory_layout import DirectoryLayout
@@ -325,7 +326,7 @@ def test_push_and_fetch_keys(mock_gnupghome):
     mirror = os.path.join(testpath, "mirror")
     mirrors = {"test-mirror": mirror}
     mirrors = spack.mirror.MirrorCollection(mirrors)
-    mirror = spack.mirror.Mirror("file://" + mirror)
+    mirror = spack.mirror.Mirror(url_util.path_to_file_url(mirror))
 
     gpg_dir1 = os.path.join(testpath, "gpg1")
     gpg_dir2 = os.path.join(testpath, "gpg2")

@@ -314,17 +314,7 @@ class URLFetchStrategy(FetchStrategy):
 
     @property
     def candidate_urls(self):
-        urls = []
-
-        for url in [self.url] + (self.mirrors or []):
-            # This must be skipped on Windows due to URL encoding
-            # of ':' characters on filepaths on Windows
-            if sys.platform != "win32" and url.startswith("file://"):
-                path = urllib.parse.quote(url[len("file://") :])
-                url = "file://" + path
-            urls.append(url)
-
-        return urls
+        return [self.url] + (self.mirrors or [])
 
     @_needs_stage
     def fetch(self):

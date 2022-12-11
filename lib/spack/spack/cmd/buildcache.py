@@ -579,7 +579,7 @@ def sync_fn(args):
         if scheme != "<missing>":
             raise ValueError('"--src-directory" expected a local path; got a URL, instead')
         # Ensure that the mirror lookup does not mistake this for named mirror
-        source_location = "file://" + source_location
+        source_location = url_util.path_to_file_url(source_location)
     elif args.src_mirror_name:
         source_location = args.src_mirror_name
         result = spack.mirror.MirrorCollection().lookup(source_location)
@@ -602,7 +602,7 @@ def sync_fn(args):
         if scheme != "<missing>":
             raise ValueError('"--dest-directory" expected a local path; got a URL, instead')
         # Ensure that the mirror lookup does not mistake this for named mirror
-        dest_location = "file://" + dest_location
+        dest_location = url_util.path_to_file_url(dest_location)
     elif args.dest_mirror_name:
         dest_location = args.dest_mirror_name
         result = spack.mirror.MirrorCollection().lookup(dest_location)
