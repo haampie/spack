@@ -813,7 +813,7 @@ def create_rebuild_env(tmpdir, pkg_name, broken_tests=False):
     mirror_url = url_util.path_to_file_url(mirror_dir.strpath)
 
     broken_specs_path = os.path.join(working_dir.strpath, "naughty-list")
-    broken_specs_url = url_util.join(url_util.path_to_file_url(broken_specs_path))
+    broken_specs_url = url_util.path_to_file_url(broken_specs_path)
     temp_storage_url = "file:///path/to/per/pipeline/storage"
 
     broken_tests_packages = [pkg_name] if broken_tests else []

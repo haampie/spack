@@ -37,11 +37,7 @@ def test_fetch(tmpdir, _fetch_method):
     testpath = str(tmpdir)
     cache = os.path.join(testpath, "cache.tar.gz")
     touch(cache)
-    if is_windows:
-        url_stub = "{0}"
-    else:
-        url_stub = "/{0}"
-    url = url_util.path_to_file_url(url_stub.format(cache))
+    url = url_util.path_to_file_url(cache)
     with spack.config.override("config:url_fetch_method", _fetch_method):
         fetcher = CacheURLFetchStrategy(url=url)
         with Stage(fetcher, path=testpath) as stage:
