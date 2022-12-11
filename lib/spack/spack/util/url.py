@@ -14,11 +14,7 @@ import sys
 import urllib.parse
 import urllib.request
 
-from spack.util.path import (
-    canonicalize_path,
-    convert_to_platform_path,
-    convert_to_posix_path,
-)
+from spack.util.path import canonicalize_path, convert_to_posix_path
 
 is_windows = sys.platform == "win32"
 
