@@ -19,11 +19,11 @@ from llnl.util.filesystem import getuid, mkdirp, partition_path, touch, working_
 import spack.paths
 import spack.stage
 import spack.util.executable
+import spack.util.url as url_util
 from spack.resource import Resource
 from spack.stage import DIYStage, ResourceStage, Stage, StageComposite
 from spack.util.path import canonicalize_path
 from spack.util.web import FetchError
-import spack.util.url as url_util
 
 # The following values are used for common fetch and stage mocking fixtures:
 _archive_base = "test-files"

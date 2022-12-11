@@ -911,6 +911,7 @@ def color_url(path, **kwargs):
 
     return colorize(out.getvalue())
 
+
 class UrlParseError(spack.error.SpackError):
     """Raised when the URL module can't parse something correctly."""
 

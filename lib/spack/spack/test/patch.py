@@ -16,11 +16,11 @@ import spack.patch
 import spack.paths
 import spack.repo
 import spack.util.compression
+import spack.util.url as url_util
 from spack.spec import Spec
 from spack.stage import Stage
 from spack.util.executable import Executable
 from spack.util.path import is_windows
-import spack.util.url as url_util
 
 # various sha256 sums (using variables for legibility)
 # many file based shas will differ between Windows and other platforms
