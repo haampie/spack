@@ -539,8 +539,7 @@ class CacheURLFetchStrategy(URLFetchStrategy):
 
     @_needs_stage
     def fetch(self):
-        reg_str = r"^file://"
-        path = re.sub(reg_str, "", self.url)
+        path = url_util.file_url_string_to_path(self.url)
 
         # check whether the cache file exists.
         if not os.path.isfile(path):
