@@ -24,9 +24,11 @@ import ruamel.yaml.error as yaml_error
 import llnl.util.tty as tty
 from llnl.util.filesystem import mkdirp
 
+import spack.caches
 import spack.config
 import spack.error
 import spack.fetch_strategy as fs
+import spack.mirror
 import spack.spec
 import spack.url as url
 import spack.util.spack_json as sjson

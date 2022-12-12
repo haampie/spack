@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import os
 import urllib.parse
+import spack.util.url as url_util
 from typing import Any, Dict, Tuple
 
 import spack
@@ -27,7 +28,7 @@ def get_s3_session(url, method="fetch"):
     global s3_client_cache
 
     # Get a (recycled) s3 session for a particular URL
-    url = urllib.parse.parseurl(url)
+    url = urllib.parse.urlparse(url)
 
     url_str = url_util.format(url)
 

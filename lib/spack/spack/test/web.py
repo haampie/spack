@@ -182,9 +182,9 @@ def test_get_header():
         spack.util.web.get_header(headers, "ContentLength")
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Not supported on Windows (yet)")
 def test_list_url(tmpdir):
     testpath = str(tmpdir)
+    testpath_url = url_util.path_to_file_url(testpath)
 
     os.mkdir(os.path.join(testpath, "dir"))
 
@@ -199,7 +199,7 @@ def test_list_url(tmpdir):
         pass
 
     list_url = lambda recursive: list(
-        sorted(spack.util.web.list_url(testpath, recursive=recursive))
+        sorted(spack.util.web.list_url(testpath_url, recursive=recursive))
     )
 
     assert list_url(False) == ["file-0.txt", "file-1.txt", "file-2.txt"]

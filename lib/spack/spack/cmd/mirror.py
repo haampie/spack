@@ -357,11 +357,10 @@ def versions_per_spec(args):
 
 
 def create_mirror_for_individual_specs(mirror_specs, directory_hint, skip_unstable_versions):
-    local_push_url = local_mirror_url_from_user(directory_hint)
     present, mirrored, error = spack.mirror.create(
-        local_push_url, mirror_specs, skip_unstable_versions
+        directory_hint, mirror_specs, skip_unstable_versions
     )
-    tty.msg("Summary for mirror in {}".format(local_push_url))
+    tty.msg("Summary for mirror in {}".format(directory_hint))
     process_mirror_stats(present, mirrored, error)
 
 

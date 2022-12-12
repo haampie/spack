@@ -8,13 +8,14 @@ Utility functions for parsing, formatting, and manipulating URLs.
 """
 
 import itertools
+import os
 import posixpath
 import re
 import sys
 import urllib.parse
 import urllib.request
 
-from spack.util.path import canonicalize_path, convert_to_posix_path
+from spack.util.path import convert_to_posix_path
 
 
 def _split_all(path):
@@ -53,6 +54,8 @@ def local_file_path(url):
 
 
 def path_to_file_url(path):
+    if not os.path.isabs(path):
+        path = os.path.abspath(path)
     return urllib.parse.urljoin("file:", urllib.request.pathname2url(path))
 
 

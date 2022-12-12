@@ -46,7 +46,7 @@ def setup_parser(subparser):
         "-r",
         "--rel",
         action="store_true",
-        help="make all rpaths relative" + " before creating tarballs.",
+        help="make all rpaths relative before creating tarballs.",
     )
     create.add_argument(
         "-f", "--force", action="store_true", help="overwrite tarball if it exists."
@@ -55,13 +55,13 @@ def setup_parser(subparser):
         "-u",
         "--unsigned",
         action="store_true",
-        help="create unsigned buildcache" + " tarballs for testing",
+        help="create unsigned buildcache tarballs for testing",
     )
     create.add_argument(
         "-a",
         "--allow-root",
         action="store_true",
-        help="allow install root string in binary files " + "after RPATH substitution",
+        help="allow install root string in binary files after RPATH substitution",
     )
     create.add_argument(
         "-k", "--key", metavar="key", type=str, default=None, help="Key for signing."
@@ -72,31 +72,31 @@ def setup_parser(subparser):
         "--directory",
         metavar="directory",
         type=str,
-        help="local directory where " + "buildcaches will be written.",
+        help="local directory where buildcaches will be written.",
     )
     output.add_argument(
         "-m",
         "--mirror-name",
         metavar="mirror-name",
         type=str,
-        help="name of the mirror where " + "buildcaches will be written.",
+        help="name of the mirror where buildcaches will be written.",
     )
     output.add_argument(
         "--mirror-url",
         metavar="mirror-url",
         type=str,
-        help="URL of the mirror where " + "buildcaches will be written.",
+        help="URL of the mirror where buildcaches will be written.",
     )
     create.add_argument(
         "--rebuild-index",
         action="store_true",
         default=False,
-        help="Regenerate buildcache index " + "after building package(s)",
+        help="Regenerate buildcache index after building package(s)",
     )
     create.add_argument(
         "--spec-file",
         default=None,
-        help=("Create buildcache entry for spec from json or " + "yaml file"),
+        help="Create buildcache entry for spec from json or yaml file",
     )
     create.add_argument(
         "--only",
@@ -125,19 +125,19 @@ def setup_parser(subparser):
         "-a",
         "--allow-root",
         action="store_true",
-        help="allow install root string in binary files " + "after RPATH substitution",
+        help="allow install root string in binary files after RPATH substitution",
     )
     install.add_argument(
         "-u",
         "--unsigned",
         action="store_true",
-        help="install unsigned buildcache" + " tarballs for testing",
+        help="install unsigned buildcache tarballs for testing",
     )
     install.add_argument(
         "-o",
         "--otherarch",
         action="store_true",
-        help="install specs from other architectures" + " instead of default platform and OS",
+        help="install specs from other architectures instead of default platform and OS",
     )
 
     arguments.add_common_arguments(install, ["specs"])
@@ -156,7 +156,7 @@ def setup_parser(subparser):
         "-a",
         "--allarch",
         action="store_true",
-        help="list specs for all available architectures" + " instead of default platform and OS",
+        help="list specs for all available architectures instead of default platform and OS",
     )
     arguments.add_common_arguments(listcache, ["specs"])
     listcache.set_defaults(func=list_fn)
@@ -205,7 +205,7 @@ def setup_parser(subparser):
     check.add_argument(
         "--spec-file",
         default=None,
-        help=("Check single spec from json or yaml file instead of release " + "specs file"),
+        help=("Check single spec from json or yaml file instead of release specs file"),
     )
 
     check.set_defaults(func=check_fn)
@@ -218,7 +218,7 @@ def setup_parser(subparser):
     download.add_argument(
         "--spec-file",
         default=None,
-        help=("Download built tarball for spec (from json or yaml file) " + "from mirror"),
+        help=("Download built tarball for spec (from json or yaml file) from mirror"),
     )
     download.add_argument(
         "-p", "--path", default=None, help="Path to directory where tarball should be downloaded"
@@ -235,7 +235,7 @@ def setup_parser(subparser):
     getbuildcachename.add_argument(
         "--spec-file",
         default=None,
-        help=("Path to spec json or yaml file for which buildcache name is " + "desired"),
+        help=("Path to spec json or yaml file for which buildcache name is desired"),
     )
     getbuildcachename.set_defaults(func=get_buildcache_name_fn)
 
@@ -295,7 +295,27 @@ def setup_parser(subparser):
 
     # Update buildcache index without copying any additional packages
     update_index = subparsers.add_parser("update-index", help=update_index_fn.__doc__)
-    update_index.add_argument("-d", "--mirror-url", default=None, help="Destination mirror url")
+    update_index_out = update_index.add_mutually_exclusive_group(required=True)
+    update_index_out.add_argument(
+        "-d",
+        "--directory",
+        metavar="directory",
+        type=str,
+        help="local directory where buildcaches will be written.",
+    )
+    update_index_out.add_argument(
+        "-m",
+        "--mirror-name",
+        metavar="mirror-name",
+        type=str,
+        help="name of the mirror where buildcaches will be written.",
+    )
+    update_index_out.add_argument(
+        "--mirror-url",
+        metavar="mirror-url",
+        type=str,
+        help="URL of the mirror where buildcaches will be written.",
+    )
     update_index.add_argument(
         "-k",
         "--keys",
@@ -324,9 +344,9 @@ def _matching_specs(args):
 
     tty.die(
         "build cache file creation requires at least one"
-        + " installed package spec, an active environment,"
-        + " or else a path to a json or yaml file containing a spec"
-        + " to install"
+        " installed package spec, an active environment,"
+        " or else a path to a json or yaml file containing a spec"
+        " to install"
     )
 
 
@@ -693,11 +713,16 @@ def update_index(mirror_url, update_keys=False):
 
 def update_index_fn(args):
     """Update a buildcache index."""
-    outdir = "file://."
-    if args.mirror_url:
-        outdir = args.mirror_url
+    if args.directory:
+        push_url = spack.mirror.push_url_from_directory(args.directory)
 
-    update_index(outdir, update_keys=args.keys)
+    if args.mirror_name:
+        push_url = spack.mirror.push_url_from_mirror_name(args.mirror_name)
+
+    if args.mirror_url:
+        push_url = spack.mirror.push_url_from_mirror_url(args.mirror_url)
+
+    update_index(push_url, update_keys=args.keys)
 
 
 def buildcache(parser, args):

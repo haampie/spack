@@ -11,6 +11,7 @@ import pytest
 import spack.cmd.mirror
 import spack.config
 import spack.environment as ev
+import spack.spec
 import spack.util.url as url_util
 from spack.main import SpackCommand, SpackCommandError
 

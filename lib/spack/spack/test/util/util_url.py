@@ -6,46 +6,44 @@
 """Test Spack's URL handling utility functions."""
 import os
 import os.path
-import posixpath
-import re
-import sys
+import urllib.parse
 
 import pytest
 
-import spack.paths
 import spack.util.url as url_util
-from spack.util.path import convert_to_posix_path
 
 
-def test_url_local_file_path():
-    spack_root = spack.paths.spack_root
-    sep = os.path.sep
-    lfp = url_util.local_file_path("/a/b/c.txt")
-    assert lfp is None
+def test_url_local_file_path(tmpdir):
+    # Create a file
+    path = str(tmpdir.join("hello.txt"))
+    with open(path, "wb") as f:
+        f.write(b"hello world")
 
-    lfp = url_util.local_file_path("file:///a/b/c.txt")
-    assert lfp == sep + os.path.join("a", "b", "c.txt")
+    # Go from path -> url -> path.
+    roundtrip = url_util.local_file_path(url_util.path_to_file_url(path))
 
-    lfp = url_util.local_file_path("file://$spack/a/b/c.txt")
-    expected = os.path.abspath(os.path.join(spack_root, "a", "b", "c.txt"))
-    assert lfp == expected
+    # Verify it's the same file.
+    assert os.path.samefile(roundtrip, path)
 
-    lfp = url_util.local_file_path("file://$spack/a/b/c.txt")
-    expected = os.path.abspath(os.path.join(spack_root, "a", "b", "c.txt"))
-    assert lfp == expected
+    # Test if it accepts urlparse objects
+    parsed = urllib.parse.urlparse(url_util.path_to_file_url(path))
+    assert os.path.samefile(url_util.local_file_path(parsed), path)
 
-    # not a file:// URL - so no local file path
-    lfp = url_util.local_file_path("http:///a/b/c.txt")
-    assert lfp is None
 
-    lfp = url_util.local_file_path("http://a/b/c.txt")
-    assert lfp is None
+def test_url_local_file_path_no_file_scheme():
+    assert url_util.local_file_path("https://example.com/hello.txt") is None
+    assert url_util.local_file_path("C:\\Program Files\\hello.txt") is None
 
-    lfp = url_util.local_file_path("http:///$spack/a/b/c.txt")
-    assert lfp is None
 
-    lfp = url_util.local_file_path("http://$spack/a/b/c.txt")
-    assert lfp is None
+def test_relative_path_to_file_url(tmpdir):
+    # Create a file
+    path = str(tmpdir.join("hello.txt"))
+    with open(path, "wb") as f:
+        f.write(b"hello world")
+
+    with tmpdir.as_cwd():
+        roundtrip = url_util.local_file_path(url_util.path_to_file_url("hello.txt"))
+        assert os.path.samefile(roundtrip, path)
 
 
 def test_url_join_local_paths():
@@ -114,26 +112,6 @@ def test_url_join_local_paths():
         == "https://mirror.spack.io/build_cache/my-package"
     )
 
-    # file:// URL path components are *NOT* canonicalized
-    spack_root = spack.paths.spack_root
-
-    if sys.platform != "win32":
-        join_result = url_util.join("/a/b/c", "$spack")
-        assert join_result == "file:///a/b/c/$spack"  # not canonicalized
-        format_result = url_util.format(join_result)
-        # canoncalize by hand
-        expected = url_util.format(
-            os.path.abspath(os.path.join("/", "a", "b", "c", "." + spack_root))
-        )
-        assert format_result == expected
-
-        # see test_url_join_absolute_paths() for more on absolute path components
-        join_result = url_util.join("/a/b/c", "/$spack")
-        assert join_result == "file:///$spack"  # not canonicalized
-        format_result = url_util.format(join_result)
-        expected = url_util.format(spack_root)
-        assert format_result == expected
-
     # For s3:// URLs, the "netloc" (bucket) is considered part of the path.
     # Make sure join() can cross bucket boundaries in this case.
     args = ["s3://bucket/a/b", "new-bucket", "c"]
@@ -151,103 +129,23 @@ def test_url_join_local_paths():
 
 
 def test_url_join_absolute_paths():
-    # Handling absolute path components is a little tricky.  To this end, we
-    # distinguish "absolute path components", from the more-familiar concept of
-    # "absolute paths" as they are understood for local filesystem paths.
-    #
-    # - All absolute paths are absolute path components.  Joining a URL with
-    #   these components has the effect of completely replacing the path of the
-    #   URL with the absolute path.  These components do not specify a URL
-    #   scheme, so the scheme of the URL procuced when joining them depend on
-    #   those provided by components that came before it (file:// assumed if no
-    #   such scheme is provided).
+    # urllib.parse.urljoin(x, y) works as if you're following a link to y on a
+    # website x in a web browser, which is different from os.path.join(x, y).
+    # url_util.join(x, y) does the same as urljoin, except that it also handles
+    # urls in the s3:// scheme like a web browser.
 
-    # For eaxmple:
-    p = "/path/to/resource"
-    # ...is an absolute path
+    # Absolute path components
+    assert (
+        url_util.join("http://example.com/a/b/c", "/path/to/resource")
+        == "http://example.com/path/to/resource"
+    )
+    assert url_util.join("s3://example.com/a/b/c", "/path/to/resource") == "s3://path/to/resource"
+    assert url_util.join("file:///a/b/c", "/d") == "file:///d"
 
-    # http:// URL
-    assert url_util.join("http://example.com/a/b/c", p) == "http://example.com/path/to/resource"
-
-    # s3:// URL
-    # also notice how the netloc is treated as part of the path for s3:// URLs
-    assert url_util.join("s3://example.com/a/b/c", p) == "s3://path/to/resource"
-
-    # - URL components that specify a scheme are always absolute path
-    #   components.  Joining a base URL with these components effectively
-    #   discards the base URL and "resets" the joining logic starting at the
-    #   component in question and using it as the new base URL.
-
-    # For eaxmple:
-    p = "http://example.com/path/to"
-    # ...is an http:// URL
-
-    join_result = url_util.join(p, "resource")
-    assert join_result == "http://example.com/path/to/resource"
-
-    # works as if everything before the http:// URL was left out
-    assert url_util.join("literally", "does", "not", "matter", p, "resource") == join_result
-
-    # It's important to keep in mind that this logic applies even if the
-    # component's path is not an absolute path!
-
-    # For eaxmple:
-    p = "./d"
-    # ...is *NOT* an absolute path
-    # ...is also *NOT* an absolute path component
-
-    u = "file://./d"
-    # ...is a URL
-    #     The path of this URL is *NOT* an absolute path
-    #     HOWEVER, the URL, itself, *is* an absolute path component
-
-    # (We just need...
-    cwd = os.getcwd()
-    # ...to work out what resource it points to)
-
-    if sys.platform == "win32":
-        convert_to_posix_path(cwd)
-        cwd = "/" + cwd
-
-    # So, even though parse() assumes "file://" URL, the scheme is still
-    # significant in URL path components passed to join(), even if the base
-    # is a file:// URL.
-
-    path_join_result = "file:///a/b/c/d"
-    assert url_util.join("/a/b/c", p) == path_join_result
-    assert url_util.join("file:///a/b/c", p) == path_join_result
-
-    url_join_result = "file://{CWD}/d".format(CWD=cwd)
-    assert url_util.join("/a/b/c", u) == url_join_result
-    assert url_util.join("file:///a/b/c", u) == url_join_result
-
-    # Finally, resolve_href should have no effect for how absolute path
-    # components are handled because local hrefs can not be absolute path
-    # components.
-    args = [
-        "s3://does",
-        "not",
-        "matter",
-        "http://example.com",
-        "also",
-        "does",
-        "not",
-        "matter",
-        "/path",
-    ]
-
-    expected = "http://example.com/path"
-    assert url_util.join(*args, resolve_href=True) == expected
-    assert url_util.join(*args, resolve_href=False) == expected
-
-    # resolve_href only matters for the local path components at the end of the
-    # argument list.
-    args[-1] = "/path/to/page"
-    args.extend(("..", "..", "resource"))
-
-    assert url_util.join(*args, resolve_href=True) == "http://example.com/resource"
-
-    assert url_util.join(*args, resolve_href=False) == "http://example.com/path/resource"
+    # Relative path components
+    assert url_util.join("http://example.com/a/b/c", "d") == "http://example.com/a/b/c/d"
+    assert url_util.join("s3://example.com/a/b/c", "d") == "s3://example.com/a/b/c/d"
+    assert url_util.join("file:///a/b/c", "./d") == "file:///a/b/c/d"
 
 
 @pytest.mark.parametrize(
