@@ -43,7 +43,7 @@ def local_file_path(url):
     file or directory referenced by it.  Otherwise, return None.
     """
     if isinstance(url, str):
-        url = parse(url)
+        url = urllib.parse.urlparse(url)
 
     if url.scheme == "file":
         return urllib.request.url2pathname(url.path)
@@ -192,7 +192,7 @@ def join(base_url, path, *extra, **kwargs):
 
 
 def _join(base_url, path, *extra, **kwargs):
-    base_url = parse(base_url)
+    base_url = urllib.parse.urlparse(base_url)
     resolve_href = kwargs.get("resolve_href", False)
 
     (scheme, netloc, base_path, params, query, _) = base_url
