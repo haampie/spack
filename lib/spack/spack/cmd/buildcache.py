@@ -8,6 +8,7 @@ import os
 import shutil
 import sys
 import tempfile
+import urllib.parse
 
 import llnl.util.tty as tty
 
@@ -575,7 +576,7 @@ def sync_fn(args):
     source_location = None
     if args.src_directory:
         source_location = args.src_directory
-        scheme = url_util.parse(source_location, scheme="<missing>").scheme
+        scheme = urllib.parse.urlparse(source_location, scheme="<missing>").scheme
         if scheme != "<missing>":
             raise ValueError('"--src-directory" expected a local path; got a URL, instead')
         # Ensure that the mirror lookup does not mistake this for named mirror
@@ -587,7 +588,7 @@ def sync_fn(args):
             raise ValueError('no configured mirror named "{name}"'.format(name=source_location))
     elif args.src_mirror_url:
         source_location = args.src_mirror_url
-        scheme = url_util.parse(source_location, scheme="<missing>").scheme
+        scheme = urllib.parse.urlparse(source_location, scheme="<missing>").scheme
         if scheme == "<missing>":
             raise ValueError('"{url}" is not a valid URL'.format(url=source_location))
 
@@ -598,7 +599,7 @@ def sync_fn(args):
     dest_location = None
     if args.dest_directory:
         dest_location = args.dest_directory
-        scheme = url_util.parse(dest_location, scheme="<missing>").scheme
+        scheme = urllib.parse.urlparse(dest_location, scheme="<missing>").scheme
         if scheme != "<missing>":
             raise ValueError('"--dest-directory" expected a local path; got a URL, instead')
         # Ensure that the mirror lookup does not mistake this for named mirror
@@ -610,7 +611,7 @@ def sync_fn(args):
             raise ValueError('no configured mirror named "{name}"'.format(name=dest_location))
     elif args.dest_mirror_url:
         dest_location = args.dest_mirror_url
-        scheme = url_util.parse(dest_location, scheme="<missing>").scheme
+        scheme = urllib.parse.urlparse(dest_location, scheme="<missing>").scheme
         if scheme == "<missing>":
             raise ValueError('"{url}" is not a valid URL'.format(url=dest_location))
 

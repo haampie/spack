@@ -16,9 +16,6 @@ import urllib.request
 
 from spack.util.path import canonicalize_path, convert_to_posix_path
 
-is_windows = sys.platform == "win32"
-
-
 def _split_all(path):
     """Split path into its atomic components.
 
@@ -62,78 +59,13 @@ def file_url_string_to_path(url):
     return urllib.request.url2pathname(urllib.parse.urlparse(url).path)
 
 
-def parse(url, scheme="file"):
-    """Parse a url.
-
-    Path variable substitution is performed on file URLs as needed. The
-    variables are documented at
-    https://spack.readthedocs.io/en/latest/configuration.html#spack-specific-variables.
-
-    Arguments:
-        url (str): URL to be parsed
-        scheme (str): associated URL scheme
-    Returns:
-        (urllib.parse.ParseResult): For file scheme URLs, the
-        netloc and path components are concatenated and passed through
-        spack.util.path.canoncalize_path().  Otherwise, the returned value
-        is the same as urllib's urlparse() with allow_fragments=False.
-    """
-    # guarantee a value passed in is of proper url format. Guarantee
-    # allows for easier string manipulation accross platforms
-    if isinstance(url, str):
-        require_url_format(url)
-        url = escape_file_url(url)
-    url_obj = (
-        urllib.parse.urlparse(
-            url,
-            scheme=scheme,
-            allow_fragments=False,
-        )
-        if isinstance(url, str)
-        else url
-    )
-
-    (scheme, netloc, path, params, query, _) = url_obj
-
-    scheme = (scheme or "file").lower()
-
-    if scheme == "file":
-
-        # (The user explicitly provides the file:// scheme.)
-        #   examples:
-        #     file://C:\\a\\b\\c
-        #     file://X:/a/b/c
-        path = canonicalize_path(netloc + path)
-        path = re.sub(r"^/+", "/", path)
-        netloc = ""
-
-        drive_ltr_lst = re.findall(r"[A-Za-z]:\\", path)
-        is_win_path = bool(drive_ltr_lst)
-        if is_windows and is_win_path:
-            drive_ltr = drive_ltr_lst[0].strip("\\")
-            path = re.sub(r"[\\]*" + drive_ltr, "", path)
-            netloc = "/" + drive_ltr.strip("\\")
-
-    if sys.platform == "win32":
-        path = convert_to_posix_path(path)
-
-    return urllib.parse.ParseResult(
-        scheme=scheme,
-        netloc=netloc,
-        path=path,
-        params=params,
-        query=query,
-        fragment=None,
-    )
-
-
 def format(parsed_url):
     """Format a URL string
 
     Returns a canonicalized format of the given URL as a string.
     """
     if isinstance(parsed_url, str):
-        parsed_url = parse(parsed_url)
+        parsed_url = urllib.parse.urlparse(parsed_url)
 
     return parsed_url.geturl()
 
@@ -367,18 +299,3 @@ def parse_git_url(url):
     return (scheme, user, hostname, port, path)
 
 
-def is_url_format(url):
-    return re.search(r"^(file://|http://|https://|ftp://|s3://|gs://|ssh://|git://|/)", url)
-
-
-def require_url_format(url):
-    if not is_url_format(url):
-        raise ValueError("Invalid url format from url: %s" % url)
-
-
-def escape_file_url(url):
-    drive_ltr = re.findall(r"[A-Za-z]:\\", url)
-    if is_windows and drive_ltr:
-        url = url.replace(drive_ltr[0], "/" + drive_ltr[0])
-
-    return url

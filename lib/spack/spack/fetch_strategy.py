@@ -790,7 +790,7 @@ class GitFetchStrategy(VCSFetchStrategy):
     def mirror_id(self):
         repo_ref = self.commit or self.tag or self.branch
         if repo_ref:
-            repo_path = url_util.parse(self.url).path
+            repo_path = urllib.parse.urlparse(self.url).path
             result = os.path.sep.join(["git", repo_path, repo_ref])
             return result
 
@@ -1136,7 +1136,7 @@ class SvnFetchStrategy(VCSFetchStrategy):
 
     def mirror_id(self):
         if self.revision:
-            repo_path = url_util.parse(self.url).path
+            repo_path = urllib.parse.urlparse(self.url).path
             result = os.path.sep.join(["svn", repo_path, self.revision])
             return result
 
@@ -1247,7 +1247,7 @@ class HgFetchStrategy(VCSFetchStrategy):
 
     def mirror_id(self):
         if self.revision:
-            repo_path = url_util.parse(self.url).path
+            repo_path = urllib.parse.urlparse(self.url).path
             result = os.path.sep.join(["hg", repo_path, self.revision])
             return result
 
@@ -1319,7 +1319,7 @@ class S3FetchStrategy(URLFetchStrategy):
             tty.debug("Already downloaded {0}".format(self.archive_file))
             return
 
-        parsed_url = url_util.parse(self.url)
+        parsed_url = urllib.parse.urlparse(self.url)
         if parsed_url.scheme != "s3":
             raise web_util.FetchError("S3FetchStrategy can only fetch from s3:// urls.")
 
@@ -1366,7 +1366,7 @@ class GCSFetchStrategy(URLFetchStrategy):
             tty.debug("Already downloaded {0}".format(self.archive_file))
             return
 
-        parsed_url = url_util.parse(self.url)
+        parsed_url = urllib.parse.urlparse(self.url)
         if parsed_url.scheme != "gs":
             raise web_util.FetchError("GCSFetchStrategy can only fetch from gs:// urls.")
 

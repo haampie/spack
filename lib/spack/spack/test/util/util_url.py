@@ -16,61 +16,6 @@ import spack.paths
 import spack.util.url as url_util
 from spack.util.path import convert_to_posix_path
 
-is_windows = sys.platform == "win32"
-if is_windows:
-    drive_m = re.search(r"[A-Za-z]:", spack.paths.test_path)
-    drive = drive_m.group() if drive_m else None
-
-
-def test_url_parse():
-
-    parsed = url_util.parse("/path/to/resource", scheme="fake")
-    assert parsed.scheme == "fake"
-    assert parsed.netloc == ""
-    assert parsed.path == "/path/to/resource"
-
-    parsed = url_util.parse("file:///path/to/resource")
-    assert parsed.scheme == "file"
-    assert parsed.netloc == ""
-    assert parsed.path == "/path/to/resource"
-
-    parsed = url_util.parse("file:///path/to/resource", scheme="fake")
-    assert parsed.scheme == "file"
-    assert parsed.netloc == ""
-    assert parsed.path == "/path/to/resource"
-
-    parsed = url_util.parse("file://path/to/resource")
-    assert parsed.scheme == "file"
-    expected = convert_to_posix_path(os.path.abspath(posixpath.join("path", "to", "resource")))
-    if is_windows:
-        expected = expected.lstrip(drive)
-    assert parsed.path == expected
-
-    if is_windows:
-        parsed = url_util.parse("file://%s\\path\\to\\resource" % drive)
-        assert parsed.scheme == "file"
-        expected = "/" + posixpath.join("path", "to", "resource")
-        assert parsed.path == expected
-
-    parsed = url_util.parse("https://path/to/resource")
-    assert parsed.scheme == "https"
-    assert parsed.netloc == "path"
-    assert parsed.path == "/to/resource"
-
-    parsed = url_util.parse("gs://path/to/resource")
-    assert parsed.scheme == "gs"
-    assert parsed.netloc == "path"
-    assert parsed.path == "/to/resource"
-
-    spack_root = spack.paths.spack_root
-    parsed = url_util.parse("file://$spack")
-    assert parsed.scheme == "file"
-
-    if is_windows:
-        spack_root = "/" + convert_to_posix_path(spack_root)
-
-    assert parsed.netloc + parsed.path == spack_root
-
 
 def test_url_local_file_path():
     spack_root = spack.paths.spack_root
@@ -81,19 +26,10 @@ def test_url_local_file_path():
     lfp = url_util.local_file_path("file:///a/b/c.txt")
     assert lfp == sep + os.path.join("a", "b", "c.txt")
 
-    if is_windows:
-        lfp = url_util.local_file_path("file://a/b/c.txt")
-        expected = os.path.abspath(os.path.join("a", "b", "c.txt"))
-        assert lfp == expected
-
     lfp = url_util.local_file_path("file://$spack/a/b/c.txt")
     expected = os.path.abspath(os.path.join(spack_root, "a", "b", "c.txt"))
     assert lfp == expected
 
-    if is_windows:
-        lfp = url_util.local_file_path("file:///$spack/a/b/c.txt")
-        expected = os.path.abspath(os.path.join(spack_root, "a", "b", "c.txt"))
-        assert lfp == expected
 
     lfp = url_util.local_file_path("file://$spack/a/b/c.txt")
     expected = os.path.abspath(os.path.join(spack_root, "a", "b", "c.txt"))
