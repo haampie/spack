@@ -15,9 +15,9 @@ import shutil
 import ssl
 import sys
 import traceback
+import urllib.parse
 from html.parser import HTMLParser
 from urllib.error import URLError
-import urllib.parse
 from urllib.request import Request, urlopen
 
 import llnl.util.lang
@@ -80,7 +80,8 @@ def uses_ssl(parsed_url):
 
 
 def read_from_url(url, accept_content_type=None):
-    url = urllib.parse.urlparse(url)
+    if isinstance(url, str):
+        url = urllib.parse.urlparse(url)
     context = None
 
     # Timeout in seconds for web requests
@@ -532,8 +533,8 @@ def _iter_local_prefix(path):
 
 def list_url(url, recursive=False):
     url = urllib.parse.urlparse(url)
-
     local_path = url_util.local_file_path(url)
+
     if local_path:
         if recursive:
             return list(_iter_local_prefix(local_path))

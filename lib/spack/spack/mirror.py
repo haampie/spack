@@ -508,19 +508,13 @@ def mirror_cache_and_stats(path, skip_unstable_versions=False):
             they do not have a stable archive checksum (as determined by
             ``fetch_strategy.stable_target``)
     """
-    parsed = urllib.parse.urlparse(path)
-    mirror_root = url_util.local_file_path(parsed)
-    if not mirror_root:
-        raise spack.error.SpackError("MirrorCaches only work with file:// URLs")
     # Get the absolute path of the root before we start jumping around.
-    if not os.path.isdir(mirror_root):
+    if not os.path.isdir(path):
         try:
-            mkdirp(mirror_root)
+            mkdirp(path)
         except OSError as e:
-            raise MirrorError("Cannot create directory '%s':" % mirror_root, str(e))
-    mirror_cache = spack.caches.MirrorCache(
-        mirror_root, skip_unstable_versions=skip_unstable_versions
-    )
+            raise MirrorError("Cannot create directory '%s':" % path, str(e))
+    mirror_cache = spack.caches.MirrorCache(path, skip_unstable_versions=skip_unstable_versions)
     mirror_stats = MirrorStats()
     return mirror_cache, mirror_stats
 

@@ -16,6 +16,7 @@ import urllib.request
 
 from spack.util.path import canonicalize_path, convert_to_posix_path
 
+
 def _split_all(path):
     """Split path into its atomic components.
 
@@ -297,5 +298,3 @@ def parse_git_url(url):
             raise ValueError("bad port in git url: %s" % url)
 
     return (scheme, user, hostname, port, path)
-
-

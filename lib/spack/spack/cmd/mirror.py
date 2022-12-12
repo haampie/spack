@@ -389,9 +389,7 @@ def local_mirror_url_from_user(directory_hint):
     mirror_directory = spack.util.path.canonicalize_path(
         directory_hint or spack.config.get("config:source_cache")
     )
-    tmp_mirror = spack.mirror.Mirror(mirror_directory)
-    local_url = url_util.format(tmp_mirror.push_url)
-    return local_url
+    return url_util.path_to_file_url(mirror_directory)
 
 
 def mirror_create(args):

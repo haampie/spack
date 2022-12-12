@@ -21,7 +21,7 @@ def test_url_local_file_path():
     spack_root = spack.paths.spack_root
     sep = os.path.sep
     lfp = url_util.local_file_path("/a/b/c.txt")
-    assert lfp == sep + os.path.join("a", "b", "c.txt")
+    assert lfp is None
 
     lfp = url_util.local_file_path("file:///a/b/c.txt")
     assert lfp == sep + os.path.join("a", "b", "c.txt")
@@ -29,7 +29,6 @@ def test_url_local_file_path():
     lfp = url_util.local_file_path("file://$spack/a/b/c.txt")
     expected = os.path.abspath(os.path.join(spack_root, "a", "b", "c.txt"))
     assert lfp == expected
-
 
     lfp = url_util.local_file_path("file://$spack/a/b/c.txt")
     expected = os.path.abspath(os.path.join(spack_root, "a", "b", "c.txt"))
