@@ -1671,7 +1671,8 @@ class FsCache(object):
 
     def fetcher(self, target_path, digest, **kwargs):
         path = os.path.join(self.root, target_path)
-        return CacheURLFetchStrategy(path, digest, **kwargs)
+        url = url_util.path_to_file_url(path)
+        return CacheURLFetchStrategy(url, digest, **kwargs)
 
     def destroy(self):
         shutil.rmtree(self.root, ignore_errors=True)
