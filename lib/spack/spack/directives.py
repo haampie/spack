@@ -341,8 +341,9 @@ def version(ver, checksum=None, **kwargs):
 
             kwargs["checksum"] = checksum
 
-        # Store kwargs for the package to later with a fetch_strategy.
+        # Declared versions are concrete
         version = Version(ver)
+
         if isinstance(version, GitVersion):
             if not hasattr(pkg, "git") and "git" not in kwargs:
                 msg = "Spack version directives cannot include git hashes fetched from"
@@ -351,6 +352,8 @@ def version(ver, checksum=None, **kwargs):
                 msg += ", ".join("%s='%s'" % (argname, value) for argname, value in kwargs.items())
                 msg += ")"
                 raise VersionLookupError(msg)
+
+        # Store kwargs for the package to later with a fetch_strategy.
         pkg.versions[version] = kwargs
 
     return _execute_version

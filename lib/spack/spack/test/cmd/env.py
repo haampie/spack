@@ -679,7 +679,7 @@ env:
   - mpileaks
   packages:
     mpileaks:
-      version: [2.2]
+      version: ["2.2"]
 """
     _env_create("test", io.StringIO(test_config))
 
@@ -731,7 +731,7 @@ def test_env_with_include_config_files_same_basename():
             """\
         packages:
           libelf:
-              version: [0.8.10]
+              version: ["0.8.10"]
         """
         )
 
@@ -741,7 +741,7 @@ def test_env_with_include_config_files_same_basename():
             """\
         packages:
           mpileaks:
-              version: [2.2]
+              version: ["2.2"]
         """
         )
 
@@ -760,7 +760,7 @@ def packages_file(tmpdir):
     raw_yaml = """
 packages:
   mpileaks:
-    version: [2.2]
+    version: ["2.2"]
 """
     filename = tmpdir.ensure("testconfig", "packages.yaml")
     filename.write(raw_yaml)
@@ -813,7 +813,7 @@ def test_env_with_included_config_file_url(tmpdir, mutable_empty_config, package
     assert len(scopes) == 1
 
     cfg = spack.config.get("packages")
-    assert cfg["mpileaks"]["version"] == [2.2]
+    assert cfg["mpileaks"]["version"] == ["2.2"]
 
 
 def test_env_with_included_config_missing_file(tmpdir, mutable_empty_config):
@@ -886,7 +886,7 @@ def test_env_config_precedence():
 env:
   packages:
     libelf:
-      version: [0.8.12]
+      version: ["0.8.12"]
   include:
   - ./included-config.yaml
   specs:
@@ -900,9 +900,9 @@ env:
             """\
 packages:
   mpileaks:
-    version: [2.2]
+    version: ["2.2"]
   libelf:
-    version: [0.8.11]
+    version: ["0.8.11"]
 """
         )
 
@@ -933,7 +933,7 @@ env:
             """\
 packages:
   libelf:
-    version: [0.8.10]  # this should override libelf version below
+    version: ["0.8.10"]  # this should override libelf version below
 """
         )
 
@@ -942,9 +942,9 @@ packages:
             """\
 packages:
   mpileaks:
-    version: [2.2]
+    version: ["2.2"]
   libelf:
-    version: [0.8.12]
+    version: ["0.8.12"]
 """
         )
 
@@ -2754,7 +2754,7 @@ def test_query_develop_specs():
     with ev.read("test") as e:
         e.add("mpich")
         e.add("mpileaks")
-        e.develop(Spec("mpich@1"), "here", clone=False)
+        e.develop(Spec("mpich@=1"), "here", clone=False)
 
         assert e.is_develop(Spec("mpich"))
         assert not e.is_develop(Spec("mpileaks"))

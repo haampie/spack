@@ -40,7 +40,7 @@ import spack.util.path
 import spack.variant as vt
 from spack.config import config
 from spack.package_prefs import PackagePrefs, is_spec_buildable, spec_externals
-from spack.version import Version, VersionList, VersionRange, ver
+from spack.version import ClosedOpenRange, VersionList, ver
 
 #: impements rudimentary logic for ABI compatibility
 _abi = llnl.util.lang.Singleton(lambda: spack.abi.ABI())
@@ -216,7 +216,7 @@ class Concretizer(object):
             # Respect order listed in packages.yaml
             -yaml_prefs(v),
             # The preferred=True flag (packages or packages.yaml or both?)
-            pkg_versions.get(Version(v)).get("preferred", False),
+            pkg_versions.get(v).get("preferred", False),
             # ------- Regular case: use latest non-develop version by default.
             # Avoid @develop version, which would otherwise be the "largest"
             # in straight version comparisons
@@ -243,11 +243,12 @@ class Concretizer(object):
                 raise NoValidVersionError(spec)
             else:
                 last = spec.versions[-1]
-                if isinstance(last, VersionRange):
-                    if last.end:
-                        spec.versions = ver([last.end])
+                if isinstance(last, ClosedOpenRange):
+                    maybe = VersionList([last]).concrete_range_as_version
+                    if maybe:
+                        spec.versions = ver([maybe])
                     else:
-                        spec.versions = ver([last.start])
+                        raise RuntimeError("Dunno")
                 else:
                     spec.versions = ver([last])
 
