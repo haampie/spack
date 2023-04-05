@@ -323,7 +323,7 @@ directive = DirectiveMeta.directive
 
 
 @directive("versions")
-def version(ver, checksum=None, **kwargs):
+def version(ver: str, checksum=None, **kwargs):
     """Adds a version and, if appropriate, metadata for fetching its code.
 
     The ``version`` directives are aggregated into a ``versions`` dictionary
@@ -354,7 +354,7 @@ def version(ver, checksum=None, **kwargs):
             )
         elif not isinstance(ver, (int, str)):
             raise VersionError(
-                f"{pkg.name}: declared version '{ver!r}' in package should be a string or int."
+                f"{pkg.name}: declared version '{ver!r}' in package should be a string."
             )
 
         # Declared versions are concrete
