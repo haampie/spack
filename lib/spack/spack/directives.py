@@ -336,6 +336,8 @@ def version(ver: str, checksum=None, **kwargs):
     Keyword Arguments:
         deprecated (bool): whether or not this version is deprecated
     """
+    if isinstance(ver, float):
+        raise TypeError(f"Unexpected type for version: float '{ver}'")
 
     def _execute_version(pkg):
         if checksum is not None:
