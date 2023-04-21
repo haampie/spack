@@ -1,0 +1,13 @@
+diff --git a/utest/test_post_fork.c b/utest/test_post_fork.c
+index 9370a02..860f87f 100644
+--- a/utest/test_post_fork.c
++++ b/utest/test_post_fork.c
+@@ -104,6 +104,8 @@ exit(0);
+     nthreads_omp = omp_get_max_threads();
+     // Run with half the max OMP threads, the max threads and twice that
+     for(i = (nthreads_omp + 1) / 2; i <= nthreads_omp * 2; i *= 2) {
++        CTEST_LOG("Using %d threads\n", i);
++        fflush(stdout);
+         omp_set_num_threads(i);
+ #endif
+ 

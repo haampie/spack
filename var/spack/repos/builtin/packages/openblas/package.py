@@ -88,6 +88,8 @@ class Openblas(MakefilePackage):
     provides("lapack@3.9.1:", when="@0.3.15:")
     provides("lapack@3.7.0", when="@0.2.20")
 
+    patch("patch-test.diff")
+
     # https://github.com/xianyi/OpenBLAS/pull/3712
     patch("cce.patch", when="@0.3.20 %cce")
 
