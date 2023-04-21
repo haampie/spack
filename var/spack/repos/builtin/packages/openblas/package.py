@@ -424,6 +424,10 @@ class Openblas(MakefilePackage):
         if self.spec.satisfies("+bignuma"):
             make_defs.append("BIGNUMA=1")
 
+        # Don't make this depend on the host's number of cores
+        if self.spec.satisfies("@0.3.17:"):
+            make_defs.append("NUM_THREADS=512")
+
         return make_defs
 
     @property
