@@ -293,6 +293,7 @@ class Llvm(CMakePackage, CudaPackage):
         depends_on("swig@3:", when="@12:")
     depends_on("libedit", when="+lldb")
     depends_on("ncurses", when="+lldb")
+    depends_on("lua", when="+lldb")
     depends_on("py-six", when="+lldb+python")
 
     # gold support, required for some features
