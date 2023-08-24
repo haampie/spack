@@ -802,13 +802,17 @@ class Llvm(CMakePackage, CudaPackage):
 
         if "+lldb" in spec:
             projects.append("lldb")
-            cmake_args.append(define("LLDB_ENABLE_LIBEDIT", True))
-            cmake_args.append(define("LLDB_ENABLE_CURSES", True))
+            cmake_args.extend([
+                define("LLDB_ENABLE_LIBEDIT", True),
+                define("LLDB_ENABLE_CURSES", True),
+                define("LLDB_ENABLE_LIBXML2", True),
+                define("LLDB_ENABLE_LUA", True),
+                define("LLDB_ENABLE_LZMA", True),
+            ])
             if spec["ncurses"].satisfies("+termlib"):
                 cmake_args.append(define("LLVM_ENABLE_TERMINFO", True))
             else:
                 cmake_args.append(define("LLVM_ENABLE_TERMINFO", False))
-            cmake_args.append(define("LLDB_ENABLE_LIBXML2", False))
             if spec.version >= Version("10"):
                 cmake_args.append(from_variant("LLDB_ENABLE_PYTHON", "python"))
             else:
