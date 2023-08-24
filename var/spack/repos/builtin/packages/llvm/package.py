@@ -289,14 +289,17 @@ class Llvm(CMakePackage, CudaPackage):
     depends_on("zstd build_system=cmake", when="+zstd")
 
     # lldb dependencies
-    with when("+lldb +python"):
+    with when("+lldb"):
+        depends_on("libedit")
+        depends_on("libxml2")
+        depends_on("lua")
+        depends_on("ncurses")
+        depends_on("xz")
+    with when("+lldb+python"):
         depends_on("swig")
         depends_on("swig@2:", when="@10:")
         depends_on("swig@3:", when="@12:")
-    depends_on("libedit", when="+lldb")
-    depends_on("ncurses", when="+lldb")
-    depends_on("lua", when="+lldb")
-    depends_on("py-six", when="+lldb+python")
+        depends_on("py-six")
 
     # gold support, required for some features
     depends_on("binutils+gold+ld+plugins+headers", when="+gold")
