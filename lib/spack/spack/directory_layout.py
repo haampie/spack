@@ -11,7 +11,6 @@ import re
 import shutil
 import sys
 from contextlib import contextmanager
-from pathlib import Path
 
 import llnl.util.filesystem as fs
 import llnl.util.tty as tty
@@ -105,7 +104,7 @@ class DirectoryLayout(object):
 
         projection = spack.projections.get_projection(self.projections, spec)
         path = spec.format(projection)
-        return str(Path(path))
+        return path
 
     def write_spec(self, spec, path):
         """Write a spec out to a file."""
