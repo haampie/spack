@@ -1137,7 +1137,7 @@ class Database(object):
         # Make sure the directory layout agrees whether the spec is installed
         if not spec.external and directory_layout:
             path = directory_layout.path_for_spec(spec)
-            raise Exception(path, spec.prefix)
+            raise Exception(path, spec.prefix, id(spack.store.layout), id(directory_layout), spack.store.layout, directory_layout)
             installed = False
             try:
                 directory_layout.ensure_installed(spec)
