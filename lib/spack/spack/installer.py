@@ -1568,6 +1568,8 @@ class PackageInstaller(object):
             return InstallAction.INSTALL
 
         # Ensure install_tree projections have not changed.
+        if rec and task.pkg.prefix != rec.path:
+            raise Exception(task.pkg.prefix, rec.path)
         assert task.pkg.prefix == rec.path
 
         # If another process has overwritten this, we shouldn't install at all
