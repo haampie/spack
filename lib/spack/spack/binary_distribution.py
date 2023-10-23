@@ -11,6 +11,7 @@ import io
 import itertools
 import json
 import os
+import pathlib
 import re
 import shutil
 import sys
@@ -1146,7 +1147,7 @@ def gzip_compressed_tarfile(path):
 
 
 def _tarinfo_name(p: str):
-    return p.lstrip("/")
+    return pathlib.Path(*pathlib.Path(p).parts[1:]).as_posix()
 
 
 def tarfile_of_spec_prefix(tar: tarfile.TarFile, prefix: str) -> None:
@@ -1177,6 +1178,7 @@ def tarfile_of_spec_prefix(tar: tarfile.TarFile, prefix: str) -> None:
         dir_info = tarfile.TarInfo(_tarinfo_name(dir))
         dir_info.type = tarfile.DIRTYPE
         dir_info.mode = 0o755
+        print("adding dir", dir_info.name)
         tar.addfile(dir_info)
 
         # Sort by name: reproducible & improves compression
@@ -1204,6 +1206,7 @@ def tarfile_of_spec_prefix(tar: tarfile.TarFile, prefix: str) -> None:
             if entry.is_symlink():
                 file_info.type = tarfile.SYMTYPE
                 file_info.linkname = os.readlink(entry.path)
+                print("adding", file_info.name)
                 tar.addfile(file_info)
 
             elif entry.is_file(follow_symlinks=False):
@@ -1212,6 +1215,7 @@ def tarfile_of_spec_prefix(tar: tarfile.TarFile, prefix: str) -> None:
                     if id in hardlink_to_tarinfo_name:
                         file_info.type = tarfile.LNKTYPE
                         file_info.linkname = hardlink_to_tarinfo_name[id]
+                        print("adding", file_info.name)
                         tar.addfile(file_info)
                         continue
                     hardlink_to_tarinfo_name[id] = file_info.name
@@ -1221,6 +1225,7 @@ def tarfile_of_spec_prefix(tar: tarfile.TarFile, prefix: str) -> None:
                 file_info.size = s.st_size
 
                 with open(entry.path, "rb") as f:
+                    print("adding", file_info.name)
                     tar.addfile(file_info, f)
 
         dir_stack.extend(reversed(new_dirs))  # we pop, so reverse to stay alphabetical
