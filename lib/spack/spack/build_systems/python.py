@@ -311,6 +311,7 @@ class PythonPackage(PythonExtension):
 
     with spack.multimethod.when("build_system=python_pip"):
         extends("python")
+        depends_on("python-venv", type=("build", "link", "run"))
         depends_on("py-pip", type="build")
         # FIXME: technically wheel is only needed when building from source, not when
         # installing a downloaded wheel, but I don't want to add wheel as a dep to every
@@ -474,6 +475,8 @@ class PythonPipBuilder(BaseBuilder):
 
     def install(self, pkg: PythonPackage, spec: Spec, prefix: Prefix) -> None:
         """Install everything from build directory."""
+        pip = spec["python-venv"].command
+        pip.add_default_arg("-m", "pip")
 
         args = PythonPipBuilder.std_args(pkg) + [f"--prefix={prefix}"]
 
@@ -489,14 +492,6 @@ class PythonPipBuilder(BaseBuilder):
         else:
             args.append(".")
 
-        pip = spec["python"].command
-        # Hide user packages, since we don't have build isolation. This is
-        # necessary because pip / setuptools may run hooks from arbitrary
-        # packages during the build. There is no equivalent variable to hide
-        # system packages, so this is not reliable for external Python.
-        pip.add_default_env("PYTHONNOUSERSITE", "1")
-        pip.add_default_arg("-m")
-        pip.add_default_arg("pip")
         with fs.working_dir(self.build_directory):
             pip(*args)
 
