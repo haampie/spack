@@ -14,7 +14,6 @@ from shutil import copy
 from typing import Dict, List
 
 import llnl.util.tty as tty
-from llnl.util.filesystem import is_nonsymlink_exe_with_shebang, path_contains_subdirectory
 from llnl.util.lang import dedupe
 
 from spack.build_environment import dso_suffix, stat_suffix
@@ -1231,44 +1230,6 @@ print(json.dumps(config))
         module.python_include = join_path(dependent_spec.prefix, self.include)
         module.python_platlib = join_path(dependent_spec.prefix, self.platlib)
         module.python_purelib = join_path(dependent_spec.prefix, self.purelib)
-
-    def add_files_to_view(self, view, merge_map, skip_if_exists=True):
-        bin_dir = self.spec.prefix.bin if sys.platform != "win32" else self.spec.prefix
-        for src, dst in merge_map.items():
-            if not path_contains_subdirectory(src, bin_dir):
-                view.link(src, dst, spec=self.spec)
-            elif not os.path.islink(src):
-                copy(src, dst)
-                if is_nonsymlink_exe_with_shebang(src):
-                    filter_file(
-                        self.spec.prefix,
-                        os.path.abspath(view.get_projection_for_spec(self.spec)),
-                        dst,
-                        backup=False,
-                    )
-            else:
-                # orig_link_target = os.path.realpath(src) is insufficient when
-                # the spack install tree is located at a symlink or a
-                # descendent of a symlink. What we need here is the real
-                # relative path from the python prefix to src
-                # TODO: generalize this logic in the link_tree object
-                #    add a method to resolve a link relative to the link_tree
-                #    object root.
-                realpath_src = os.path.realpath(src)
-                realpath_prefix = os.path.realpath(self.spec.prefix)
-                realpath_rel = os.path.relpath(realpath_src, realpath_prefix)
-                orig_link_target = os.path.join(self.spec.prefix, realpath_rel)
-
-                new_link_target = os.path.abspath(merge_map[orig_link_target])
-                view.link(new_link_target, dst, spec=self.spec)
-
-    def remove_files_from_view(self, view, merge_map):
-        bin_dir = self.spec.prefix.bin if sys.platform != "win32" else self.spec.prefix
-        for src, dst in merge_map.items():
-            if not path_contains_subdirectory(src, bin_dir):
-                view.remove_file(src, dst)
-            else:
-                os.remove(dst)
 
     def test_hello_world(self):
         """run simple hello world program"""

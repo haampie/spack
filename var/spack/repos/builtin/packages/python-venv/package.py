@@ -64,13 +64,12 @@ class PythonVenv(Package):
     def setup_dependent_run_environment(self, env, dependent_spec):
         """Set PYTHONPATH to include the site-packages directory for the
         extension and any other python extensions it depends on."""
-        if not dependent_spec.package.extends(self.spec):
-            return
-
         # Packages may be installed in platform-specific or platform-independent site-packages
         # directories
         for directory in {self.platlib, self.purelib}:
-            env.prepend_path("PYTHONPATH", os.path.join(dependent_spec.prefix, directory))
+            path = os.path.join(dependent_spec.prefix, directory)
+            if os.path.isdir(path):
+                env.prepend_path("PYTHONPATH", path)
 
     def setup_dependent_package(self, module, dependent_spec):
         """Called before python modules' install() methods."""
