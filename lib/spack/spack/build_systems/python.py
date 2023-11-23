@@ -140,23 +140,17 @@ class PythonExtension(spack.package_base.PackageBase):
             return super().add_files_to_view(view, merge_map, skip_if_exists)
 
         bin_dir = self.spec.prefix.bin
-        python_prefix = self.extendee_spec.prefix
-        python_is_external = self.extendee_spec.external
-        global_view = fs.same_path(python_prefix, view.get_projection_for_spec(self.spec))
+        pythons = self.spec.dependencies("python-venv") or self.spec.dependencies("python")
+        python = pythons[0]
         for src, dst in merge_map.items():
             if os.path.exists(dst):
                 continue
-            elif global_view or not fs.path_contains_subdirectory(src, bin_dir):
+            elif not fs.path_contains_subdirectory(src, bin_dir):
                 view.link(src, dst)
             elif not os.path.islink(src):
                 shutil.copy2(src, dst)
-                is_script = fs.is_nonsymlink_exe_with_shebang(src)
-                if is_script and not python_is_external:
-                    fs.filter_file(
-                        python_prefix,
-                        os.path.abspath(view.get_projection_for_spec(self.spec)),
-                        dst,
-                    )
+                if fs.is_nonsymlink_exe_with_shebang(src):
+                    fs.filter_file(python.prefix, view.get_projection_for_spec(self.spec), dst)
             else:
                 orig_link_target = os.path.realpath(src)
                 new_link_target = os.path.abspath(merge_map[orig_link_target])
@@ -176,14 +170,13 @@ class PythonExtension(spack.package_base.PackageBase):
                 ignore_namespace = True
 
         bin_dir = self.spec.prefix.bin
-        global_view = self.extendee_spec.prefix == view.get_projection_for_spec(self.spec)
 
         to_remove = []
         for src, dst in merge_map.items():
             if ignore_namespace and namespace_init(dst):
                 continue
 
-            if global_view or not fs.path_contains_subdirectory(src, bin_dir):
+            if not fs.path_contains_subdirectory(src, bin_dir):
                 to_remove.append(dst)
             else:
                 os.remove(dst)
