@@ -1108,7 +1108,7 @@ print(json.dumps(config))
         path = self.config_vars["platlib"]
         if path.startswith(prefix):
             return path.replace(prefix, "")
-        return os.path.join("lib64", "python{}".format(self.version.up_to(2)), "site-packages")
+        return os.path.join("lib64", f"python{self.version.up_to(2)}", "site-packages")
 
     @property
     def purelib(self):
@@ -1128,7 +1128,7 @@ print(json.dumps(config))
         path = self.config_vars["purelib"]
         if path.startswith(prefix):
             return path.replace(prefix, "")
-        return os.path.join("lib", "python{}".format(self.version.up_to(2)), "site-packages")
+        return os.path.join("lib", f"python{self.version.up_to(2)}", "site-packages")
 
     @property
     def include(self):
@@ -1214,7 +1214,9 @@ print(json.dumps(config))
         """Set PYTHONPATH to include the site-packages directory for the
         extension and any other python extensions it depends on.
         """
-        if not dependent_spec.package.extends(self.spec):
+        if not dependent_spec.package.extends(self.spec) or dependent_spec.dependencies(
+            "python-venv"
+        ):
             return
 
         # Packages may be installed in platform-specific or platform-independent site-packages
@@ -1226,7 +1228,6 @@ print(json.dumps(config))
         """Called before python modules' install() methods."""
 
         module.python = self.command
-
         module.python_include = join_path(dependent_spec.prefix, self.include)
         module.python_platlib = join_path(dependent_spec.prefix, self.platlib)
         module.python_purelib = join_path(dependent_spec.prefix, self.purelib)
