@@ -33,7 +33,7 @@ class BootstrapEnvironment(spack.environment.Environment):
 
         # Remove python package roots created before python-venv was introduced
         for s in self.concrete_roots():
-            if s.dependencies("python") and not s.dependencies("python-venv"):
+            if "python" in s.package.extendees and not s.dependencies("python-venv"):
                 self.deconcretize(s)
 
     @classmethod
