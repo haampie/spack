@@ -26,6 +26,16 @@ from .core import _add_externals_if_missing
 class BootstrapEnvironment(spack.environment.Environment):
     """Environment to install dependencies of Spack for a given interpreter and architecture"""
 
+    def __init__(self) -> None:
+        if not self.spack_yaml().exists():
+            self._write_spack_yaml_file()
+        super().__init__(self.environment_root())
+
+        # Remove python package roots created before python-venv was introduced
+        for s in self.concrete_roots():
+            if s.dependencies("python") and not s.dependencies("python-venv"):
+                self.deconcretize(s)
+
     @classmethod
     def spack_dev_requirements(cls) -> List[str]:
         """Spack development requirements"""
@@ -69,11 +79,6 @@ class BootstrapEnvironment(spack.environment.Environment):
     def spack_yaml(cls) -> pathlib.Path:
         """Environment spack.yaml file"""
         return cls.environment_root().joinpath("spack.yaml")
-
-    def __init__(self) -> None:
-        if not self.spack_yaml().exists():
-            self._write_spack_yaml_file()
-        super().__init__(self.environment_root())
 
     def update_installations(self) -> None:
         """Update the installations of this environment."""
