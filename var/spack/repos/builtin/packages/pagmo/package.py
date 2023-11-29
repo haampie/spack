@@ -39,7 +39,9 @@ class Pagmo(CMakePackage):
     variant("vpython", default=False, description="Enable support for vpython")
     variant("pykep", default=False, description="Enable support for pykep")
 
-    extends("python", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
 
     # Concretization in Spack is currently broken
     # depends_on('boost+system+serialization+thread')
@@ -98,7 +100,7 @@ class Pagmo(CMakePackage):
             args.extend(
                 [
                     # By default picks up the system python not the Spack build
-                    "-DPYTHON_EXECUTABLE={0}".format(spec["python"].command.path),
+                    "-DPYTHON_EXECUTABLE={0}".format(python.path),
                     # By default installs to the python prefix not the pagmo prefix
                     "-DPYTHON_MODULES_DIR={0}".format(python_platlib),
                 ]

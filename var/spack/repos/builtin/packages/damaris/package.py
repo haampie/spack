@@ -56,15 +56,18 @@ class Damaris(CMakePackage):
         default=False,
         description="Enables building of Python enabled Damaris library using Boost::python",
     )
-    extends("python", when="+python")
+
+    with when("+python"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("boost+python")
+        depends_on("py-mpi4py", type=("build", "run"))
 
     depends_on("xsd")
     depends_on("xerces-c")
     depends_on("mpi")
     depends_on("cmake@3.18.0:", type=("build"))
     depends_on("boost@1.67:+thread+log+filesystem+date_time+system")
-    depends_on("boost+python", when="+python")
-    depends_on("py-mpi4py", when="+python", type=("build", "run"))
     depends_on("hdf5@1.8.20:", when="+hdf5")
     depends_on("paraview+python+mpi+development_files", when="+catalyst")
     depends_on("visit+mpi", when="+visit")

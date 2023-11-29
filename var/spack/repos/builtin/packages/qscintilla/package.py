@@ -27,14 +27,15 @@ class Qscintilla(QMakePackage):
 
     depends_on("qmake")
     depends_on("qmake+opengl", when="+python")
-    depends_on("py-pyqt6", type=("build", "run"), when="+python ^qt-base")
-    depends_on("py-pyqt-builder", type="build", when="+python")
-    depends_on("py-pyqt5", type=("build", "run"), when="+python ^qt@5")
-    depends_on("python", type=("build", "run"), when="+python")
     # adter install inquires py-sip variant : so we need to have it
     depends_on("py-sip", type="build", when="~python")
 
-    extends("python", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-pyqt6", type=("build", "run"), when="^qt-base")
+        depends_on("py-pyqt-builder", type="build")
+        depends_on("py-pyqt5", type=("build", "run"), when="^qt@5")
 
     # https://www.riverbankcomputing.com/static/Downloads/QScintilla/2.12.0/ChangeLog
     conflicts("^qt@4", when="@2.12:")
@@ -94,7 +95,10 @@ class Qscintilla(QMakePackage):
         with working_dir(join_path(self.stage.source_path, "Python")):
             copy(ftoml, "pyproject.toml")
             sip_inc_dir = join_path(
-                self.spec[py_pyqtx].prefix, self.spec["python"].package.platlib, pyqtx, "bindings"
+                self.spec[py_pyqtx].prefix,
+                self.spec["python-venv"].package.platlib,
+                pyqtx,
+                "bindings",
             )
 
             with open("pyproject.toml", "a") as tomlfile:

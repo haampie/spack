@@ -22,7 +22,6 @@ class Tiramisu(CMakePackage, CudaPackage, PythonExtension):
     version("2023-2-8", commit="2cd0c43cc1656bfa43cfb6e81d06f770cbf7251e")
 
     variant("python", default=True, description="Install python bindings.")
-    extends("python", when="+python")
     variant(
         "debug",
         default="0",
@@ -34,10 +33,13 @@ class Tiramisu(CMakePackage, CudaPackage, PythonExtension):
     depends_on("cmake@3.5:", type="build")
     depends_on("halide@14.0.0:", type=("build", "link", "run"))
     depends_on("isl", type=("build", "link", "run"))
-    depends_on("python@3.8:", type=("build", "link", "run"), when="+python")
-    depends_on("py-pybind11@2.6.2:", type="build", when="+python")
-    depends_on("py-numpy", type=("build", "run"), when="+python")
-    depends_on("py-cython", type="run", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python@3.8:", type=("build", "link", "run"))
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-pybind11@2.6.2:", type="build")
+        depends_on("py-numpy", type=("build", "run"))
+        depends_on("py-cython", type="run")
 
     def cmake_args(self):
         spec = self.spec
@@ -57,7 +59,7 @@ class Tiramisu(CMakePackage, CudaPackage, PythonExtension):
         if "+python" in spec:
             args += [
                 self.define("Tiramisu_INSTALL_PYTHONDIR", python_platlib),
-                self.define("Python3_EXECUTABLE", spec["python"].command.path),
+                self.define("Python3_EXECUTABLE", python.path),
             ]
         return args
 

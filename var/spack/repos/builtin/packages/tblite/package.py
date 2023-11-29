@@ -26,13 +26,14 @@ class Tblite(MesonPackage):
     depends_on("mctc-lib@0.3:")
     depends_on("meson@0.57.2:", type="build")  # mesonbuild/meson#8377
     depends_on("pkgconfig", type="build")
-    depends_on("py-cffi", when="+python")
-    depends_on("py-numpy", when="+python")
-    depends_on("python@3.6:", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python@3.6:")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-cffi")
+        depends_on("py-numpy")
     depends_on("simple-dftd3")
     depends_on("toml-f")
-
-    extends("python", when="+python")
 
     def meson_args(self):
         lapack = self.spec["lapack"].libs.names[0]

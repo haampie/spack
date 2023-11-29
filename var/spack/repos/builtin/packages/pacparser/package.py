@@ -22,10 +22,10 @@ class Pacparser(MakefilePackage):
         url="https://github.com/manugarg/pacparser/releases/download/1.3.7/pacparser-1.3.7.tar.gz",
     )
 
-    depends_on("python", when="+python")
-    depends_on("py-setuptools", when="+python", type=("build", "run"))
-
-    extends("python", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-setuptools", type=("build", "run"))
 
     variant("python", default=False, description="Build and install python bindings")
 

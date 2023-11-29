@@ -100,8 +100,10 @@ class Geant4(CMakePackage):
     depends_on("vtk@8.2:", when="+vtk")
 
     # Python, with boost requirement dealt with in cxxstd section
-    depends_on("python@3:", when="+python")
-    extends("python", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python@3:")
+        depends_on("python-venv", type=("build", "run"))
 
     # CLHEP version requirements to be reviewed
     depends_on("clhep@2.4.6.0:", when="@11.1:")

@@ -17,6 +17,8 @@ class PyGosam(Package):
     tags = ["hep"]
 
     extends("python")
+    depends_on("python@3:", type=("build", "run"))
+    depends_on("python-venv", type=("build", "run"))
 
     version(
         "2.1.1",
@@ -27,7 +29,6 @@ class PyGosam(Package):
     depends_on("form", type="run")
     depends_on("qgraf", type="run")
     depends_on("gosam-contrib", type="link")
-    depends_on("python@3:", type=("build", "run"))
 
     def setup_run_environment(self, env):
         gosam_contrib_lib_dir = self.spec["gosam-contrib"].prefix.lib

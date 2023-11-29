@@ -24,6 +24,7 @@ class Pygmo(CMakePackage):
     # Run-time dependencies
     # https://github.com/esa/pygmo2/blob/master/doc/install.rst#dependencies
     extends("python@3.4:")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("pagmo2@2.18:")
     depends_on("boost@1.60:")
     depends_on("py-numpy", type=("build", "run"))

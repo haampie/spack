@@ -20,8 +20,11 @@ class Kicad(CMakePackage):
     version("5.1.9", sha256="841be864b9dc5c761193c3ee9cbdbed6729952d7b38451aa8e1977bdfdb6081b")
     version("5.1.8", sha256="bf24f8ef427b4a989479b8e4af0b8ae5c54766755f12748e2e88a922c5344ca4")
 
-    depends_on("wxwidgets")
+    extends("python")
     depends_on("python@3:", type=("build", "run"))
+    depends_on("python-venv", type=("build", "run"))
+
+    depends_on("wxwidgets")
     # py-wxpython needs work
     # depends_on('py-wxpython', type=('build', 'run'))
     depends_on("glew")
@@ -44,8 +47,6 @@ class Kicad(CMakePackage):
     depends_on("hicolor-icon-theme", type=("build", "run"))
     depends_on("adwaita-icon-theme", type=("build", "run"))
     depends_on("gsettings-desktop-schemas", type=("build", "run"))
-
-    extends("python")
 
     resource_list = [
         # version, resource, sha256sum

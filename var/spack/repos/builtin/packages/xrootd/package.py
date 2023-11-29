@@ -114,9 +114,11 @@ class Xrootd(CMakePackage):
     depends_on("uuid", when="@4.11.0:")
     depends_on("openssl@:1", when="@:5.4")
     depends_on("openssl")
-    depends_on("python", when="+python")
-    depends_on("py-setuptools", type="build", when="@:5.5 +python")
-    depends_on("py-pip", type="build", when="@5.6: +python")
+    with when("+python"):
+        extends("python", type=("build", "link", "run"))
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-setuptools", type="build", when="@:5.5")
+        depends_on("py-pip", type="build", when="@5.6:")
     depends_on("readline", when="+readline")
     depends_on("xz")
     depends_on("zlib-api")
@@ -125,8 +127,6 @@ class Xrootd(CMakePackage):
     depends_on("json-c")
     depends_on("scitokens-cpp", when="+scitokens-cpp")
     conflicts("^openssl@3:", when="@:5.3.99")
-
-    extends("python", when="+python")
 
     # Issue with _STAT_VER not being defined, fixed in 5.0.3
     patch(
@@ -203,7 +203,7 @@ class Xrootd(CMakePackage):
         if "+python" in self.spec:
             options.extend(
                 [
-                    define("PYTHON_EXECUTABLE", spec["python"].command.path),
+                    define("PYTHON_EXECUTABLE", python.path),
                     define("XRD_PYTHON_REQ_VERSION", spec["python"].version.up_to(2)),
                 ]
             )

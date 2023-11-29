@@ -84,13 +84,14 @@ class Arbor(CMakePackage, CudaPackage):
 
     # mpi
     depends_on("mpi", when="+mpi")
-    depends_on("py-mpi4py", when="+mpi+python", type=("build", "run"))
 
     # python (bindings)
-    extends("python", when="+python")
-    depends_on("python@3.7:", when="+python", type=("build", "run"))
-    depends_on("py-numpy", when="+python", type=("build", "run"))
     with when("+python"):
+        extends("python")
+        depends_on("python@3.7:", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-mpi4py", when="+mpi", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "run"))
         depends_on("py-pybind11@2.6:", type="build")
         depends_on("py-pybind11@2.8.1:", when="@0.5.3:", type="build")
         depends_on("py-pybind11@2.10.1:", when="@0.7.1:", type="build")

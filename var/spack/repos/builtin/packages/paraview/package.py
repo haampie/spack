@@ -159,19 +159,21 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("cmake@3.3:", type="build")
     depends_on("cmake@3.21:", type="build", when="+rocm")
 
-    extends("python", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python@3:", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
 
-    # VTK < 8.2.1 can't handle Python 3.8
-    # This affects Paraview <= 5.7 (VTK 8.2.0)
-    # https://gitlab.kitware.com/vtk/vtk/-/issues/17670
-    depends_on("python@3:3.7", when="@:5.7 +python", type=("build", "run"))
-    depends_on("python@3:", when="@5.8:+python", type=("build", "run"))
+        # VTK < 8.2.1 can't handle Python 3.8
+        # This affects Paraview <= 5.7 (VTK 8.2.0)
+        # https://gitlab.kitware.com/vtk/vtk/-/issues/17670
+        depends_on("python@:3.7", when="@:5.7", type=("build", "run"))
 
-    depends_on("py-numpy", when="+python", type=("build", "run"))
-    depends_on("py-mpi4py", when="+python+mpi", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "run"))
+        depends_on("py-mpi4py", when="+mpi", type=("build", "run"))
 
-    depends_on("py-matplotlib", when="+python", type="run")
-    depends_on("py-pandas@0.21:", when="+python", type="run")
+        depends_on("py-matplotlib", type="run")
+        depends_on("py-pandas@0.21:", type="run")
 
     # openPMD is implemented as a Python module and provides ADIOS2 and HDF5 backends
     depends_on("openpmd-api@0.14.5: +python", when="+python +openpmd", type=("build", "run"))
@@ -535,7 +537,7 @@ class Paraview(CMakePackage, CudaPackage, ROCmPackage):
             cmake_args.extend(
                 [
                     "-DPARAVIEW_%s_PYTHON:BOOL=ON" % py_use_opt,
-                    "-DPYTHON_EXECUTABLE:FILEPATH=%s" % spec["python"].command.path,
+                    "-DPYTHON_EXECUTABLE:FILEPATH=%s" % python.path,
                     "-D%s_PYTHON_VERSION:STRING=%d" % (py_ver_opt, py_ver_val),
                 ]
             )

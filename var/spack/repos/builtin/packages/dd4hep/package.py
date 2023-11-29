@@ -164,6 +164,7 @@ class Dd4hep(CMakePackage):
     depends_on("root @6.08: +gdml +math +python +x +opengl", when="+utilityapps")
 
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("xerces-c", when="+xercesc")
     depends_on("geant4@10.2.2:", when="+ddg4")
     depends_on("assimp@5.0.2:", when="+ddcad")

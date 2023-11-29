@@ -35,11 +35,12 @@ class Reprimand(MesonPackage):
     depends_on("boost +json +math +test")
     depends_on("gsl")
     depends_on("hdf5")
-    depends_on("python", when="+python")
-    depends_on("py-matplotlib", when="+python")
-    depends_on("py-pybind11 @2.6.0:", when="+python")
 
-    extends("python", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-matplotlib")
+        depends_on("py-pybind11 @2.6.0:")
 
     def setup_build_environment(self, env):
         env.set("CXXFLAGS", self.compiler.cxx11_flag)

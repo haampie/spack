@@ -367,22 +367,24 @@ class Gdal(CMakePackage, AutotoolsPackage, PythonExtension):
     # Language bindings
     # FIXME: Allow packages to extend multiple packages
     # See https://github.com/spack/spack/issues/987
-    extends("python", when="+python")
     # extends('openjdk', when='+java')
     # extends('perl', when='+perl')
 
     # see gdal_version_and_min_supported_python_version
     # in swig/python/osgeo/__init__.py
-    depends_on("python@3.6:", type=("build", "link", "run"), when="@3.3:+python")
-    depends_on("python@2.0:", type=("build", "link", "run"), when="@3.2:+python")
-    depends_on("python", type=("build", "link", "run"), when="+python")
-    # Uses distutils
-    depends_on("python@:3.11", type=("build", "link", "run"), when="@:3.4+python")
-    # swig/python/setup.py
-    depends_on("py-setuptools@:57", type="build", when="@:3.2+python")  # needs 2to3
-    depends_on("py-setuptools", type="build", when="+python")
-    depends_on("py-numpy@1.0.0:", type=("build", "run"), when="+python")
-    depends_on("swig", type="build", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python@3.6:", type=("build", "link", "run"), when="@3.3:")
+        depends_on("python@2.0:", type=("build", "link", "run"), when="@3.2:")
+        depends_on("python", type=("build", "link", "run"))
+        depends_on("python-venv", type=("build", "run"))
+        # Uses distutils
+        depends_on("python@:3.11", type=("build", "link", "run"), when="@:3.4")
+        # swig/python/setup.py
+        depends_on("py-setuptools@:57", type="build", when="@:3.2")  # needs 2to3
+        depends_on("py-setuptools", type="build")
+        depends_on("py-numpy@1.0.0:", type=("build", "run"))
+        depends_on("swig", type="build")
     depends_on("java@7:", type=("build", "link", "run"), when="@3.2:+java")
     depends_on("java@6:", type=("build", "link", "run"), when="@2.4:+java")
     depends_on("java@5:", type=("build", "link", "run"), when="@2.1:+java")
@@ -695,7 +697,9 @@ class AutotoolsBuilder(AutotoolsBuilder):
             self.with_or_without("xerces", variant="xercesc", package="xerces-c"),
             self.with_or_without("zstd", package="zstd"),
             # Language bindings
-            self.with_or_without("python", package="python", attribute="command"),
+            self.with_or_without(
+                "python", variant="python", package="python-venv", attribute="command"
+            ),
             self.with_or_without("java", package="java"),
             self.with_or_without("jvm-lib", variant="mdb", package="java", attribute="libs"),
             self.with_or_without("jvm-lib-add-rpath", variant="mdb"),

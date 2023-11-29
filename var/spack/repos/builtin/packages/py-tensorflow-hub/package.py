@@ -21,6 +21,7 @@ class PyTensorflowHub(Package):
     version("0.11.0", sha256="4715a4212b45531a7c25ada7207d850467d1b5480f1940f16623f8770ad64df4")
 
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
 
     depends_on("bazel", type="build")
     depends_on("py-pip", type="build")

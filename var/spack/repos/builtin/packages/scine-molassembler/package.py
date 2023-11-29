@@ -61,15 +61,16 @@ class ScineMolassembler(CMakePackage):
     depends_on("googletest", type="build")
     depends_on("nauty")
     depends_on("nlohmann-json", type="build")
-    depends_on("python@3.6:", when="+python", type=("build", "run"))
-    depends_on("py-pip", when="+python", type="build")
-    depends_on("py-pybind11@2.6.2:", when="+python", type="build")
+    with when("+python"):
+        extends("python")
+        depends_on("python@3.6:", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-pip", type="build")
+        depends_on("py-pybind11@2.6.2:", type="build")
     # depends_on("ringdecomposerlib")
     depends_on("scine-core")
     depends_on("scine-utilities")
     depends_on("scine-utilities+python", when="+python", type=("build", "run"))
-
-    extends("python", when="+python")
 
     def patch(self):
         os.rmdir("dev")
@@ -94,5 +95,5 @@ class ScineMolassembler(CMakePackage):
             self.define("Boost_NO_BOOST_CMAKE", True),
         ]
         if "+python" in self.spec:
-            args.append(self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path))
+            args.append(self.define("PYTHON_EXECUTABLE", python.path))
         return args

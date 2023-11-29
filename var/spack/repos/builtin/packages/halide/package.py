@@ -32,7 +32,6 @@ class Halide(CMakePackage, PythonExtension):
     variant(
         "d3d12", default=False, description="Build Non-llvm based Direct3D 12 Compute backend."
     )
-    extends("python", when="+python")
     _values = (
         "aarch64",
         "amdgpu",
@@ -66,17 +65,20 @@ class Halide(CMakePackage, PythonExtension):
     depends_on("libjpeg", type=("build", "link", "run"))
     depends_on("libpng", type=("build", "link", "run"))
 
-    depends_on("python@3.8:", type=("build", "link", "run"), when="+python")
-    # See https://github.com/halide/Halide/blob/main/requirements.txt
-    depends_on("py-pybind11@2.6.2", type="build", when="+python")
-    depends_on("py-setuptools@43:", type="build", when="+python")
-    depends_on("py-scikit-build", type="build", when="+python")
-    depends_on("py-wheel", type="build", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python@3.8:", type=("build", "link", "run"))
+        depends_on("python-venv", type=("build", "run"))
+        # See https://github.com/halide/Halide/blob/main/requirements.txt
+        depends_on("py-pybind11@2.6.2", type="build")
+        depends_on("py-setuptools@43:", type="build")
+        depends_on("py-scikit-build", type="build")
+        depends_on("py-wheel", type="build")
 
-    depends_on("py-imageio", type=("build", "run"), when="+python")
-    depends_on("pil", type=("build", "run"), when="+python")
-    depends_on("py-scipy", type=("build", "run"), when="+python")
-    depends_on("py-numpy", type=("build", "run"), when="+python")
+        depends_on("py-imageio", type=("build", "run"))
+        depends_on("pil", type=("build", "run"))
+        depends_on("py-scipy", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "run"))
 
     @property
     def libs(self):
@@ -105,7 +107,7 @@ class Halide(CMakePackage, PythonExtension):
 
         if "+python" in spec:
             args += [
-                self.define("Python3_EXECUTABLE", spec["python"].command.path),
+                self.define("Python3_EXECUTABLE", python.path),
                 self.define("PYBIND11_USE_FETCHCONTENT", False),
                 self.define("Halide_INSTALL_PYTHONDIR", python_platlib),
             ]

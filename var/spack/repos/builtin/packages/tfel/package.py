@@ -128,9 +128,13 @@ class Tfel(CMakePackage):
     variant("diana-fea", default=True, description="Enables DIANA-FEA interface")
 
     depends_on("java", when="+java")
-    depends_on("python", when="+python", type=("build", "link", "run"))
-    depends_on("python", when="+python_bindings", type=("build", "link", "run"))
-    depends_on("py-numpy", when="+python_bindings", type=("build", "link", "run"))
+    with when("+python"):
+        depends_on("python", type=("build", "link", "run"))
+        depends_on("python-venv", type=("build", "run"))
+    with when("+python_bindings"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "link", "run"))
 
     # As boost+py has py runtime dependency, boost+py needs types link and run as well:
     depends_on(
@@ -138,8 +142,6 @@ class Tfel(CMakePackage):
         when="+python_bindings",
         type=("build", "link", "run"),
     )
-
-    extends("python", when="+python_bindings")
 
     conflicts("%gcc@:7", when="@4:")
 

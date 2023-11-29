@@ -37,7 +37,6 @@ class Flann(CMakePackage):
     # Options available in the CMakeLists.txt
     # Language bindings
     variant("python", default=False, description="Build the Python bindings. " "Module: pyflann.")
-    extends("python", when="+python")
     variant("matlab", default=False, description="Build the Matlab bindings.")
     # default to true for C because it's a C++ library, nothing extra needed
     variant("c", default=True, description="Build the C bindings.")
@@ -56,8 +55,11 @@ class Flann(CMakePackage):
     variant("hdf5", default=True, description="Enable HDF5 support.")
 
     # Dependencies
-    extends("python", when="+python")
-    depends_on("py-numpy", when="+python", type=("build", "run"))
+    with when("+python"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "run"))
+
     depends_on("matlab", when="+matlab", type=("build", "run"))
     depends_on("cuda", when="+cuda")
     depends_on("mpi", when="+mpi")
@@ -123,6 +125,6 @@ class Flann(CMakePackage):
 
         # Configure the proper python executable
         if "+python" in spec:
-            args.append("-DPYTHON_EXECUTABLE={0}".format(spec["python"].command.path))
+            args.append("-DPYTHON_EXECUTABLE={0}".format(python.path))
 
         return args

@@ -85,8 +85,10 @@ class SagaGis(AutotoolsPackage, SourceforgePackage):
     # FIXME Saga-Gis uses a wrong include path
     # depends_on('qhull', when='~triangle')
 
-    depends_on("swig", type="build", when="+python")
-    extends("python", when="+python")
+    with when("+python"):
+        depends_on("swig", type="build")
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
 
     configure_directory = "saga-gis"
 

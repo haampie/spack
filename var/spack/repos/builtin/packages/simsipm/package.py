@@ -25,9 +25,11 @@ class Simsipm(CMakePackage):
     variant("python", default=False, description="Build pybind11-based python bindings")
     variant("openmp", default=False, description="Use OpenMP", when="@:1")
 
-    extends("python", when="+python")
-    depends_on("python@3.6:", when="+python", type=("build", "run"))
-    depends_on("py-pybind11", when="+python", type=("build", "link"))
+    with when("+python"):
+        extends("python")
+        depends_on("python@3.6:", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-pybind11", type=("build", "link"))
 
     def cmake_args(self):
         args = [

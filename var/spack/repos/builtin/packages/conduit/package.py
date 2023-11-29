@@ -121,10 +121,11 @@ class Conduit(CMakePackage):
     #######################
     # Python
     #######################
-    depends_on("python", when="+python")
-    extends("python", when="+python")
-    depends_on("py-numpy", when="+python", type=("build", "run"))
-    depends_on("py-mpi4py", when="+python+mpi", type=("build", "run"))
+    with when("+python"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "run"))
+        depends_on("py-mpi4py", when="+mpi", type=("build", "run"))
 
     #######################
     # I/O Packages
@@ -436,7 +437,7 @@ class Conduit(CMakePackage):
             cfg.write("# Enable python module builds\n")
             cfg.write(cmake_cache_entry("ENABLE_PYTHON", "ON"))
             cfg.write("# python from spack \n")
-            cfg.write(cmake_cache_entry("PYTHON_EXECUTABLE", spec["python"].command.path))
+            cfg.write(cmake_cache_entry("PYTHON_EXECUTABLE", python.path))
             try:
                 cfg.write("# python module install dir\n")
                 cfg.write(cmake_cache_entry("PYTHON_MODULE_INSTALL_PREFIX", python_platlib))

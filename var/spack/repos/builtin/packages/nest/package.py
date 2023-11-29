@@ -35,12 +35,14 @@ class Nest(CMakePackage):
     conflicts("~shared", when="@:2.10", msg="Option only introduced for non-ancient versions.")
     conflicts("~openmp", when="@:2.10", msg="Option only introduced for non-ancient versions.")
 
-    depends_on("python@2.6:", when="+python", type=("build", "run"))
-    depends_on("py-numpy", when="+python", type=("build", "run"))
-    depends_on("py-scipy", when="+python", type=("run"))
-    depends_on("py-cython@0.19.2:", when="+python", type="build")
-    depends_on("py-nose", when="+python", type="test")
-    depends_on("py-setuptools", when="+python", type="build")
+    with when("+python"):
+        extends("python", when="+python")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "run"))
+        depends_on("py-scipy", type=("run"))
+        depends_on("py-cython@0.19.2:", type="build")
+        depends_on("py-nose", type="test")
+        depends_on("py-setuptools", type="build")
 
     depends_on("mpi", when="+mpi")
 
@@ -50,8 +52,6 @@ class Nest(CMakePackage):
     depends_on("readline")
     depends_on("libtool")
     depends_on("pkgconfig", type="build")
-
-    extends("python", when="+python")
 
     # Before 2.12.0 it was an autotools package
     @when("@:2.10")

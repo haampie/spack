@@ -33,8 +33,10 @@ class Libxslt(AutotoolsPackage):
     depends_on("zlib-api")
     depends_on("libgcrypt", when="+crypto")
 
-    depends_on("python+shared", when="+python")
-    extends("python", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python+shared")
+        depends_on("python-venv", type=("build", "run"))
 
     def configure_args(self):
         args = []

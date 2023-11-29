@@ -62,10 +62,11 @@ class Tasmanian(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("cmake@3.10:", type=("build", "run"), when="@7.0:")
     depends_on("cmake@3.22:", type=("build", "run"), when="@8.0:")
 
-    depends_on("python@3.0:", when="+python", type=("build", "run"))
-    depends_on("py-numpy", when="+python", type=("build", "run"))
-
-    extends("python", when="+python", type=("build", "run"))
+    with when("+python"):
+        extends("python", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("python@3:", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "run"))
 
     depends_on("mpi", when="+mpi", type=("build", "run"))  # openmpi 2 and 3 tested
 
@@ -115,9 +116,7 @@ class Tasmanian(CMakePackage, CudaPackage, ROCmPackage):
             args.append("-DLAPACK_LIBRARIES={0}".format(spec["lapack"].libs.joined(";")))
 
         if spec.satisfies("+python"):
-            args.append(
-                "-DPYTHON_EXECUTABLE:FILEPATH={0}".format(self.spec["python"].command.path)
-            )
+            args.append("-DPYTHON_EXECUTABLE:FILEPATH={0}".format(python.path))
 
         return args
 

@@ -32,15 +32,16 @@ class ScineUtilities(CMakePackage):
     depends_on("eigen@3:")
     depends_on("googletest", type="build")
     depends_on("lbfgspp", type="build")
-    depends_on("python@3.6:", when="+python", type=("build", "run"))
-    depends_on("py-numpy", when="+python", type=("build", "run"))
-    depends_on("py-pip", when="+python", type="build")
-    depends_on("py-pybind11@2.6.2:", when="+python", type="build")
-    depends_on("py-scipy", when="+python", type=("build", "run"))
+    with when("+python"):
+        extends("python")
+        depends_on("python@3.6:", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "run"))
+        depends_on("py-pip", type="build")
+        depends_on("py-pybind11@2.6.2:", type="build")
+        depends_on("py-scipy", type=("build", "run"))
     depends_on("scine-core")
     depends_on("yaml-cpp")
-
-    extends("python", when="+python")
 
     def patch(self):
         os.rmdir("dev")
@@ -76,6 +77,6 @@ class ScineUtilities(CMakePackage):
             self.define("Boost_NO_BOOST_CMAKE", True),
         ]
         if "+python" in self.spec:
-            args.append(self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path))
+            args.append(self.define("PYTHON_EXECUTABLE", python.path))
 
         return args

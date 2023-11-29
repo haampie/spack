@@ -20,3 +20,4 @@ class Talloc(AutotoolsPackage):
 
     extends("python")
     depends_on("python@3:")
+    depends_on("python-venv", type=("build", "run"))

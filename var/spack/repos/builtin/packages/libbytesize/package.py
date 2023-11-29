@@ -18,6 +18,7 @@ class Libbytesize(AutotoolsPackage):
     version("2.2", sha256="b93c54b502880c095c9f5767a42464853e2687db2e5e3084908a615bafe73baa")
 
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("pcre2")
     depends_on("gmp")
     depends_on("mpfr")

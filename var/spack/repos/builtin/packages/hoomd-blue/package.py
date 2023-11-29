@@ -54,7 +54,7 @@ class HoomdBlue(CMakePackage):
     conflicts("%gcc@7.0:")
 
     extends("python")
-    depends_on("python@2.7:")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("py-numpy@1.7:", type=("build", "run"))
     depends_on("cmake@2.8.0:3.9.6", type="build")
     depends_on("pkgconfig", type="build")
@@ -66,7 +66,7 @@ class HoomdBlue(CMakePackage):
         spec = self.spec
 
         cmake_args = [
-            "-DPYTHON_EXECUTABLE={0}".format(spec["python"].command.path),
+            "-DPYTHON_EXECUTABLE={0}".format(python.path),
             "-DCMAKE_INSTALL_PREFIX={0}".format(python_platlib),
         ]
 

@@ -71,8 +71,6 @@ class Omnitrace(CMakePackage):
         ),
     )
 
-    extends("python", when="+python")
-
     # hard dependencies
     depends_on("cmake@3.16:", type="build")
     depends_on("dyninst@11.0.1:", type=("build", "run"))
@@ -87,7 +85,11 @@ class Omnitrace(CMakePackage):
     depends_on("mpi", when="+mpi")
     depends_on("tau", when="+tau")
     depends_on("caliper", when="+caliper")
-    depends_on("python@3:", when="+python", type=("build", "run"))
+
+    with when("+python"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("python@3:", type=("build", "run"))
 
     def cmake_args(self):
         spec = self.spec
@@ -125,9 +127,8 @@ class Omnitrace(CMakePackage):
             args.append(self.define("TAU_ROOT_DIR", tau_root))
 
         if "+python" in spec:
-            pyexe = spec["python"].command.path
-            args.append(self.define("PYTHON_EXECUTABLE", pyexe))
-            args.append(self.define("Python3_EXECUTABLE", pyexe))
+            args.append(self.define("PYTHON_EXECUTABLE", python.path))
+            args.append(self.define("Python3_EXECUTABLE", python.path))
 
         if "+mpi" in spec:
             args.append(self.define("MPI_C_COMPILER", spec["mpi"].mpicc))
@@ -144,7 +145,3 @@ class Omnitrace(CMakePackage):
             files = glob.glob(pattern)
             if files:
                 env.set("TAU_MAKEFILE", files[0])
-
-    def setup_run_environment(self, env):
-        if "+python" in self.spec:
-            env.prepend_path("PYTHONPATH", join_path(self.prefix.lib, "python", "site-packages"))

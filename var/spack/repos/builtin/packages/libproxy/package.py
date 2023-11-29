@@ -25,7 +25,9 @@ class Libproxy(CMakePackage):
     depends_on("zlib-api")
     depends_on("perl", type=("build", "run"), when="+perl")
 
-    extends("python@:3.8", when="+python")
+    with when("+python"):
+        extends("python@:3.8")
+        depends_on("python-venv", type=("build", "run"))
 
     def cmake_args(self):
         args = [

@@ -192,6 +192,7 @@ class Spectre(CMakePackage):
     # Python bindings
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("python@3.7:", type=("build", "run"))
         depends_on("py-pybind11@2.6:", type="build")
         depends_on("py-numpy@1.10:", type=("build", "run"))
@@ -305,7 +306,7 @@ class Spectre(CMakePackage):
         args = [
             self.define("CHARM_ROOT", self.spec["charmpp"].prefix),
             self.define_from_variant("BUILD_SHARED_LIBS", "shared"),
-            self.define("Python_EXECUTABLE", self.spec["python"].command.path),
+            self.define("Python_EXECUTABLE", python.path),
             self.define_from_variant("BUILD_PYTHON_BINDINGS", "python"),
             self.define("BUILD_TESTING", self.run_tests),
             self.define_from_variant("BUILD_DOCS", "doc"),

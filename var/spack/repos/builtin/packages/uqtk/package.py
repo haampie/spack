@@ -32,12 +32,14 @@ class Uqtk(CMakePackage):
     depends_on("blas", when="@3.1.0:")
     depends_on("lapack", when="@3.1.0:")
 
-    extends("python", when="+python")
-    depends_on("py-numpy", type=("build", "run"), when="+python")
-    depends_on("py-scipy", type=("build", "run"), when="+python")
-    depends_on("py-matplotlib", type=("build", "run"), when="+python")
-    depends_on("py-pymc3", type=("build", "run"), when="+python")
-    depends_on("swig", type="build", when="@:3.1.0 +python")
+    with when("+python"):
+        extends("python", when="+python")
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "run"))
+        depends_on("py-scipy", type=("build", "run"))
+        depends_on("py-matplotlib", type=("build", "run"))
+        depends_on("py-pymc3", type=("build", "run"))
+        depends_on("swig", type="build", when="@:3.1.0")
 
     # The two patches for 3.1.0 fail with 3.1.2, therefore convert the patches
     # to more versatile and reliable sed-like filter_file substitutions.

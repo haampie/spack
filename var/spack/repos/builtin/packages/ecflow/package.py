@@ -38,8 +38,8 @@ class Ecflow(CMakePackage):
     variant("pic", default=False, description="Enable position-independent code (PIC)")
 
     extends("python")
-
     depends_on("python@3:", type=("build", "run"))
+    depends_on("python-venv", type=("build", "run"))
     depends_on("py-setuptools", type="build")
     depends_on("py-numpy", type="build")
     depends_on("py-pip", type="build")
@@ -91,7 +91,7 @@ class Ecflow(CMakePackage):
             self.define_from_variant("ENABLE_SSL", "ssl"),
             # https://jira.ecmwf.int/browse/SUP-2641#comment-208943
             self.define_from_variant("ENABLE_STATIC_BOOST_LIBS", "static_boost"),
-            self.define("Python3_EXECUTABLE", spec["python"].package.command),
+            self.define("Python3_EXECUTABLE", python.path),
             self.define("BOOST_ROOT", spec["boost"].prefix),
             self.define_from_variant("CMAKE_POSITION_INDEPENDENT_CODE", "pic"),
         ]

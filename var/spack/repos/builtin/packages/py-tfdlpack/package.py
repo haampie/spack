@@ -27,6 +27,7 @@ class PyTfdlpack(CMakePackage, PythonExtension):
 
     # Python dependencies
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("py-setuptools", type="build")
     depends_on("py-tensorflow", type=("build", "run"))
 

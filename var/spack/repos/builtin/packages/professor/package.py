@@ -25,13 +25,13 @@ class Professor(Package):
 
     depends_on("yoda")
     depends_on("eigen")
+    extends("python")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("py-cython")
     depends_on("py-iminuit")
     depends_on("py-matplotlib")
     depends_on("py-matplotlib backend=wx", when="+interactive")
     depends_on("root")
-
-    extends("python")
 
     def setup_build_environment(self, env):
         env.set("PROF_VERSION", self.spec.version)

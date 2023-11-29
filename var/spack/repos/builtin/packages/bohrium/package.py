@@ -54,7 +54,10 @@ class Bohrium(CMakePackage, CudaPackage):
     conflicts("%intel")
     conflicts("%clang@:3.5")
     conflicts("%gcc@:4.7")
-    extends("python", when="+python")
+
+    with when("+python"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
 
     # Bohrium needs at least one vector engine and
     # at least one vector engine manager

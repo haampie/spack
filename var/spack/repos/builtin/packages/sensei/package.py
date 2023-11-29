@@ -83,11 +83,13 @@ class Sensei(CMakePackage):
     # HDF5
     depends_on("hdf5", when="+hdf5")
 
-    depends_on("python@3:", when="+python", type=("build", "run"))
-    extends("python", when="+python")
-    depends_on("py-numpy", when="+python", type=("build", "run"))
-    depends_on("py-mpi4py", when="+python", type=("build", "run"))
-    depends_on("swig", when="+python", type="build")
+    with when("+python"):
+        extends("python")
+        depends_on("python@3:", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
+        depends_on("py-numpy", type=("build", "run"))
+        depends_on("py-mpi4py", type=("build", "run"))
+        depends_on("swig", type="build")
     depends_on("cmake@3.6:", when="@3:", type="build")
     depends_on("pugixml")
     depends_on("mpi")
@@ -149,9 +151,9 @@ class Sensei(CMakePackage):
             args.append("-DVISIT_DIR:PATH={0}/current/linux-x86_64".format(spec["visit"].prefix))
 
         if "+python" in spec:
-            args.append(self.define("PYTHON_EXECUTABLE", spec["python"].command.path))
-            args.append(self.define("Python_EXECUTABLE", spec["python"].command.path))
-            args.append(self.define("Python3_EXECUTABLE", spec["python"].command.path))
+            args.append(self.define("PYTHON_EXECUTABLE", python.path))
+            args.append(self.define("Python_EXECUTABLE", python.path))
+            args.append(self.define("Python3_EXECUTABLE", python.path))
             if spec.satisfies("@3:"):
                 args.append(self.define("SENSEI_PYTHON_VERSION", 3))
             args.append(self.define_from_variant("ENABLE_CATALYST_PYTHON", "catalyst"))
