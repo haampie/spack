@@ -26,13 +26,8 @@ class PythonVenv(Package):
     @property
     def command(self):
         """Returns a python Executable instance"""
-        version = self.spec["python"].version
-        for ver in (version.up_to(2), version.up_to(1), ""):
-            path = os.path.join(self.prefix.bin, f"python{ver}")
-            if os.path.exists(path):
-                return Executable(path)
-
-        raise RuntimeError(f"Unable to locate {self.name} command in {self.prefix}")
+        subdir = "Scripts" if self.spec.satisfies("platform=windows") else "bin"
+        return which("python", path=join_path(self.prefix, subdir))
 
     def _get_path(self, name) -> str:
         return self.command(
