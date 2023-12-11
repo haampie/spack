@@ -217,13 +217,11 @@ class Lbann(CachedCMakePackage, CudaPackage, ROCmPackage):
     with when("+python"):
         extends("python")
         depends_on("python@3: +shared", type=("run"), when="@:0.90,0.99:")
-        depends_on("python-venv", type=("build", "run"))
 
     # Python front end and possible extra packages
     with when("+pfe"):
         extends("python")
         depends_on("python@3: +shared", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-setuptools", type="build")
         depends_on("py-protobuf+cpp@3.10.0:4.21.12", type=("build", "run"))
 

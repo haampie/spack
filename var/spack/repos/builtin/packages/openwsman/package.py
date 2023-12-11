@@ -21,7 +21,6 @@ class Openwsman(CMakePackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
 
     depends_on("python", type=("build", "link", "run"))
     depends_on("curl", type="link")

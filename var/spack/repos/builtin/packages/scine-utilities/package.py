@@ -35,7 +35,6 @@ class ScineUtilities(CMakePackage):
     with when("+python"):
         extends("python")
         depends_on("python@3.6:", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-pip", type="build")
         depends_on("py-pybind11@2.6.2:", type="build")

@@ -86,7 +86,6 @@ class Sensei(CMakePackage):
     with when("+python"):
         extends("python")
         depends_on("python@3:", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-mpi4py", type=("build", "run"))
         depends_on("swig", type="build")

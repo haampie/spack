@@ -82,7 +82,6 @@ class Pism(CMakePackage):
     with when("+python"):
         extends("python")
         depends_on("python@2.7:2.8,3.3:")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-matplotlib")
         depends_on("py-numpy")
 

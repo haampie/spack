@@ -24,7 +24,6 @@ class Dsqss(CMakePackage):
     depends_on("mpi", when="+mpi")
 
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-numpy", type=("build", "run"))
     depends_on("py-scipy", type=("build", "run"))
     depends_on("py-toml", type=("build", "run"))

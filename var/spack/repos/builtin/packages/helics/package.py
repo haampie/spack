@@ -97,7 +97,6 @@ class Helics(CMakePackage):
     with when("+python"):
         extends("python")
         depends_on("python@3:")
-        depends_on("python-venv", type=("build", "run"))
 
     # Compiler restrictions based on C++ standard supported
     conflicts("%gcc@:6", when="@3.0.0:", msg="HELICS 3+ cannot be built with GCC older than 7.0")

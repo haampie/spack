@@ -597,7 +597,6 @@ class Lammps(CMakePackage, CudaPackage, ROCmPackage, PythonExtension):
     depends_on("lapack", when="+latte")
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-cython", when="+mliap", type="build")
         depends_on("py-cython", when="+ml-iap", type="build")
         depends_on("py-pip", type="build")

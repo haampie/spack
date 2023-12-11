@@ -30,7 +30,6 @@ class Openturns(CMakePackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
 
     depends_on("mpi", type=("build", "run"))
     depends_on("lapack", type=("build", "run"))

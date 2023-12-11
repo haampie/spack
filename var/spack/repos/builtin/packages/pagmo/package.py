@@ -41,7 +41,6 @@ class Pagmo(CMakePackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
 
     # Concretization in Spack is currently broken
     # depends_on('boost+system+serialization+thread')

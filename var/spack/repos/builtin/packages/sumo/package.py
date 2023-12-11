@@ -28,7 +28,6 @@ class Sumo(CMakePackage):
     variant("eigen", default=False, description="eigen support")
 
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-setuptools", type="build")
     depends_on("googletest", type="test")
     depends_on("xerces-c")

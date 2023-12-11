@@ -28,7 +28,6 @@ class LibcapNg(AutotoolsPackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("python@2.7:", type=("build", "link", "run"))
 
     def setup_build_environment(self, env):

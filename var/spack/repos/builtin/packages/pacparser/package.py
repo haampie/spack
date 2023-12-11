@@ -24,7 +24,6 @@ class Pacparser(MakefilePackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-setuptools", type=("build", "run"))
 
     variant("python", default=False, description="Build and install python bindings")

@@ -30,7 +30,6 @@ class Caffe(CMakePackage, CudaPackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         # TODO: replace this with an explicit list of components of Boost,
         # for instance depends_on('boost +filesystem')
         # See https://github.com/spack/spack/pull/22303 for reference

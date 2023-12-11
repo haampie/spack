@@ -33,7 +33,6 @@ class SimpleDftd3(MesonPackage):
     with when("+python"):
         extends("python")
         depends_on("python@3.6:")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-cffi")
 
     def meson_args(self):

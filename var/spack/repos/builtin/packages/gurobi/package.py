@@ -37,7 +37,6 @@ class Gurobi(Package):
 
     extends("python")
     depends_on("python@2.7,3.6:")
-    depends_on("python-venv", type=("build", "run"))
 
     def url_for_version(self, version):
         return "file://{0}/gurobi{1}_linux64.tar.gz".format(os.getcwd(), version)

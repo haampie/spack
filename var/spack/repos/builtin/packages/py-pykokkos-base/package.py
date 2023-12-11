@@ -42,7 +42,6 @@ class PyPykokkosBase(CMakePackage, PythonExtension):
     depends_on("py-pybind11", type="build")
     depends_on("kokkos@3.4.00:", type=("build", "run"))
     depends_on("python@3:", type=("build", "run"))
-    depends_on("python-venv", type=("build", "run"))
 
     def cmake_args(self):
         args = [

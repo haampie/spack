@@ -30,7 +30,6 @@ class PyOnnxruntime(CMakePackage, PythonExtension):
 
     depends_on("cmake@3.1:", type="build")
     depends_on("python", type=("build", "run"))
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-pip", type="build")
     depends_on("protobuf")
     # https://github.com/microsoft/onnxruntime/pull/11639

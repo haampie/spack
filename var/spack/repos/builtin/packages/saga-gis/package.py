@@ -88,7 +88,6 @@ class SagaGis(AutotoolsPackage, SourceforgePackage):
     with when("+python"):
         depends_on("swig", type="build")
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
 
     configure_directory = "saga-gis"
 

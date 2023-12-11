@@ -36,7 +36,6 @@ class Libxslt(AutotoolsPackage):
     with when("+python"):
         extends("python")
         depends_on("python+shared")
-        depends_on("python-venv", type=("build", "run"))
 
     def configure_args(self):
         args = []

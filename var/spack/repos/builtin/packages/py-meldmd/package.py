@@ -20,7 +20,6 @@ class PyMeldmd(CMakePackage, PythonExtension, CudaPackage):
 
     extends("python")
     depends_on("python@3.6:", type=("build", "run"))
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-setuptools", type="build")
     depends_on("amber")
     depends_on("openmm+cuda")

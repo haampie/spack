@@ -249,7 +249,6 @@ class Opencv(CMakePackage, CudaPackage):
         depends_on("py-setuptools", type="build")
         depends_on("py-numpy", type=("build", "run"))
         extends("python", when="+python3")
-        depends_on("python-venv", type=("build", "run"))
 
     with when("+stitching"):
         conflicts("~calib3d")

@@ -32,7 +32,6 @@ class Qscintilla(QMakePackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-pyqt6", type=("build", "run"), when="^qt-base")
         depends_on("py-pyqt-builder", type="build")
         depends_on("py-pyqt5", type=("build", "run"), when="^qt@5")

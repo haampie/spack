@@ -57,7 +57,6 @@ class PyPybind11(CMakePackage, PythonExtension):
     depends_on("py-pip", type="build")
     depends_on("py-wheel", type="build")
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
 
     with when("build_system=cmake"):
         generator("ninja")

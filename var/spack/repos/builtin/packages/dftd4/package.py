@@ -34,7 +34,6 @@ class Dftd4(MesonPackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-cffi")
         depends_on("python@3.6:")
 

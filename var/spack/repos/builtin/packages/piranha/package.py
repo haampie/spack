@@ -27,7 +27,6 @@ class Piranha(CMakePackage):
     with when("+python"):
         extends("python")
         depends_on("python@2.6:", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
 
     # Other dependencies
     depends_on("boost+iostreams+regex+serialization", when="~python")

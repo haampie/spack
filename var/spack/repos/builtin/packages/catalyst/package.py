@@ -43,7 +43,6 @@ class Catalyst(CMakePackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("python@3:", type=("build", "run"))
         # VTK < 8.2.1 can't handle Python 3.8
         # This affects Paraview <= 5.7 (VTK 8.2.0)

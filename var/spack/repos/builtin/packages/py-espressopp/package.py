@@ -31,7 +31,6 @@ class PyEspressopp(CMakePackage):
     depends_on("boost+numpy cxxstd=11", when="@master")
     extends("python")
     depends_on("python@3:", type=("build", "run"))
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-mpi4py@2.0.0:", type=("build", "run"))
     depends_on("fftw")
     depends_on("py-sphinx", when="+ug", type="build")

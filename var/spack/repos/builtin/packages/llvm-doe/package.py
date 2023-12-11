@@ -108,13 +108,11 @@ class LlvmDoe(CMakePackage, CudaPackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
 
     # Build dependency
     depends_on("cmake@3.4.3:", type="build")
     depends_on("cmake@3.13.4:", type="build", when="@12:")
     depends_on("python", when="~python", type="build")
-    depends_on("python-venv", when="~python", type="build")
     depends_on("pkgconfig", type="build")
 
     depends_on("z3", when="+clang+z3")

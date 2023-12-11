@@ -67,7 +67,6 @@ class Yoda(AutotoolsPackage):
     variant("root", default=False, description="Enable ROOT interface")
 
     extends("python", type=("build", "link", "run"))
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-future", type=("build", "run"))
     depends_on("zlib-api")
     depends_on("boost", when="@:1.6.0", type=("build", "run"))

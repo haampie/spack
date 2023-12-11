@@ -38,7 +38,6 @@ class Reprimand(MesonPackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-matplotlib")
         depends_on("py-pybind11 @2.6.0:")
 

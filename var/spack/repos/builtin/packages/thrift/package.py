@@ -61,7 +61,6 @@ class Thrift(Package):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-setuptools", type=("build", "run"))
         depends_on("py-six@1.7.2:", type=("build", "run"), when="@0.10.0:")
         depends_on("py-tornado", type=("build", "run"))

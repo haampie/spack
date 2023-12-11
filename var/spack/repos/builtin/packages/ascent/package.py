@@ -166,7 +166,6 @@ class Ascent(CMakePackage, CudaPackage):
     with when("+python"):
         extends("python")
         depends_on("python+shared")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-pip", type=("build", "run"))
 

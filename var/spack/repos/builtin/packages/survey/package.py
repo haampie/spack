@@ -72,7 +72,6 @@ class Survey(CMakePackage):
     depends_on("mpi", when="+mpi")
 
     depends_on("python@3:", type=("build", "run"))
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-setuptools", type="build")
     depends_on("py-pip", type="build")
     depends_on("py-pandas", type=("build", "run"))

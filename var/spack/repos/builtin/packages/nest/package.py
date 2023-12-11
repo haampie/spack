@@ -37,7 +37,6 @@ class Nest(CMakePackage):
 
     with when("+python"):
         extends("python", when="+python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-scipy", type=("run"))
         depends_on("py-cython@0.19.2:", type="build")

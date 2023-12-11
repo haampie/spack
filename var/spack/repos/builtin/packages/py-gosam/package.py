@@ -18,7 +18,6 @@ class PyGosam(Package):
 
     extends("python")
     depends_on("python@3:", type=("build", "run"))
-    depends_on("python-venv", type=("build", "run"))
 
     version(
         "2.1.1",

@@ -56,7 +56,6 @@ class Rivet(AutotoolsPackage):
     depends_on("fastjet@3.4.0:", when="@3.1.7:")
     depends_on("fjcontrib")
     depends_on("python", type=("build", "run"))
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-cython@0.24.0:", type="build")
     depends_on("swig", type="build")
 

@@ -39,7 +39,6 @@ class Openimageio(CMakePackage):
     variant("python", default=False, description="Build python bindings")
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-pybind11", type=("build", "run"))
 

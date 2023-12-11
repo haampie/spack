@@ -116,7 +116,6 @@ class Xrootd(CMakePackage):
     depends_on("openssl")
     with when("+python"):
         extends("python", type=("build", "link", "run"))
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-setuptools", type="build", when="@:5.5")
         depends_on("py-pip", type="build", when="@5.6:")
     depends_on("readline", when="+readline")

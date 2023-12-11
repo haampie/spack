@@ -377,7 +377,6 @@ class Gdal(CMakePackage, AutotoolsPackage, PythonExtension):
         depends_on("python@3.6:", type=("build", "link", "run"), when="@3.3:")
         depends_on("python@2.0:", type=("build", "link", "run"), when="@3.2:")
         depends_on("python", type=("build", "link", "run"))
-        depends_on("python-venv", type=("build", "run"))
         # Uses distutils
         depends_on("python@:3.11", type=("build", "link", "run"), when="@:3.4")
         # swig/python/setup.py

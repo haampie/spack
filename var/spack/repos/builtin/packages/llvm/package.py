@@ -264,7 +264,6 @@ class Llvm(CMakePackage, CudaPackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
 
     # Build dependency
     depends_on("cmake@3.4.3:", type="build")
@@ -276,7 +275,6 @@ class Llvm(CMakePackage, CudaPackage):
         for runtime in ["libunwind", "libcxx", "compiler-rt"]:
             depends_on("cmake@:3.16", type="build", when="{0}=runtime".format(runtime))
         del runtime
-    depends_on("python-venv", when="~python", type="build")
     depends_on("pkgconfig", type="build")
 
     # clang and clang-tools dependencies

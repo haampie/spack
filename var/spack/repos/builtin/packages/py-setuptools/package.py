@@ -199,7 +199,6 @@ class PySetuptools(Package, PythonExtension):
     depends_on("python@3.5:", when="@45:50", type=("build", "run"))
     depends_on("python@2.7:2.8,3.5:", when="@44", type=("build", "run"))
     depends_on("python@2.7:2.8,3.4:", when="@:43", type=("build", "run"))
-    depends_on("python-venv", type=("build", "run"))
 
     # Uses HTMLParser.unescape
     depends_on("python@:3.8", when="@:41.0", type=("build", "run"))

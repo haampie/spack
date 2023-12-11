@@ -27,7 +27,6 @@ class Ibmisc(CMakePackage):
     variant("python", default=True, description="Compile utilities for use with Python/Cython")
 
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-cython", when="+python", type=("build", "run"))
     depends_on("py-numpy", when="+python", type=("build", "run"))
 

@@ -146,7 +146,6 @@ class PyTensorflow(Package, CudaPackage, ROCmPackage, PythonExtension):
     )
 
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
 
     # Python support based on wheel availability
     depends_on("python@3.9:3.11", when="@2.14:", type=("build", "run"))

@@ -88,7 +88,6 @@ class Omnitrace(CMakePackage):
 
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("python@3:", type=("build", "run"))
 
     def cmake_args(self):

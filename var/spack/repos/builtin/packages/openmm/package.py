@@ -27,7 +27,6 @@ class Openmm(CMakePackage, CudaPackage):
     install_targets = ["install", "PythonInstall"]
 
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
     depends_on("cmake@3.17:", type="build", when="@7.6.0:")
     depends_on("cmake@3.1:", type="build")
     # https://github.com/openmm/openmm/issues/3317

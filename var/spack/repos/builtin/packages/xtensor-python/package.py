@@ -28,7 +28,6 @@ class XtensorPython(CMakePackage):
 
     depends_on("py-numpy")
     depends_on("python", type=("build", "link", "run"))
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-pybind11@2.2.1:2.2")
 
     def cmake_args(self):

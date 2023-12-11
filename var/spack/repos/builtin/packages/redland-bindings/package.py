@@ -21,7 +21,6 @@ class RedlandBindings(AutotoolsPackage):
     depends_on("krb5")
     depends_on("libssh")
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
 
     def configure_args(self):
         return ["--with-python", f"PYTHON_LIB={python_platlib}"]

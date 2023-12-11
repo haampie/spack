@@ -57,7 +57,6 @@ class Flann(CMakePackage):
     # Dependencies
     with when("+python"):
         extends("python")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
 
     depends_on("matlab", when="+matlab", type=("build", "run"))
