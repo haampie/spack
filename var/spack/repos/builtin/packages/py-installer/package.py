@@ -24,7 +24,6 @@ class PyInstaller(Package, PythonExtension):
     )
 
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
 
     def install(self, spec, prefix):
         # To build and install installer from source, you need flit-core, build, and installer
@@ -40,6 +39,6 @@ class PyInstaller(Package, PythonExtension):
         python(*args)
 
     def setup_dependent_package(self, module, dependent_spec):
-        installer = dependent_spec["python-venv"].command
+        installer = dependent_spec["python"].command
         installer.add_default_arg("-m", "installer")
         setattr(module, "installer", installer)

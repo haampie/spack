@@ -16,20 +16,18 @@ class Henson(CMakePackage):
 
     maintainers("mrzv")
 
-    variant("python", default=False, description="Build Python bindings")
-    variant("mpi-wrappers", default=False, description="Build MPI wrappers (PMPI)")
-    variant("boost", default=False, description="Use Boost for coroutine support")
-
     depends_on("mpi")
+
+    variant("python", default=False, description="Build Python bindings")
+    extends("python", when="+python")
+    depends_on("py-mpi4py", when="+python", type=("build", "run"))
+    variant("mpi-wrappers", default=False, description="Build MPI wrappers (PMPI)")
+
+    variant("boost", default=False, description="Use Boost for coroutine support")
     depends_on("boost+context", when="+boost", type=("build", "run"))
     conflicts("~boost", when="target=aarch64:")
 
     conflicts("^openmpi", when="+mpi-wrappers")
-
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-mpi4py", type=("build", "run"))
 
     def cmake_args(self):
         args = [
@@ -39,6 +37,6 @@ class Henson(CMakePackage):
         ]
 
         if self.spec.satisfies("+python"):
-            args += [self.define("PYTHON_EXECUTABLE", python.path)]
+            args += [self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path)]
 
         return args

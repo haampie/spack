@@ -40,13 +40,11 @@ class Cantera(SConsPackage):
     depends_on("yaml-cpp")
 
     # Python module dependencies
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-cython", type="build")
-        depends_on("py-numpy", type=("build", "run"))
-        depends_on("py-scipy", type=("build", "run"))
-        depends_on("py-3to2", type=("build", "run"))
+    extends("python", when="+python")
+    depends_on("py-cython", when="+python", type="build")
+    depends_on("py-numpy", when="+python", type=("build", "run"))
+    depends_on("py-scipy", when="+python", type=("build", "run"))
+    depends_on("py-3to2", when="+python", type=("build", "run"))
 
     # Matlab toolbox dependencies
     extends("matlab", when="+matlab")

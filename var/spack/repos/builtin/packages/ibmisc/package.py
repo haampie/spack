@@ -27,9 +27,6 @@ class Ibmisc(CMakePackage):
     variant("python", default=True, description="Compile utilities for use with Python/Cython")
 
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
-    depends_on("py-cython", when="+python", type=("build", "run"))
-    depends_on("py-numpy", when="+python", type=("build", "run"))
 
     depends_on("eigen")
     depends_on("everytrace", when="+everytrace")
@@ -38,6 +35,8 @@ class Ibmisc(CMakePackage):
     depends_on("netcdf-cxx4", when="+netcdf")
     depends_on("udunits", when="+udunits2")
     depends_on("googletest", when="+googletest", type="build")
+    depends_on("py-cython", when="+python", type=("build", "run"))
+    depends_on("py-numpy", when="+python", type=("build", "run"))
     depends_on("boost", when="+boost")
 
     # TODO: replace this with an explicit list of components of Boost,

@@ -262,9 +262,7 @@ class Llvm(CMakePackage, CudaPackage):
     provides("libllvm@4", when="@4.0.0:4")
     provides("libllvm@3", when="@3.0.0:3")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
+    extends("python", when="+python")
 
     # Build dependency
     depends_on("cmake@3.4.3:", type="build")
@@ -276,8 +274,11 @@ class Llvm(CMakePackage, CudaPackage):
         for runtime in ["libunwind", "libcxx", "compiler-rt"]:
             depends_on("cmake@:3.16", type="build", when="{0}=runtime".format(runtime))
         del runtime
-    depends_on("python-venv", when="~python", type="build")
+    depends_on("python", when="~python", type="build")
     depends_on("pkgconfig", type="build")
+
+    # Universal dependency
+    depends_on("python", when="+python")
 
     # clang and clang-tools dependencies
     depends_on("z3@4.7.1:", when="+z3")
@@ -768,12 +769,13 @@ class Llvm(CMakePackage, CudaPackage):
         define = self.define
         from_variant = self.define_from_variant
 
+        python = spec["python"]
         cmake_args = [
             define("LLVM_REQUIRES_RTTI", True),
             define("LLVM_ENABLE_RTTI", True),
             define("LLVM_ENABLE_LIBXML2", False),
             define("CLANG_DEFAULT_OPENMP_RUNTIME", "libomp"),
-            define("PYTHON_EXECUTABLE", python.path),
+            define("PYTHON_EXECUTABLE", python.command.path),
             define("LIBOMP_USE_HWLOC", True),
             define("LIBOMP_HWLOC_INSTALL_DIR", spec["hwloc"].prefix),
             from_variant("LLVM_ENABLE_ZSTD", "zstd"),
@@ -797,7 +799,10 @@ class Llvm(CMakePackage, CudaPackage):
         if shlib_symbol_version is not None and shlib_symbol_version.value != "none":
             cmake_args.append(define("LLVM_SHLIB_SYMBOL_VERSION", shlib_symbol_version.value))
 
-        cmake_args.append(define("Python3_EXECUTABLE", python.path))
+        if python.version >= Version("3"):
+            cmake_args.append(define("Python3_EXECUTABLE", python.command.path))
+        else:
+            cmake_args.append(define("Python2_EXECUTABLE", python.command.path))
 
         projects = []
         runtimes = []

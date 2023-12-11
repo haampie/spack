@@ -41,7 +41,6 @@ class SIPPackage(spack.package_base.PackageBase):
 
     with when("build_system=sip"):
         extends("python", type=("build", "link", "run"))
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-sip", type="build")
 
     @property

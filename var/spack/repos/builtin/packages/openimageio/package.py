@@ -37,11 +37,9 @@ class Openimageio(CMakePackage):
     depends_on("openjpeg", when="+jpeg2k")
 
     variant("python", default=False, description="Build python bindings")
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-numpy", type=("build", "run"))
-        depends_on("py-pybind11", type=("build", "run"))
+    extends("python", when="+python")
+    depends_on("py-numpy", when="+python", type=("build", "run"))
+    depends_on("py-pybind11", when="+python", type=("build", "run"))
 
     variant("qt", default=False, description="Build qt viewer")
     depends_on("qt@5.6.0:+opengl", when="+qt")

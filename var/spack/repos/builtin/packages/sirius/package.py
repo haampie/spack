@@ -116,18 +116,17 @@ class Sirius(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("pkgconfig", type="build")
 
     # Python module
+    depends_on("python", when="+python", type=("build", "run"))
     depends_on("python", when="@:6", type=("build", "run"))
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-numpy", type=("build", "run"))
-        depends_on("py-scipy", type=("build", "run"))
-        depends_on("py-h5py", type=("build", "run"))
-        depends_on("py-mpi4py", type=("build", "run"))
-        depends_on("py-pyyaml", type=("build", "run"))
-        depends_on("py-mpi4py", type=("build", "run"))
-        depends_on("py-voluptuous", type=("build", "run"))
-        depends_on("py-pybind11", type=("build", "run"))
+    depends_on("py-numpy", when="+python", type=("build", "run"))
+    depends_on("py-scipy", when="+python", type=("build", "run"))
+    depends_on("py-h5py", when="+python", type=("build", "run"))
+    depends_on("py-mpi4py", when="+python", type=("build", "run"))
+    depends_on("py-pyyaml", when="+python", type=("build", "run"))
+    depends_on("py-mpi4py", when="+python", type=("build", "run"))
+    depends_on("py-voluptuous", when="+python", type=("build", "run"))
+    depends_on("py-pybind11", when="+python", type=("build", "run"))
+    extends("python", when="+python")
 
     depends_on("magma", when="+magma")
 

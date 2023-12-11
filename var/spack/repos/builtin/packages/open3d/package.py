@@ -43,16 +43,13 @@ class Open3d(CMakePackage, CudaPackage):
     # depends_on('tinygltf')
     # depends_on('tinyobjloader')
 
-    with when("+python"):
-        extends("python", type=("build", "link", "run"))
-        depends_on("python@3.6:", type=("build", "link", "run"))
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-pip", type="build")
-        depends_on("py-setuptools@40.8:", type="build")
-        depends_on("py-wheel@0.36:", type="build")
-        depends_on("py-numpy@1.18:", type=("build", "run"))
-        depends_on("py-pytest", type="test")
-
+    extends("python", when="+python", type=("build", "link", "run"))
+    depends_on("python@3.6:", when="+python", type=("build", "link", "run"))
+    depends_on("py-pip", when="+python", type="build")
+    depends_on("py-setuptools@40.8:", when="+python", type="build")
+    depends_on("py-wheel@0.36:", when="+python", type="build")
+    depends_on("py-numpy@1.18:", when="+python", type=("build", "run"))
+    depends_on("py-pytest", when="+python", type="test")
     depends_on("cuda@10.1:", when="+cuda")
 
     # C++14 compiler required
@@ -97,7 +94,7 @@ class Open3d(CMakePackage, CudaPackage):
         ]
 
         if "+python" in self.spec:
-            args.append(self.define("PYTHON_EXECUTABLE", python.path))
+            args.append(self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path))
 
         return args
 
@@ -125,7 +122,7 @@ class Open3d(CMakePackage, CudaPackage):
     def test(self):
         if "+python" in self.spec:
             self.run_test(
-                python.path,
+                self.spec["python"].command.path,
                 ["-c", "import open3d"],
                 purpose="checking import of open3d",
                 work_dir="spack-test",

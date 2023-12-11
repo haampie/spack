@@ -56,10 +56,7 @@ class Sollve(CMakePackage):
     variant("omp_tsan", default=False, description="Build with OpenMP capable thread sanitizer")
     variant("python", default=False, description="Install python bindings")
     variant("argobots", default=True, description="Use Argobots in BOLT")
-
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
+    extends("python", when="+python")
 
     # Build dependency
     depends_on("cmake@3.4.3:", type="build")
@@ -262,7 +259,7 @@ class Sollve(CMakePackage):
             "-DLLVM_ENABLE_RTTI:BOOL=ON",
             "-DLLVM_ENABLE_EH:BOOL=ON",
             "-DCLANG_DEFAULT_OPENMP_RUNTIME:STRING=libomp",
-            "-DPYTHON_EXECUTABLE:PATH={0}".format(python.path),
+            "-DPYTHON_EXECUTABLE:PATH={0}".format(spec["python"].command.path),
         ]
 
         # TODO: Instead of unconditionally disabling CUDA, add a "cuda" variant

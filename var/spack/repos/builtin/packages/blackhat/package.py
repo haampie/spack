@@ -15,8 +15,8 @@ class Blackhat(AutotoolsPackage):
     version("0.9.9", branch="cms/v0.9.9")
 
     depends_on("qd")
+    depends_on("python")
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
 
     def patch(self):
         filter_file(

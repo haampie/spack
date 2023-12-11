@@ -22,6 +22,7 @@ class Libkml(CMakePackage):
     variant("python", default=False, description="Build python bindings")
 
     extends("openjdk", when="+java")
+    extends("python", when="+python")
 
     # See DEPENDENCIES
     depends_on("cmake@2.8:", type="build")
@@ -35,11 +36,7 @@ class Libkml(CMakePackage):
     conflicts("^zlib@:1.2.7")
     depends_on("googletest@1.7.0:", type="link")
     depends_on("swig", when="+java", type="build")
-
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("swig", type="build")
+    depends_on("swig", when="+python", type="build")
 
     @property
     def libs(self):

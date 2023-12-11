@@ -31,12 +31,10 @@ class Dftd4(MesonPackage):
     depends_on("mctc-lib")
     depends_on("meson@0.57.1:", type="build")  # mesonbuild/meson#8377
     depends_on("pkgconfig", type="build")
+    depends_on("py-cffi", when="+python")
+    depends_on("python@3.6:", when="+python")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-cffi")
-        depends_on("python@3.6:")
+    extends("python", when="+python")
 
     def meson_args(self):
         lapack = self.spec["lapack"].libs.names[0]

@@ -19,9 +19,7 @@ class Openwsman(CMakePackage):
 
     variant("python", default=True, description="Enable python")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
+    extends("python", when="+python")
 
     depends_on("python", type=("build", "link", "run"))
     depends_on("curl", type="link")
@@ -33,9 +31,13 @@ class Openwsman(CMakePackage):
     def patch(self):
         """Change python install directory."""
         if self.spec.satisfies("+python"):
+            python_spec = self.spec["python"]
+            python_libdir = join_path(
+                self.spec.prefix.lib, "python" + str(python_spec.version.up_to(2)), "site-packages"
+            )
             filter_file(
                 "DESTINATION .*",
-                "DESTINATION {0} )".format(python_platlib),
+                "DESTINATION {0} )".format(python_libdir),
                 join_path("bindings", "python", "CMakeLists.txt"),
             )
 
@@ -53,7 +55,7 @@ class Openwsman(CMakePackage):
                 arg.extend([define("BUILD_PYTHON", False), define("BUILD_PYTHON3", True)])
             else:
                 arg.extend([define("BUILD_PYTHON", True), define("BUILD_PYTHON3", False)])
-            arg.append(define("PYTHON_EXECUTABLE", python.path))
+            arg.append(define("PYTHON_EXECUTABLE", spec["python"].command.path))
         else:
             arg.extend([define("BUILD_PYTHON", False), define("BUILD_PYTHON3", False)])
         return arg

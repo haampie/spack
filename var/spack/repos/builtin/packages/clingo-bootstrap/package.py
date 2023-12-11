@@ -108,9 +108,9 @@ class ClingoBootstrap(Clingo):
 
         # Set PGO training flags.
         generate_mods = EnvironmentModifications()
-        generate_mods.append_flags("CFLAGS", f"-fprofile-generate={reports}")
-        generate_mods.append_flags("CXXFLAGS", f"-fprofile-generate={reports}")
-        generate_mods.append_flags("LDFLAGS", f"-fprofile-generate={reports} --verbose")
+        generate_mods.append_flags("CFLAGS", "-fprofile-generate={}".format(reports))
+        generate_mods.append_flags("CXXFLAGS", "-fprofile-generate={}".format(reports))
+        generate_mods.append_flags("LDFLAGS", "-fprofile-generate={} --verbose".format(reports))
 
         with working_dir(self.build_directory, create=True):
             cmake(*cmake_options, sources, extra_env=generate_mods)
@@ -122,12 +122,13 @@ class ClingoBootstrap(Clingo):
 
         # Run spack solve --fresh hdf5 with instrumented clingo.
         python_runtime_env = EnvironmentModifications()
-        python_runtime_env.extend(
-            spack.user_environment.environment_modifications_for_specs(self.spec)
-        )
+        for s in self.spec.traverse(deptype=("run", "link"), order="post"):
+            python_runtime_env.extend(spack.user_environment.environment_modifications_for_spec(s))
         python_runtime_env.unset("SPACK_ENV")
         python_runtime_env.unset("SPACK_PYTHON")
-        python(spack.paths.spack_script, "solve", "--fresh", "hdf5", extra_env=python_runtime_env)
+        self.spec["python"].command(
+            spack.paths.spack_script, "solve", "--fresh", "hdf5", extra_env=python_runtime_env
+        )
 
         # Clean the build dir.
         rmtree(self.build_directory, ignore_errors=True)
@@ -136,10 +137,10 @@ class ClingoBootstrap(Clingo):
             # merge reports
             use_report = join_path(reports, "merged.prof")
             raw_files = glob.glob(join_path(reports, "*.profraw"))
-            llvm_profdata("merge", f"--output={use_report}", *raw_files)
-            use_flag = f"-fprofile-instr-use={use_report}"
+            llvm_profdata("merge", "--output={}".format(use_report), *raw_files)
+            use_flag = "-fprofile-instr-use={}".format(use_report)
         else:
-            use_flag = f"-fprofile-use={reports}"
+            use_flag = "-fprofile-use={}".format(reports)
 
         # Set PGO use flags for next cmake phase.
         use_mods = EnvironmentModifications()

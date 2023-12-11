@@ -41,14 +41,13 @@ class Bufr(CMakePackage):
     variant("python", default=False, description="Enable Python interface?")
     variant("shared", default=True, description="Build shared libraries", when="@11.5:")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python@3:", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-setuptools", type="build")
-        depends_on("py-numpy", type=("build", "run"))
-        depends_on("py-pip", type="build")
-        depends_on("py-wheel", type="build")
+    extends("python", when="+python")
+
+    depends_on("python@3:", type=("build", "run"), when="+python")
+    depends_on("py-setuptools", type="build", when="+python")
+    depends_on("py-numpy", type=("build", "run"), when="+python")
+    depends_on("py-pip", type="build", when="+python")
+    depends_on("py-wheel", type="build", when="+python")
 
     def url_for_version(self, version):
         pre = "bufr_" if version < Version("12.0.1") else ""

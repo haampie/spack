@@ -25,11 +25,17 @@ class XtensorPython(CMakePackage):
     depends_on("xtl", when="@develop")
     depends_on("xtl@0.6.4:0.6", when="@0.23.1")
     depends_on("xtl@0.4.0:0.4", when="@0.17.0")
+    depends_on("py-pybind11@2.2.1:2.2")
 
     depends_on("py-numpy")
     depends_on("python", type=("build", "link", "run"))
-    depends_on("python-venv", type=("build", "run"))
-    depends_on("py-pybind11@2.2.1:2.2")
+
+    extends("python")
 
     def cmake_args(self):
-        return [f"-DPYTHON_EXECUTABLE={python.path}"]
+        spec = self.spec
+
+        python_exe = spec["python"].command.path
+
+        args = ["-DPYTHON_EXECUTABLE={0}".format(python_exe)]
+        return args

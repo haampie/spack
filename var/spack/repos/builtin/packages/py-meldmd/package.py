@@ -19,8 +19,8 @@ class PyMeldmd(CMakePackage, PythonExtension, CudaPackage):
     version("0.4.20", sha256="8c8d2b713f8dc0ecc137d19945b3957e12063c8dda569696e47c8820eeac6c92")
 
     extends("python")
+
     depends_on("python@3.6:", type=("build", "run"))
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-setuptools", type="build")
     depends_on("amber")
     depends_on("openmm+cuda")

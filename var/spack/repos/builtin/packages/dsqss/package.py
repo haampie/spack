@@ -22,9 +22,7 @@ class Dsqss(CMakePackage):
     variant("mpi", default=True, description="build mpi support")
 
     depends_on("mpi", when="+mpi")
-
-    extends("python")
-    depends_on("python-venv", type=("build", "run"))
+    depends_on("python", type=("build", "run"))
     depends_on("py-numpy", type=("build", "run"))
     depends_on("py-scipy", type=("build", "run"))
     depends_on("py-toml", type=("build", "run"))
@@ -35,6 +33,8 @@ class Dsqss(CMakePackage):
 
     patch("spackpip.patch")
     patch("ctest.patch")
+
+    extends("python")
 
     # Built-in tests are stored as JSON files.
     # The archive contains "resource fork" files such as "._dimer_1.json".
@@ -56,6 +56,7 @@ class Dsqss(CMakePackage):
         copy(join_path(test01, "std.toml"), ".")
 
         # prepare
+        python = self.spec["python"].command
         opts = [self.spec.prefix.bin.dla_pre, "std.toml"]
         with test_part(self, "test_dla_pre", purpose="prepare dla"):
             python(*opts)

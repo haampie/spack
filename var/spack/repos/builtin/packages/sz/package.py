@@ -69,12 +69,10 @@ class Sz(CMakePackage, AutotoolsPackage):
     depends_on("zlib-api")
     depends_on("zstd")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python@3:", type=("build", "link", "run"))
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("swig@3.12:", type="build")
-        depends_on("py-numpy", type=("build", "link", "run"))
+    extends("python", when="+python")
+    depends_on("python@3:", when="+python", type=("build", "link", "run"))
+    depends_on("swig@3.12:", when="+python", type="build")
+    depends_on("py-numpy", when="+python", type=("build", "link", "run"))
     depends_on("hdf5", when="+hdf5")
     depends_on("netcdf-c", when="+netcdf")
     depends_on("cmake@3.13:", type="build")

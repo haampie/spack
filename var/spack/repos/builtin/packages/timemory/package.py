@@ -184,7 +184,6 @@ class Timemory(CMakePackage, PythonExtension):
     )
 
     extends("python", when="+python")
-    depends_on("python-venv", when="+python", type=("build", "run"))
     depends_on("cmake@3.15:", type="build")
     depends_on("python@3:", when="+python", type=("build", "run"))
     depends_on("py-cython", when="+python_hatchet", type=("build"))
@@ -322,8 +321,9 @@ class Timemory(CMakePackage, PythonExtension):
         ]
 
         if "+python" in spec:
-            args.append(self.define("PYTHON_EXECUTABLE=", python.path))
-            args.append(self.define("Python3_EXECUTABLE", python.path))
+            pyexe = spec["python"].command.path
+            args.append(self.define("PYTHON_EXECUTABLE=", pyexe))
+            args.append(self.define("Python3_EXECUTABLE", pyexe))
 
         if "+mpi" in spec:
             args.append(self.define("MPI_C_COMPILER", spec["mpi"].mpicc))

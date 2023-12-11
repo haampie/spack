@@ -70,6 +70,9 @@ class Exago(CMakePackage, CudaPackage, ROCmPackage):
         "+python", when="+ipopt+rocm", msg="Python bindings require -fPIC with Ipopt for rocm."
     )
 
+    # Adds ExaGO's python wrapper to PYTHONPATH
+    extends("python", when="+python")
+
     # Solver options
     variant("hiop", default=False, description="Enable/Disable HiOp")
     variant("ipopt", default=False, description="Enable/Disable IPOPT")
@@ -90,12 +93,9 @@ class Exago(CMakePackage, CudaPackage, ROCmPackage):
     )
     conflicts("+python~mpi", msg="#16 - Python wrapper requires MPI enabled")
     # Dependencies
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("python@3.6:3.10", when="@1.3.0:1.5")
-        depends_on("py-pytest", type=("build", "run"), when="@1.5.0:")
-        depends_on("py-mpi4py", when="@1.3.0:+mpi")
+    depends_on("python@3.6:3.10", when="@1.3.0:1.5+python")
+    depends_on("py-pytest", type=("build", "run"), when="@1.5.0:+python")
+    depends_on("py-mpi4py", when="@1.3.0:+mpi+python")
     depends_on("pkgconfig", type="build")
     depends_on("mpi", when="+mpi")
     depends_on("blas")

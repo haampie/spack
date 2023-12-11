@@ -28,15 +28,14 @@ class ScineSerenity(CMakePackage):
     variant("python", default=False, description="Build Python extension module")
 
     depends_on("boost+system+filesystem+program_options cxxstd=17 @1.65.0:")
-
-    with when("+python"):
-        extends("python")
-        depends_on("python@3.6:", type=("build", "run"))
-        depends_on("py-pip", type="build")
+    depends_on("python@3.6:", when="+python", type=("build", "run"))
+    depends_on("py-pip", when="+python", type="build")
     depends_on("scine-core")
     depends_on("scine-utilities")
     depends_on("scine-utilities+python", when="+python", type=("build", "run"))
     depends_on("serenity")
+
+    extends("python", when="+python")
 
     def patch(self):
         os.rmdir("dev")
@@ -69,5 +68,5 @@ class ScineSerenity(CMakePackage):
             self.define("Boost_NO_BOOST_CMAKE", True),
         ]
         if "+python" in self.spec:
-            args.append(self.define("PYTHON_EXECUTABLE", python.path))
+            args.append(self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path))
         return args

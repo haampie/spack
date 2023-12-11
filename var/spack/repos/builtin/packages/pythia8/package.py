@@ -96,9 +96,7 @@ class Pythia8(AutotoolsPackage):
     depends_on("hdf5", when="+hdf5")
     depends_on("highfive@2.2", when="+hdf5")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
+    extends("python", when="+python")
 
     conflicts(
         "^evtgen+pythia8",

@@ -28,16 +28,12 @@ class Caffe(CMakePackage, CudaPackage):
     variant("python", default=False, description="Build python wrapper and caffe python layer")
     variant("matlab", default=False, description="Build Matlab wrapper")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        # TODO: replace this with an explicit list of components of Boost,
-        # for instance depends_on('boost +filesystem')
-        # See https://github.com/spack/spack/pull/22303 for reference
-        depends_on(Boost.with_default_variants)
-        depends_on("boost +python")
-        depends_on("py-numpy@1.7:", type=("build", "run"))
+    depends_on("boost +python", when="+python")
 
+    # TODO: replace this with an explicit list of components of Boost,
+    # for instance depends_on('boost +filesystem')
+    # See https://github.com/spack/spack/pull/22303 for reference
+    depends_on(Boost.with_default_variants, when="+python")
     depends_on("cuda", when="+cuda")
     depends_on("blas")
     depends_on("protobuf@:3.17")
@@ -49,7 +45,11 @@ class Caffe(CMakePackage, CudaPackage):
     depends_on("opencv@:3+highgui+imgproc+imgcodecs", when="+opencv")
     depends_on("leveldb", when="+leveldb")
     depends_on("lmdb", when="+lmdb")
+    depends_on("python@2.7:", when="+python")
+    depends_on("py-numpy@1.7:", when="+python", type=("build", "run"))
     depends_on("matlab", when="+matlab")
+
+    extends("python", when="+python")
 
     def cmake_args(self):
         spec = self.spec

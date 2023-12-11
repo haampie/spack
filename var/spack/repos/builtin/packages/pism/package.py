@@ -79,12 +79,10 @@ class Pism(CMakePackage):
     depends_on("proj@:4")
     depends_on("everytrace", when="+everytrace")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python@2.7:2.8,3.3:")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-matplotlib")
-        depends_on("py-numpy")
+    extends("python", when="+python")
+    depends_on("python@2.7:2.8,3.3:", when="+python")
+    depends_on("py-matplotlib", when="+python")
+    depends_on("py-numpy", when="+python")
 
     def cmake_args(self):
         spec = self.spec

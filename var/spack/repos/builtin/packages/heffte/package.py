@@ -49,13 +49,11 @@ class Heffte(CMakePackage, CudaPackage, ROCmPackage):
     variant("python", default=False, description="Install the Python bindings")
     variant("fortran", default=False, description="Install the Fortran modules")
 
-    with when("+python"):
-        extends("python", type=("build", "run"))
-        depends_on("python@3:", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-mpi4py", type=("build", "run"))
-        depends_on("py-numpy", type=("build", "run"))
-        depends_on("py-numba", when="+cuda", type=("build", "run"))
+    depends_on("python@3.0:", when="+python", type=("build", "run"))
+    depends_on("py-mpi4py", when="+python", type=("build", "run"))
+    depends_on("py-numpy", when="+python", type=("build", "run"))
+    depends_on("py-numba", when="+python+cuda", type=("build", "run"))
+    extends("python", when="+python", type=("build", "run"))
 
     conflicts("^openmpi~cuda", when="+cuda")  # +cuda requires CUDA enabled OpenMPI
     conflicts("~cuda~rocm", when="+magma")  # magma requires CUDA or HIP

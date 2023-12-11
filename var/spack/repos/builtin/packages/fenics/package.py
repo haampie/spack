@@ -82,6 +82,9 @@ class Fenics(CMakePackage):
     )
     patch("petsc_3_11.patch", when="@2018.1.0.post1")
 
+    # enable extension support for fenics package
+    extends("python", when="+python")
+
     # fenics python package dependencies
     for ver in dolfin_versions:
         wver = "@" + ver
@@ -100,16 +103,7 @@ class Fenics(CMakePackage):
         depends_on("py-fenics-ffc{0}".format(wver), type=("build", "run"), when=wver + "+python")
 
     # package dependencies
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("python@3.5:", type=("build", "run"))
-        depends_on("py-petsc4py@3.6:", when="+petsc")
-        depends_on("py-pip", type="build")
-        depends_on("py-wheel", type="build")
-        depends_on("py-setuptools", type="build")
-        depends_on("py-pkgconfig", type=("build", "run"))
-
+    depends_on("python@3.5:", type=("build", "run"), when="+python")
     depends_on("eigen@3.2.0:")
     depends_on("pkgconfig", type="build")
     depends_on("zlib-api", when="+zlib")
@@ -134,6 +128,7 @@ class Fenics(CMakePackage):
     depends_on("scotch+mpi~metis", when="+scotch+mpi")
     depends_on("petsc", when="+petsc")
     depends_on("slepc", when="+slepc")
+    depends_on("py-petsc4py@3.6:", when="+petsc+python")
     depends_on("trilinos", when="+trilinos")
     depends_on("vtk", when="+vtk")
     depends_on("suite-sparse", when="+suite-sparse")
@@ -142,6 +137,10 @@ class Fenics(CMakePackage):
     depends_on("py-pybind11@2.2.4", type=("build", "run"))
     depends_on("cmake@3.17.3:", type="build")
 
+    depends_on("py-pip", when="+python", type="build")
+    depends_on("py-wheel", when="+python", type="build")
+    depends_on("py-setuptools", type="build", when="+python")
+    depends_on("py-pkgconfig", type=("build", "run"), when="+python")
     depends_on("py-sphinx@1.0.1:", when="+doc", type="build")
 
     def cmake_args(self):

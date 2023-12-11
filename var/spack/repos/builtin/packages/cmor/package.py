@@ -37,12 +37,10 @@ class Cmor(AutotoolsPackage):
     depends_on("netcdf-c")
     depends_on("udunits")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-pip", type="build")
-        depends_on("py-wheel", type="build")
-        depends_on("py-numpy", type=("build", "run"))
+    extends("python", when="+python")
+    depends_on("py-pip", when="+python", type="build")
+    depends_on("py-wheel", when="+python", type="build")
+    depends_on("py-numpy", type=("build", "run"), when="+python")
 
     @run_before("configure")
     def validate(self):

@@ -23,13 +23,10 @@ class Jsonnet(MakefilePackage):
     conflicts("%gcc@:5.4.99", when="@0.18.0:")
 
     variant("python", default=False, description="Provide Python bindings for jsonnet")
-
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-setuptools", type=("build",))
-        depends_on("py-pip", type=("build",))
-        depends_on("py-wheel", type=("build",))
+    extends("python", when="+python")
+    depends_on("py-setuptools", type=("build",), when="+python")
+    depends_on("py-pip", type=("build",), when="+python")
+    depends_on("py-wheel", type=("build",), when="+python")
 
     @property
     def install_targets(self):

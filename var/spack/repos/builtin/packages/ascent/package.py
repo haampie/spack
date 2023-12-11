@@ -164,9 +164,8 @@ class Ascent(CMakePackage, CudaPackage):
     # we need a shared version of python b/c linking with static python lib
     # causes duplicate state issues when running compiled python modules.
     with when("+python"):
-        extends("python")
         depends_on("python+shared")
-        depends_on("python-venv", type=("build", "run"))
+        extends("python")
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-pip", type=("build", "run"))
 

@@ -68,13 +68,11 @@ class OpenpmdApi(CMakePackage):
         depends_on("adios2@2.5.0: ~mpi", when="~mpi")
         depends_on("adios2@2.5.0: +mpi", when="+mpi")
     with when("+python"):
-        extends("python")
-        depends_on("python@3.7:", type=["link", "test", "run"])
-        depends_on("python@3.8:", when="@0.15.2:", type=["link", "test", "run"])
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-pybind11@2.6.2:", type="link")
         depends_on("py-numpy@1.15.1:", type=["test", "run"])
         depends_on("py-mpi4py@2.1.0:", when="+mpi", type=["test", "run"])
+        depends_on("python@3.7:", type=["link", "test", "run"])
+        depends_on("python@3.8:", when="@0.15.2:", type=["link", "test", "run"])
 
     conflicts("^hdf5 api=v16", msg="openPMD-api requires HDF5 APIs for 1.8+")
 
@@ -103,6 +101,8 @@ class OpenpmdApi(CMakePackage):
         when="@0.15.1",
     )
 
+    extends("python", when="+python")
+
     def cmake_args(self):
         spec = self.spec
 
@@ -125,7 +125,7 @@ class OpenpmdApi(CMakePackage):
                 "Python_EXECUTABLE" if spec.version >= Version("0.13.0") else "PYTHON_EXECUTABLE"
             )
             args += [
-                self.define(py_exe_define, python.path),
+                self.define(py_exe_define, self.spec["python"].command.path),
                 self.define("openPMD_USE_INTERNAL_PYBIND11", False),
             ]
 

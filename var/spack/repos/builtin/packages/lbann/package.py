@@ -214,18 +214,14 @@ class Lbann(CachedCMakePackage, CudaPackage, ROCmPackage):
     # and 2) to drive the front end model creation and launch
 
     # Core library support for Python Data Reader and extensible interface
-    with when("+python"):
-        extends("python")
-        depends_on("python@3: +shared", type=("run"), when="@:0.90,0.99:")
-        depends_on("python-venv", type=("build", "run"))
+    depends_on("python@3: +shared", type=("run"), when="@:0.90,0.99: +python")
+    extends("python", when="+python")
 
     # Python front end and possible extra packages
-    with when("+pfe"):
-        extends("python")
-        depends_on("python@3: +shared", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-setuptools", type="build")
-        depends_on("py-protobuf+cpp@3.10.0:4.21.12", type=("build", "run"))
+    depends_on("python@3: +shared", type=("build", "run"), when="+pfe")
+    extends("python", when="+pfe")
+    depends_on("py-setuptools", type="build", when="+pfe")
+    depends_on("py-protobuf+cpp@3.10.0:4.21.12", type=("build", "run"), when="+pfe")
 
     depends_on("protobuf+shared@3.10.0:3.21.12")
     depends_on("zlib-api", when="^protobuf@3.11.0:")
@@ -403,8 +399,12 @@ class Lbann(CachedCMakePackage, CudaPackage, ROCmPackage):
         )
         entries.append(cmake_cache_option("protobuf_MODULE_COMPATIBLE", True))
 
-        if spec.dependencies("python") and "+pfe" in spec:
-            entries.append(cmake_cache_path("LBANN_PFE_PYTHON_EXECUTABLE", python.path))
+        if spec.satisfies("^python") and "+pfe" in spec:
+            entries.append(
+                cmake_cache_path(
+                    "LBANN_PFE_PYTHON_EXECUTABLE", "{0}/python3".format(spec["python"].prefix.bin)
+                )
+            )
             entries.append(
                 cmake_cache_string("LBANN_PFE_PYTHONPATH", env["PYTHONPATH"])
             )  # do NOT need to sub ; for : because

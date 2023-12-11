@@ -57,7 +57,6 @@ class PyPybind11(CMakePackage, PythonExtension):
     depends_on("py-pip", type="build")
     depends_on("py-wheel", type="build")
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
 
     with when("build_system=cmake"):
         generator("ninja")
@@ -86,7 +85,7 @@ class PyPybind11(CMakePackage, PythonExtension):
 class CMakeBuilder(spack.build_systems.cmake.CMakeBuilder):
     def cmake_args(self):
         return [
-            self.define("PYTHON_EXECUTABLE:FILEPATH", python.path),
+            self.define("PYTHON_EXECUTABLE:FILEPATH", self.spec["python"].command.path),
             self.define("PYBIND11_TEST", self.pkg.run_tests),
         ]
 
@@ -105,6 +104,7 @@ class CMakeBuilder(spack.build_systems.cmake.CMakeBuilder):
 
         with working_dir("spack-test", create=True):
             # test include helper points to right location
+            python = self.spec["python"].command
             py_inc = python(
                 "-c", "import pybind11 as py; print(py.get_include())", output=str
             ).strip()

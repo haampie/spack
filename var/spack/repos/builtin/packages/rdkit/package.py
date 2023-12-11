@@ -65,12 +65,10 @@ class Rdkit(CMakePackage):
         depends_on("coordgen", when="+coordgen")
         depends_on("maeparser", when="+maeparser")
         depends_on("eigen@3:", when="+descriptors3d")
+        depends_on("python@3:", when="+python")
+        depends_on("py-numpy", when="+python")
 
-        with when("+python"):
-            extends("python")
-            depends_on("python@3:")
-            depends_on("python-venv", type=("build", "run"))
-            depends_on("py-numpy")
+        extends("python", when="+python")
 
         conflicts("+xyz2mol", when="~yaehmop", msg="XY2MOL requires YAeHMOP")
 
@@ -79,10 +77,9 @@ class Rdkit(CMakePackage):
     depends_on("freetype", when="@2020_09_1: +freetype")
 
     with when("@:2021_09_5"):
-        extends("python")
         depends_on("python@3:")
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy")
+        extends("python")
 
     def cmake_args(self):
         args = [

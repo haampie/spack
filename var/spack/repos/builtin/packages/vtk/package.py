@@ -78,7 +78,6 @@ class Vtk(CMakePackage):
     with when("+python"):
         # Depend on any Python, add bounds below.
         extends("python@2.7:", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
         depends_on("python@:3.7", when="@:8.2.0", type=("build", "run"))
         # Python 3.8 support from vtk 9 and patched 8.2
         depends_on("python@:3.8", when="@:8.2.1a", type=("build", "run"))
@@ -309,7 +308,7 @@ class Vtk(CMakePackage):
         if "+python" in spec:
             cmake_args.append("-DVTK_WRAP_PYTHON=ON")
             if spec.satisfies("@:8"):
-                cmake_args.append("-DPYTHON_EXECUTABLE={0}".format(python.path))
+                cmake_args.append("-DPYTHON_EXECUTABLE={0}".format(spec["python"].command.path))
             if "+mpi" in spec and spec.satisfies("@:8"):
                 cmake_args.append("-DVTK_USE_SYSTEM_MPI4PY:BOOL=ON")
             if spec.satisfies("@9.0.0: ^python@3:"):

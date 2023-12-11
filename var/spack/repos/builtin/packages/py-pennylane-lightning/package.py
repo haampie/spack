@@ -37,6 +37,8 @@ class PyPennylaneLightning(CMakePackage, PythonExtension):
     variant("cpptests", default=False, description="Build CPP tests")
     variant("cppbenchmarks", default=False, description="Build CPP benchmark examples")
 
+    extends("python")
+
     # hard dependencies
     depends_on("cmake@3.21:3.24,3.25.2:", type="build")
     depends_on("ninja", type=("run", "build"))
@@ -47,10 +49,8 @@ class PyPennylaneLightning(CMakePackage, PythonExtension):
     depends_on("kokkos-kernels@:4.0.01", when="@:0.31+kokkos")
     depends_on("llvm-openmp", when="+openmp %apple-clang")
 
-    extends("python")
     depends_on("python@3.8:", type=("build", "run"), when="@:0.31")
     depends_on("python@3.9:", type=("build", "run"), when="@0.32:")
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-setuptools", type="build")
     depends_on("py-numpy", type=("build", "run"))
     depends_on("py-pybind11", type="link")

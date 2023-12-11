@@ -36,13 +36,10 @@ class Akantu(CMakePackage):
     depends_on(Boost.with_default_variants)
     depends_on("lapack")
     depends_on("cmake@3.5.1:", type="build")
-
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-numpy", type=("build", "run"))
-        depends_on("py-scipy", type=("build", "run"))
-        depends_on("py-pybind11", when="@3.1:", type=("build", "run"))
+    depends_on("python", when="+python", type=("build", "run"))
+    depends_on("py-numpy", when="+python", type=("build", "run"))
+    depends_on("py-scipy", when="+python", type=("build", "run"))
+    depends_on("py-pybind11", when="@3.1:+python", type=("build", "run"))
 
     depends_on("mumps", when="~mpi external_solvers=mumps")
     depends_on("mumps+mpi", when="+mpi external_solvers=mumps")
@@ -52,6 +49,8 @@ class Akantu(CMakePackage):
 
     depends_on("mpi", when="+mpi")
     depends_on("scotch", when="+mpi")
+
+    extends("python", when="+python")
 
     conflicts("%gcc@:5.3")
     conflicts("@:3.0 external_solvers=petsc")

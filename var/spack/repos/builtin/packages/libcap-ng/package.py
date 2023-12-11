@@ -23,13 +23,11 @@ class LibcapNg(AutotoolsPackage):
     depends_on("m4", type="build")
     depends_on("attr", type="build")
     depends_on("swig", type="build")
+    depends_on("python@2.7:", type=("build", "link", "run"), when="+python")
 
     variant("python", default=True, description="Enable python")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("python@2.7:", type=("build", "link", "run"))
+    extends("python", when="+python")
 
     def setup_build_environment(self, env):
         if self.spec.satisfies("+python"):

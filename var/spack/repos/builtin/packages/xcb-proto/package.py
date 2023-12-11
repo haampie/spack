@@ -21,7 +21,6 @@ class XcbProto(AutotoolsPackage):
     version("1.11", sha256="d12152193bd71aabbdbb97b029717ae6d5d0477ab239614e3d6193cc0385d906")
 
     extends("python")
-    depends_on("python-venv", type=("build", "run"))
 
     patch("xcb-proto-1.12-schema-1.patch", when="@1.12")
 

@@ -132,11 +132,10 @@ class Visit(CMakePackage):
     depends_on("qt+gui+opengl@5:5.14", when="+gui")
     depends_on("qwt+opengl", when="+gui")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python@3.2:")
-        depends_on("python-venv", type=("build", "run"))
-        conflicts("python@3.8", when="@:3.2", msg="VisIt doesn't work with python@3.8")
+    # python@3.8 doesn't work with VisIt.
+    depends_on("python@3.2:3.7,3.9:", when="@:3.2 +python")
+    depends_on("python@3.2:", when="@3.3: +python")
+    extends("python", when="+python")
 
     # VisIt uses the hdf5 1.8 api
     # set the API version later on down in setup_build_environment

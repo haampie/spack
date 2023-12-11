@@ -21,12 +21,10 @@ class Xcfun(CMakePackage):
     version("2.0.0", sha256="34398e935c522d0b55e1803fd6116e7cd40677d1add8894ef08362361705cf25")
 
     extends("python")
+    depends_on("cmake@3.14:", type="build")
     depends_on("python@3:")
-    depends_on("python-venv", type=("build", "run"))
     depends_on("py-pybind11")
     depends_on("py-numpy")
-
-    depends_on("cmake@3.14:", type="build")
 
     def cmake_args(self):
         spec = self.spec
@@ -36,7 +34,7 @@ class Xcfun(CMakePackage):
             "-DPYMOD_INSTALL_LIBDIR=/python{0}/site-packages".format(spec["python"].version[:-1]),
             "-DXCFUN_MAX_ORDER=8",
             "-DXCFUN_PYTHON_INTERFACE=ON",
-            f"-DPYTHON_EXECUTABLE={python.path}",
+            "-DPYTHON_EXECUTABLE={0}".format(spec["python"].command),
             "-DENABLE_TESTALL=OFF",
         ]
         return args

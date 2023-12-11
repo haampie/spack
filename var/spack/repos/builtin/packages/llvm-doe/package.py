@@ -106,17 +106,16 @@ class LlvmDoe(CMakePackage, CudaPackage):
     variant("version_suffix", default="none", description="Add a symbol suffix")
     variant("z3", default=False, description="Use Z3 for the clang static analyzer")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
+    extends("python", when="+python")
 
     # Build dependency
     depends_on("cmake@3.4.3:", type="build")
     depends_on("cmake@3.13.4:", type="build", when="@12:")
     depends_on("python", when="~python", type="build")
-    depends_on("python-venv", when="~python", type="build")
     depends_on("pkgconfig", type="build")
 
+    # Universal dependency
+    depends_on("python", when="+python")
     depends_on("z3", when="+clang+z3")
 
     # openmp dependencies
@@ -406,12 +405,13 @@ class LlvmDoe(CMakePackage, CudaPackage):
         define = self.define
         from_variant = self.define_from_variant
 
+        python = spec["python"]
         cmake_args = [
             define("LLVM_REQUIRES_RTTI", True),
             define("LLVM_ENABLE_RTTI", True),
             define("LLVM_ENABLE_EH", True),
             define("CLANG_DEFAULT_OPENMP_RUNTIME", "libomp"),
-            define("PYTHON_EXECUTABLE", python.path),
+            define("PYTHON_EXECUTABLE", python.command.path),
             define("LIBOMP_USE_HWLOC", True),
             define("LIBOMP_HWLOC_INSTALL_DIR", spec["hwloc"].prefix),
         ]
@@ -420,7 +420,10 @@ class LlvmDoe(CMakePackage, CudaPackage):
         if version_suffix != "none":
             cmake_args.append(define("LLVM_VERSION_SUFFIX", version_suffix))
 
-        cmake_args.append(define("Python3_EXECUTABLE", python.path))
+        if python.version >= Version("3"):
+            cmake_args.append(define("Python3_EXECUTABLE", python.command.path))
+        else:
+            cmake_args.append(define("Python2_EXECUTABLE", python.command.path))
 
         projects = []
         runtimes = []

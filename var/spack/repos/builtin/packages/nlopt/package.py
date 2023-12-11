@@ -34,16 +34,13 @@ class Nlopt(CMakePackage):
     variant("matlab", default=False, description="Build the Matlab bindings.")
 
     depends_on("cmake@3.0:", type="build", when="@master")
-
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-numpy", type=("build", "run"))
-        depends_on("swig")
-
+    depends_on("python", when="+python", type=("build", "run"))
+    depends_on("py-numpy", when="+python", type=("build", "run"))
+    depends_on("swig", when="+python")
     depends_on("guile", when="+guile")
     depends_on("octave", when="+octave")
     depends_on("matlab", when="+matlab")
+    extends("python", when="+python")
 
     def cmake_args(self):
         # Add arguments other than
@@ -56,7 +53,7 @@ class Nlopt(CMakePackage):
 
         # Spack should locate python by default - but to point to a build
         if "+python" in spec:
-            args.append("-DPYTHON_EXECUTABLE=%s" % python.path)
+            args.append("-DPYTHON_EXECUTABLE=%s" % spec["python"].command.path)
 
         # On is default
         if "-shared" in spec:

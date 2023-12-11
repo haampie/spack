@@ -29,12 +29,10 @@ class SimpleDftd3(MesonPackage):
     depends_on("meson@0.57.1:", type="build")  # mesonbuild/meson#8377
     depends_on("pkgconfig", type="build")
     depends_on("toml-f")
+    depends_on("py-cffi", when="+python")
+    depends_on("python@3.6:", when="+python")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python@3.6:")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-cffi")
+    extends("python", when="+python")
 
     def meson_args(self):
         return [

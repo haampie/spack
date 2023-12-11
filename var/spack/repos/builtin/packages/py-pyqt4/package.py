@@ -52,7 +52,7 @@ class PyPyqt4(SIPPackage):
             "--destdir",
             python_platlib,
             "--pyuic4-interpreter",
-            python.path,
+            self.spec["python"].command.path,
             "--sipdir",
             self.prefix.share.sip.PyQt4,
             "--stubsdir",

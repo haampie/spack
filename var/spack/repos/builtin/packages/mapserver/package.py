@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import os
+
 from spack.package import *
 
 
@@ -41,13 +43,13 @@ class Mapserver(CMakePackage):
     depends_on("giflib")
     depends_on("gdal")
     depends_on("swig", type="build")
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
+    depends_on("python", when="+python")
     depends_on("postgresql")
     depends_on("ruby", when="+ruby")
     depends_on("java", when="+java")
     depends_on("perl", when="+perl")
+
+    extends("python", when="+python")
 
     @when("+python")
     def patch(self):
@@ -56,7 +58,9 @@ class Mapserver(CMakePackage):
         # prefix. This hack patches the CMakeLists.txt for the Python
         # bindings and hard-wires in the right destination. A bit ugly,
         # sorry, but I don't speak cmake.
-        filter_file(r"\${PYTHON_SITE_PACKAGES}", python_platlib, "mapscript/python/CMakeLists.txt")
+        pyversiondir = "python{0}".format(self.spec["python"].version.up_to(2))
+        sitepackages = os.path.join(self.spec.prefix.lib, pyversiondir, "site-packages")
+        filter_file(r"\${PYTHON_SITE_PACKAGES}", sitepackages, "mapscript/python/CMakeLists.txt")
 
     def cmake_args(self):
         args = []

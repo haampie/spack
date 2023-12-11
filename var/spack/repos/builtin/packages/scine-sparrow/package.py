@@ -47,15 +47,14 @@ class ScineSparrow(CMakePackage):
     depends_on("cereal")
     depends_on("eigen@3.3.2:")
     depends_on("googletest", type="build")
-    with when("+python"):
-        extends("python")
-        depends_on("python@3.6:", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-pip", type="build")
+    depends_on("python@3.6:", when="+python", type=("build", "run"))
+    depends_on("py-pip", when="+python", type="build")
     depends_on("scine-core")
     depends_on("scine-utilities")
     depends_on("scine-utilities+python", when="+python", type=("build", "run"))
     depends_on("yaml-cpp")
+
+    extends("python", when="+python")
 
     def patch(self):
         os.rmdir("dev")
@@ -86,7 +85,7 @@ class ScineSparrow(CMakePackage):
             self.define("Boost_NO_BOOST_CMAKE", True),
         ]
         if "+python" in self.spec:
-            args.append(self.define("PYTHON_EXECUTABLE", python.path))
+            args.append(self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path))
         return args
 
     # Adapted from ddd in MacPorts: cmake will build the executable

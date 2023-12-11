@@ -41,16 +41,14 @@ class Faiss(AutotoolsPackage, CMakePackage, CudaPackage):
 
     depends_on("cmake@3.17:", when="build_system=cmake", type="build")
 
-    with when("+python"):
-        extends("python", when="+python")
-        depends_on("python@3.7:", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-pip", type="build")
-        depends_on("py-wheel", type="build")
-        depends_on("py-setuptools", type="build")
-        depends_on("py-numpy", type=("build", "run"))
-        depends_on("swig@4", type="build")
-        depends_on("py-scipy", when="+tests", type=("build", "run"))
+    extends("python", when="+python")
+    depends_on("python@3.7:", when="+python", type=("build", "run"))
+    depends_on("py-pip", when="+python", type="build")
+    depends_on("py-wheel", when="+python", type="build")
+    depends_on("py-setuptools", when="+python", type="build")
+    depends_on("py-numpy", when="+python", type=("build", "run"))
+    depends_on("swig@4", when="+python", type="build")
+    depends_on("py-scipy", when="+python+tests", type=("build", "run"))
 
     depends_on("blas")
 
@@ -97,7 +95,8 @@ class CMakeBuilder(spack.build_systems.cmake.CMakeBuilder):
             self.define("FAISS_OPT_LEVEL", "generic"),
         ]
         if "+python" in spec:
-            args.append(self.define("Python_EXECUTABLE", python.path))
+            pyexe = spec["python"].command.path
+            args.append(self.define("Python_EXECUTABLE", pyexe))
 
         if "+cuda" in spec:
             key = "CMAKE_CUDA_ARCHITECTURES"

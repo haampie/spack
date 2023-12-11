@@ -49,7 +49,6 @@ class Tamaas(SConsPackage):
     with when("+python"):
         extends("python")
         depends_on("python@3.7:", type=("build", "run"))
-        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-scipy", when="+solvers", type="run")
         depends_on("py-pybind11", type="build")

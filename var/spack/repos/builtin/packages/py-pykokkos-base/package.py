@@ -42,14 +42,15 @@ class PyPykokkosBase(CMakePackage, PythonExtension):
     depends_on("py-pybind11", type="build")
     depends_on("kokkos@3.4.00:", type=("build", "run"))
     depends_on("python@3:", type=("build", "run"))
-    depends_on("python-venv", type=("build", "run"))
 
     def cmake_args(self):
+        spec = self.spec
+
         args = [
             self.define("ENABLE_INTERNAL_KOKKOS", False),
             self.define("ENABLE_INTERNAL_PYBIND11", False),
-            self.define("PYTHON_EXECUTABLE", python.path),
-            self.define("Python3_EXECUTABLE", python.path),
+            self.define("PYTHON_EXECUTABLE", spec["python"].command.path),
+            self.define("Python3_EXECUTABLE", spec["python"].command.path),
             self.define_from_variant("ENABLE_VIEW_RANKS", "view_ranks"),
         ]
 

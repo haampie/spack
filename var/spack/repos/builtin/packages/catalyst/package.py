@@ -38,19 +38,18 @@ class Catalyst(CMakePackage):
     variant("osmesa", default=True, description="Use offscreen rendering")
     conflicts("+osmesa", when="~rendering")
 
+    extends("python", when="+python")
+    # VTK < 8.2.1 can't handle Python 3.8
+    # This affects Paraview <= 5.7 (VTK 8.2.0)
+    # https://gitlab.kitware.com/vtk/vtk/-/issues/17670
+    depends_on("python@3:3.7", when="@:5.7 +python", type=("build", "run"))
+    depends_on("python@3:", when="@5.8:+python", type=("build", "run"))
+
     depends_on("git", type="build")
     depends_on("mpi")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("python@3:", type=("build", "run"))
-        # VTK < 8.2.1 can't handle Python 3.8
-        # This affects Paraview <= 5.7 (VTK 8.2.0)
-        # https://gitlab.kitware.com/vtk/vtk/-/issues/17670
-        depends_on("python@:3.7", when="@:5.7", type=("build", "run"))
-        depends_on("py-numpy", type=("build", "run"))
-        depends_on("py-mpi4py", type=("build", "run"))
+    depends_on("py-numpy", when="+python", type=("build", "run"))
+    depends_on("py-mpi4py", when="+python", type=("build", "run"))
 
     depends_on("gl@3.2:", when="+rendering")
     depends_on("osmesa", when="+osmesa")

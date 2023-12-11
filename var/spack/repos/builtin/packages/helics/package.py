@@ -69,7 +69,6 @@ class Helics(CMakePackage):
         when="@3.2.0:",
         description="Enable support for encrypted communication",
     )
-    # SWIG generated Python interface only works with HELICS <=2.x
     variant(
         "python",
         default=False,
@@ -94,10 +93,8 @@ class Helics(CMakePackage):
     depends_on("mpi@2", when="+mpi")
     depends_on("openssl@1.1.1:", when="+encryption")
 
-    with when("+python"):
-        extends("python")
-        depends_on("python@3:")
-        depends_on("python-venv", type=("build", "run"))
+    # SWIG generated Python interface only works with HELICS <=2.x
+    depends_on("python@3:", when="@:2 +python")
 
     # Compiler restrictions based on C++ standard supported
     conflicts("%gcc@:6", when="@3.0.0:", msg="HELICS 3+ cannot be built with GCC older than 7.0")
@@ -116,6 +113,8 @@ class Helics(CMakePackage):
     # ASIO (vendored in HELICS repo) is required for tcp and udp options
     conflicts("+tcp", when="~asio")
     conflicts("+udp", when="~asio")
+
+    extends("python", when="+python")
 
     def cmake_args(self):
         spec = self.spec

@@ -31,18 +31,16 @@ class Cosmomc(Package):
     variant("planck", default=False, description="Enable Planck Likelihood code and baseline data")
     variant("python", default=True, description="Enable Python bindings")
 
+    extends("python", when="+python")
+
     depends_on("mpi", when="+mpi")
     depends_on("planck-likelihood", when="+planck")
-
-    with when("+python"):
-        extends("python")
-        depends_on("python-venv", type=("build", "run"))
-        depends_on("py-matplotlib", type=("build", "run"))
-        depends_on("py-numpy", type=("build", "run"))
-        depends_on("py-pandas", type=("build", "run"))
-        depends_on("py-scipy", type=("build", "run"))
-        depends_on("py-six", type=("build", "run"))
-        depends_on("python @2.7:2,3.4:", type=("build", "run"))
+    depends_on("py-matplotlib", type=("build", "run"), when="+python")
+    depends_on("py-numpy", type=("build", "run"), when="+python")
+    depends_on("py-pandas", type=("build", "run"), when="+python")
+    depends_on("py-scipy", type=("build", "run"), when="+python")
+    depends_on("py-six", type=("build", "run"), when="+python")
+    depends_on("python @2.7:2,3.4:", type=("build", "run"), when="+python")
 
     patch("Makefile.patch")
     patch("errorstop.patch")
