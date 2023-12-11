@@ -28,6 +28,7 @@ class Henson(CMakePackage):
 
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-mpi4py", type=("build", "run"))
 
     def cmake_args(self):

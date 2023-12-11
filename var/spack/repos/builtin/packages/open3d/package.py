@@ -46,6 +46,7 @@ class Open3d(CMakePackage, CudaPackage):
     with when("+python"):
         extends("python", type=("build", "link", "run"))
         depends_on("python@3.6:", type=("build", "link", "run"))
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-pip", type="build")
         depends_on("py-setuptools@40.8:", type="build")
         depends_on("py-wheel@0.36:", type="build")

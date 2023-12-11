@@ -27,6 +27,7 @@ class Libproxy(CMakePackage):
 
     with when("+python"):
         extends("python@:3.8")
+        depends_on("python-venv", type=("build", "run"))
 
     def cmake_args(self):
         args = [

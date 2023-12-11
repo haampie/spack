@@ -570,7 +570,6 @@ def depends_on(spec, when=None, type=dt.DEFAULT_TYPES, patches=None):
 @directive(("extendees", "dependencies"))
 def extends(spec, type=("build", "run"), **kwargs):
     """Same as depends_on, but also adds this package to the extendee list.
-    In case of Python, also adds a dependency on python-venv.
 
     keyword arguments can be passed to extends() so that extension
     packages can pass parameters to the extendee's extension
@@ -586,11 +585,6 @@ def extends(spec, type=("build", "run"), **kwargs):
 
         _depends_on(pkg, spec, when=when, type=type)
         spec_obj = spack.spec.Spec(spec)
-
-        # When extending python, also add a dependency on python-venv. This is done so that
-        # Spack environment views are Python virtual environments.
-        if spec_obj.name == "python":
-            _depends_on(pkg, "python-venv", when=when, type=("build", "run"))
         pkg.extendees[spec_obj.name] = (spec_obj, kwargs)
 
     return _execute_extends

@@ -103,6 +103,7 @@ class Geant4(CMakePackage):
     with when("+python"):
         extends("python")
         depends_on("python@3:")
+        depends_on("python-venv", type=("build", "run"))
 
     # CLHEP version requirements to be reviewed
     depends_on("clhep@2.4.6.0:", when="@11.1:")

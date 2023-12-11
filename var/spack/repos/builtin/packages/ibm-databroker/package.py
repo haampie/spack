@@ -35,6 +35,7 @@ class IbmDatabroker(CMakePackage, PythonExtension):
     with when("+python"):
         extends("python")
         depends_on("python@3.7:")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-setuptools")
 
     patch("fixes_in_v0.6.1.patch", when="@0.6.1")

@@ -59,6 +59,7 @@ class Clingo(CMakePackage):
 
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         # Clingo 5.5.0 supports Python 3.6 or later and needs CFFI
         depends_on("python@3.6.0:", type=("build", "link", "run"), when="@5.5.0:")
         depends_on("py-cffi", type=("build", "run"), when="@5.5.0: platform=linux")

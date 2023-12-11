@@ -102,6 +102,7 @@ class Fenics(CMakePackage):
     # package dependencies
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("python@3.5:", type=("build", "run"))
         depends_on("py-petsc4py@3.6:", when="+petsc")
         depends_on("py-pip", type="build")

@@ -43,6 +43,7 @@ class Mapserver(CMakePackage):
     depends_on("swig", type="build")
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
     depends_on("postgresql")
     depends_on("ruby", when="+ruby")
     depends_on("java", when="+java")

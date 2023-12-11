@@ -39,6 +39,7 @@ class Simulationio(CMakePackage):
         depends_on("py-h5py", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
         depends_on("python@3:", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
     depends_on("rnpletal", when="+rnpl")
     depends_on("silo", when="+silo")
     depends_on("swig @3", type="build")

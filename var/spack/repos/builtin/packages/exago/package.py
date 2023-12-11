@@ -92,6 +92,7 @@ class Exago(CMakePackage, CudaPackage, ROCmPackage):
     # Dependencies
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("python@3.6:3.10", when="@1.3.0:1.5")
         depends_on("py-pytest", type=("build", "run"), when="@1.5.0:")
         depends_on("py-mpi4py", when="@1.3.0:+mpi")

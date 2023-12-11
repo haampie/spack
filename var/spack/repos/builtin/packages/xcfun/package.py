@@ -22,6 +22,7 @@ class Xcfun(CMakePackage):
 
     extends("python")
     depends_on("python@3:")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("py-pybind11")
     depends_on("py-numpy")
 

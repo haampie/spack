@@ -26,6 +26,7 @@ class Jsonnet(MakefilePackage):
 
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-setuptools", type=("build",))
         depends_on("py-pip", type=("build",))
         depends_on("py-wheel", type=("build",))

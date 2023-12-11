@@ -98,6 +98,7 @@ class Pythia8(AutotoolsPackage):
 
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
 
     conflicts(
         "^evtgen+pythia8",

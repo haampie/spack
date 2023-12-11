@@ -179,6 +179,7 @@ class Adios2(CMakePackage, CudaPackage, ROCmPackage):
 
     with when("+python"):
         extends("python", when="+python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("python@2.7:2.8,3.5:", when="@:2.4.0", type=("build", "run"))
         depends_on("python@3.5:", when="@2.5.0:", type=("build", "run"))
         depends_on("py-numpy@1.6.1:", type=("build", "run"))

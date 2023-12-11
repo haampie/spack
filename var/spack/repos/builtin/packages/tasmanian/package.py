@@ -64,6 +64,7 @@ class Tasmanian(CMakePackage, CudaPackage, ROCmPackage):
 
     with when("+python"):
         extends("python", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
         depends_on("python@3:", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
 

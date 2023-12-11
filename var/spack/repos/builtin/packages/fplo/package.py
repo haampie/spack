@@ -51,6 +51,7 @@ class Fplo(MakefilePackage):
     depends_on("qt@5+opengl")
 
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("py-numpy")
 
     conflicts("%gcc@12:")

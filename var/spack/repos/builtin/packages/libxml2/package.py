@@ -56,6 +56,7 @@ class Libxml2(AutotoolsPackage, NMakePackage):
     with when("+python"):
         extends("python")
         depends_on("python+shared~libxml2")
+        depends_on("python-venv", type=("build", "run"))
         # A note about python versions: libxml 2.10.1 (and presumably earlier) has
         # a bug in its configure script that fails to properly parse python
         # version strings with more than one character for the minor version.

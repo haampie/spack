@@ -50,6 +50,7 @@ class PyPennylaneLightning(CMakePackage, PythonExtension):
     extends("python")
     depends_on("python@3.8:", type=("build", "run"), when="@:0.31")
     depends_on("python@3.9:", type=("build", "run"), when="@0.32:")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("py-setuptools", type="build")
     depends_on("py-numpy", type=("build", "run"))
     depends_on("py-pybind11", type="link")

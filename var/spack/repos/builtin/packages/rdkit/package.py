@@ -69,6 +69,7 @@ class Rdkit(CMakePackage):
         with when("+python"):
             extends("python")
             depends_on("python@3:")
+            depends_on("python-venv", type=("build", "run"))
             depends_on("py-numpy")
 
         conflicts("+xyz2mol", when="~yaehmop", msg="XY2MOL requires YAeHMOP")
@@ -80,6 +81,7 @@ class Rdkit(CMakePackage):
     with when("@:2021_09_5"):
         extends("python")
         depends_on("python@3:")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy")
 
     def cmake_args(self):

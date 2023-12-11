@@ -192,6 +192,7 @@ class Spectre(CMakePackage):
     # Python bindings
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("python@3.7:", type=("build", "run"))
         depends_on("py-pybind11@2.6:", type="build")
         depends_on("py-numpy@1.10:", type=("build", "run"))

@@ -36,6 +36,7 @@ class Tiramisu(CMakePackage, CudaPackage, PythonExtension):
     with when("+python"):
         extends("python")
         depends_on("python@3.8:", type=("build", "link", "run"))
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-pybind11@2.6.2:", type="build")
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-cython", type="run")

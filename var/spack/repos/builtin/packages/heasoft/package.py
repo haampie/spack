@@ -40,6 +40,7 @@ class Heasoft(AutotoolsPackage):
     depends_on("py-numpy")
 
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
 
     conflicts("%gcc@:4,10:")
 

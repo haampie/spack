@@ -35,6 +35,7 @@ class PyTensorflowEstimator(Package):
     version("1.13.0", sha256="a787b150ff436636df723e507019c72a5d6486cfe506886279d380166953f12f")
 
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
 
     # tensorflow_estimator/tools/pip_package/setup.py
     depends_on("python@3.7:", when="@2.9:", type=("build", "run"))

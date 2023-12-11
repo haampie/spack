@@ -38,6 +38,7 @@ class Libkml(CMakePackage):
 
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("swig", type="build")
 
     @property

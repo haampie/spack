@@ -68,6 +68,7 @@ class Halide(CMakePackage, PythonExtension):
     with when("+python"):
         extends("python")
         depends_on("python@3.8:", type=("build", "link", "run"))
+        depends_on("python-venv", type=("build", "run"))
         # See https://github.com/halide/Halide/blob/main/requirements.txt
         depends_on("py-pybind11@2.6.2", type="build")
         depends_on("py-setuptools@43:", type="build")

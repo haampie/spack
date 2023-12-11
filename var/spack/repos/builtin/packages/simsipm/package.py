@@ -28,6 +28,7 @@ class Simsipm(CMakePackage):
     with when("+python"):
         extends("python")
         depends_on("python@3.6:", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-pybind11", type=("build", "link"))
 
     def cmake_args(self):

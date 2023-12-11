@@ -34,6 +34,7 @@ class Uqtk(CMakePackage):
 
     with when("+python"):
         extends("python", when="+python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-scipy", type=("build", "run"))
         depends_on("py-matplotlib", type=("build", "run"))

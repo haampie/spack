@@ -42,6 +42,7 @@ class Cantera(SConsPackage):
     # Python module dependencies
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-cython", type="build")
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-scipy", type=("build", "run"))

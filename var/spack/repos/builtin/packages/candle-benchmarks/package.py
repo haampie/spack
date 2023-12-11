@@ -20,6 +20,7 @@ class CandleBenchmarks(Package):
     variant("mpi", default=True, description="Build with MPI support")
 
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("py-theano +cuda", type=("build", "run"))
     depends_on("py-keras", type=("build", "run"))
     depends_on("py-matplotlib +image@:2.2.3", type=("build", "run"))

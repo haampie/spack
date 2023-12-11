@@ -26,7 +26,9 @@ class Antlr(AutotoolsPackage):
     variant("python", default=False, description="Enable ANTLR for Python")
     variant("pic", default=False, description="Enable fPIC")
 
-    extends("python", when="+python")
+    with when("+python"):
+        extends("python")
+        depends_on("python-venv", type=("build", "run"))
 
     depends_on("java", type=("build", "run"), when="+java")
 

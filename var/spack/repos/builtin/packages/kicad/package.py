@@ -22,6 +22,7 @@ class Kicad(CMakePackage):
 
     extends("python")
     depends_on("python@3:", type=("build", "run"))
+    depends_on("python-venv", type=("build", "run"))
 
     depends_on("wxwidgets")
     # py-wxpython needs work

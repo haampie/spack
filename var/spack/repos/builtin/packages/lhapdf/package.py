@@ -38,6 +38,7 @@ class Lhapdf(AutotoolsPackage):
 
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-cython", type="build")
         depends_on("py-setuptools", type="build")
         depends_on("gettext", type="build")

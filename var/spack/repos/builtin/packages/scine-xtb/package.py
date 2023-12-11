@@ -39,6 +39,7 @@ class ScineXtb(CMakePackage):
     with when("+python"):
         extends("python")
         depends_on("python@3.6:", type=("build", "run"))
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-pip", type="build")
     depends_on("scine-core")
     depends_on("scine-utilities")

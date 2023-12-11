@@ -135,6 +135,7 @@ class Visit(CMakePackage):
     with when("+python"):
         extends("python")
         depends_on("python@3.2:")
+        depends_on("python-venv", type=("build", "run"))
         conflicts("python@3.8", when="@:3.2", msg="VisIt doesn't work with python@3.8")
 
     # VisIt uses the hdf5 1.8 api

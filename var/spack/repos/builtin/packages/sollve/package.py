@@ -59,6 +59,7 @@ class Sollve(CMakePackage):
 
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
 
     # Build dependency
     depends_on("cmake@3.4.3:", type="build")

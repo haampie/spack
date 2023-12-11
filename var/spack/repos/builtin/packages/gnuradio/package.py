@@ -57,6 +57,7 @@ class Gnuradio(CMakePackage):
     depends_on("qwt", when="+gui")
 
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
 
     def cmake_args(self):
         args = []

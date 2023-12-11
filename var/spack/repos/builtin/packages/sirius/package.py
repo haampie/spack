@@ -119,6 +119,7 @@ class Sirius(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("python", when="@:6", type=("build", "run"))
     with when("+python"):
         extends("python")
+        depends_on("python-venv", type=("build", "run"))
         depends_on("py-numpy", type=("build", "run"))
         depends_on("py-scipy", type=("build", "run"))
         depends_on("py-h5py", type=("build", "run"))

@@ -26,6 +26,7 @@ class Professor(Package):
     depends_on("yoda")
     depends_on("eigen")
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("py-cython")
     depends_on("py-iminuit")
     depends_on("py-matplotlib")

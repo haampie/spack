@@ -184,6 +184,7 @@ class Timemory(CMakePackage, PythonExtension):
     )
 
     extends("python", when="+python")
+    depends_on("python-venv", when="+python", type=("build", "run"))
     depends_on("cmake@3.15:", type="build")
     depends_on("python@3:", when="+python", type=("build", "run"))
     depends_on("py-cython", when="+python_hatchet", type=("build"))

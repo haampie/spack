@@ -22,6 +22,7 @@ class Gengeo(AutotoolsPackage):
     version("163", sha256="9c896d430d8f315a45379d2b82e7d374f36259af66a745bfdee4c022a080d34d")
 
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
 
     depends_on("autoconf", type="build")
     depends_on("automake", type="build")

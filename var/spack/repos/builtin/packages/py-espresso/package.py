@@ -41,6 +41,7 @@ class PyEspresso(CMakePackage):
     # See https://github.com/spack/spack/pull/22303 for reference
     depends_on(Boost.with_default_variants)
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
     depends_on("py-cython@0.23:", type="build")
     depends_on("py-numpy", type=("build", "run"))
     depends_on("fftw")

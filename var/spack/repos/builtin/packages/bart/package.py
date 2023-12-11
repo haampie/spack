@@ -38,6 +38,7 @@ class Bart(MakefilePackage, CudaPackage):
     depends_on("py-numpy", type="run")
     depends_on("py-matplotlib", type="run")
     extends("python")
+    depends_on("python-venv", type=("build", "run"))
 
     conflicts("^atlas", msg="BART does not currently support atlas")
 
