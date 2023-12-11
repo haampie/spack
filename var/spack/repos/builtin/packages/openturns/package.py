@@ -58,7 +58,7 @@ class Openturns(CMakePackage):
             args.extend(
                 [
                     # By default picks up the system python not the Spack build
-                    "-DPYTHON_EXECUTABLE={0}".format(spec["python"].command.path),
+                    "-DPYTHON_EXECUTABLE={0}".format(python.path),
                     # By default installs to the python prefix
                     "-DPYTHON_SITE_PACKAGES={0}".format(python_platlib),
                 ]

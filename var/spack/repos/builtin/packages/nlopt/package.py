@@ -53,7 +53,7 @@ class Nlopt(CMakePackage):
 
         # Spack should locate python by default - but to point to a build
         if "+python" in spec:
-            args.append("-DPYTHON_EXECUTABLE=%s" % spec["python"].command.path)
+            args.append("-DPYTHON_EXECUTABLE=%s" % python.path)
 
         # On is default
         if "-shared" in spec:

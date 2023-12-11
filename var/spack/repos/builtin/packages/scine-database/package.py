@@ -55,5 +55,5 @@ class ScineDatabase(CMakePackage):
             self.define("SCINE_MARCH", ""),
         ]
         if "+python" in self.spec:
-            args.append(self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path))
+            args.append(self.define("PYTHON_EXECUTABLE", python.path))
         return args

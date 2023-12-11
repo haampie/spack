@@ -94,7 +94,7 @@ class Open3d(CMakePackage, CudaPackage):
         ]
 
         if "+python" in self.spec:
-            args.append(self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path))
+            args.append(self.define("PYTHON_EXECUTABLE", python.path))
 
         return args
 
@@ -122,7 +122,7 @@ class Open3d(CMakePackage, CudaPackage):
     def test(self):
         if "+python" in self.spec:
             self.run_test(
-                self.spec["python"].command.path,
+                python.path,
                 ["-c", "import open3d"],
                 purpose="checking import of open3d",
                 work_dir="spack-test",

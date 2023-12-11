@@ -203,7 +203,7 @@ class Xrootd(CMakePackage):
         if "+python" in self.spec:
             options.extend(
                 [
-                    define("PYTHON_EXECUTABLE", spec["python"].command.path),
+                    define("PYTHON_EXECUTABLE", python.path),
                     define("XRD_PYTHON_REQ_VERSION", spec["python"].version.up_to(2)),
                 ]
             )

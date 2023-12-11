@@ -60,7 +60,7 @@ class Gnuradio(CMakePackage):
 
     def cmake_args(self):
         args = []
-        args.append("-DPYTHON_EXECUTABLE={0}".format(self.spec["python"].command.path))
+        args.append("-DPYTHON_EXECUTABLE={0}".format(python.path))
         args.append("-DENABLE_INTERNAL_VOLK=OFF")
         return args
 

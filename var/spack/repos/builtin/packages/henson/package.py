@@ -37,6 +37,6 @@ class Henson(CMakePackage):
         ]
 
         if self.spec.satisfies("+python"):
-            args += [self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path)]
+            args += [self.define("PYTHON_EXECUTABLE", python.path)]
 
         return args

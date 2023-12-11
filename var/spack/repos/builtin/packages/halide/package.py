@@ -105,7 +105,7 @@ class Halide(CMakePackage, PythonExtension):
 
         if "+python" in spec:
             args += [
-                self.define("Python3_EXECUTABLE", spec["python"].command.path),
+                self.define("Python3_EXECUTABLE", python.path),
                 self.define("PYBIND11_USE_FETCHCONTENT", False),
                 self.define("Halide_INSTALL_PYTHONDIR", python_platlib),
             ]

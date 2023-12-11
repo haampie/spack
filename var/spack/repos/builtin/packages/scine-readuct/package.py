@@ -63,5 +63,5 @@ class ScineReaduct(CMakePackage):
             self.define("Boost_NO_BOOST_CMAKE", True),
         ]
         if "+python" in self.spec:
-            args.append(self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path))
+            args.append(self.define("PYTHON_EXECUTABLE", python.path))
         return args

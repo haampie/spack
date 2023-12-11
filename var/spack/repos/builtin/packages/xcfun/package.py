@@ -34,7 +34,7 @@ class Xcfun(CMakePackage):
             "-DPYMOD_INSTALL_LIBDIR=/python{0}/site-packages".format(spec["python"].version[:-1]),
             "-DXCFUN_MAX_ORDER=8",
             "-DXCFUN_PYTHON_INTERFACE=ON",
-            "-DPYTHON_EXECUTABLE={0}".format(spec["python"].command),
+            f"-DPYTHON_EXECUTABLE={python.path}",
             "-DENABLE_TESTALL=OFF",
         ]
         return args

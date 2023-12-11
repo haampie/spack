@@ -95,8 +95,7 @@ class CMakeBuilder(spack.build_systems.cmake.CMakeBuilder):
             self.define("FAISS_OPT_LEVEL", "generic"),
         ]
         if "+python" in spec:
-            pyexe = spec["python"].command.path
-            args.append(self.define("Python_EXECUTABLE", pyexe))
+            args.append(self.define("Python_EXECUTABLE", python.path))
 
         if "+cuda" in spec:
             key = "CMAKE_CUDA_ARCHITECTURES"

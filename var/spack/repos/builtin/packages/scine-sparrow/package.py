@@ -85,7 +85,7 @@ class ScineSparrow(CMakePackage):
             self.define("Boost_NO_BOOST_CMAKE", True),
         ]
         if "+python" in self.spec:
-            args.append(self.define("PYTHON_EXECUTABLE", self.spec["python"].command.path))
+            args.append(self.define("PYTHON_EXECUTABLE", python.path))
         return args
 
     # Adapted from ddd in MacPorts: cmake will build the executable

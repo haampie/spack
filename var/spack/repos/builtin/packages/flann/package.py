@@ -123,6 +123,6 @@ class Flann(CMakePackage):
 
         # Configure the proper python executable
         if "+python" in spec:
-            args.append("-DPYTHON_EXECUTABLE={0}".format(spec["python"].command.path))
+            args.append("-DPYTHON_EXECUTABLE={0}".format(python.path))
 
         return args

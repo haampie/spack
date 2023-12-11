@@ -57,7 +57,7 @@ class Tiramisu(CMakePackage, CudaPackage, PythonExtension):
         if "+python" in spec:
             args += [
                 self.define("Tiramisu_INSTALL_PYTHONDIR", python_platlib),
-                self.define("Python3_EXECUTABLE", spec["python"].command.path),
+                self.define("Python3_EXECUTABLE", python.path),
             ]
         return args
 

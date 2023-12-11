@@ -66,7 +66,7 @@ class HoomdBlue(CMakePackage):
         spec = self.spec
 
         cmake_args = [
-            "-DPYTHON_EXECUTABLE={0}".format(spec["python"].command.path),
+            "-DPYTHON_EXECUTABLE={0}".format(python.path),
             "-DCMAKE_INSTALL_PREFIX={0}".format(python_platlib),
         ]
 

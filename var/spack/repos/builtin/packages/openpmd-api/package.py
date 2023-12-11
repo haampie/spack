@@ -125,7 +125,7 @@ class OpenpmdApi(CMakePackage):
                 "Python_EXECUTABLE" if spec.version >= Version("0.13.0") else "PYTHON_EXECUTABLE"
             )
             args += [
-                self.define(py_exe_define, self.spec["python"].command.path),
+                self.define(py_exe_define, python.path),
                 self.define("openPMD_USE_INTERNAL_PYBIND11", False),
             ]
 

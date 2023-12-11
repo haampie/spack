@@ -321,9 +321,8 @@ class Timemory(CMakePackage, PythonExtension):
         ]
 
         if "+python" in spec:
-            pyexe = spec["python"].command.path
-            args.append(self.define("PYTHON_EXECUTABLE=", pyexe))
-            args.append(self.define("Python3_EXECUTABLE", pyexe))
+            args.append(self.define("PYTHON_EXECUTABLE=", python.path))
+            args.append(self.define("Python3_EXECUTABLE", python.path))
 
         if "+mpi" in spec:
             args.append(self.define("MPI_C_COMPILER", spec["mpi"].mpicc))

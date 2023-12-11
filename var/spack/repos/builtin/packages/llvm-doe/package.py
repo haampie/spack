@@ -405,13 +405,12 @@ class LlvmDoe(CMakePackage, CudaPackage):
         define = self.define
         from_variant = self.define_from_variant
 
-        python = spec["python"]
         cmake_args = [
             define("LLVM_REQUIRES_RTTI", True),
             define("LLVM_ENABLE_RTTI", True),
             define("LLVM_ENABLE_EH", True),
             define("CLANG_DEFAULT_OPENMP_RUNTIME", "libomp"),
-            define("PYTHON_EXECUTABLE", python.command.path),
+            define("PYTHON_EXECUTABLE", python.path),
             define("LIBOMP_USE_HWLOC", True),
             define("LIBOMP_HWLOC_INSTALL_DIR", spec["hwloc"].prefix),
         ]
@@ -420,10 +419,7 @@ class LlvmDoe(CMakePackage, CudaPackage):
         if version_suffix != "none":
             cmake_args.append(define("LLVM_VERSION_SUFFIX", version_suffix))
 
-        if python.version >= Version("3"):
-            cmake_args.append(define("Python3_EXECUTABLE", python.command.path))
-        else:
-            cmake_args.append(define("Python2_EXECUTABLE", python.command.path))
+        cmake_args.append(define("Python3_EXECUTABLE", python.path))
 
         projects = []
         runtimes = []
