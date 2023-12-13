@@ -21,13 +21,26 @@ class PythonVenv(Package):
     depends_on("python", type=("build", "run"))
 
     def install(self, spec, prefix):
+        # Create a virtual environment
         spec["python"].command("-m", "venv", "--without-pip", prefix)
+
+        # Prefer `spack env activate` over `source activate` as it applies all required environment
+        # variable changes. The activate scripts are removed also because they contain an absolute
+        # path to python-venv's bin dir, which is incorrect in environment views.
+        bindir = self.bindir
+        for p in os.listdir(bindir):
+            if p.startswith("activate") or p.startswith("Activate"):
+                os.unlink(os.path.join(bindir, p))
+
+    @property
+    def bindir(self):
+        windows = self.spec.satisfies("platform=windows")
+        return join_path(self.prefix, "Scripts" if windows else "bin")
 
     @property
     def command(self):
         """Returns a python Executable instance"""
-        subdir = "Scripts" if self.spec.satisfies("platform=windows") else "bin"
-        return which("python", path=join_path(self.prefix, subdir))
+        return which("python3", path=self.bindir)
 
     def _get_path(self, name) -> str:
         return self.command(
