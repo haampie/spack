@@ -16,7 +16,7 @@ import time
 import urllib.parse
 import urllib.request
 import warnings
-from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Dict, Generator, Iterable, List, Optional, Set, Tuple, Union
 
 import llnl.util.filesystem as fs
 import llnl.util.tty as tty
@@ -802,7 +802,7 @@ class Environment:
 
         self.txlock = lk.Lock(self._transaction_lock_path)
 
-        self._unify = None
+        self._unify: Optional[bool] = None
         self.new_specs: List[Spec] = []
         self.views: Dict[str, ViewDescriptor] = {}
 
@@ -815,10 +815,10 @@ class Environment:
         #: Concretized specs by hash
         self.specs_by_hash: Dict[str, Spec] = {}
         #: Repository for this environment (memoized)
-        self._repo = None
+        self._repo: Optional[spack.repo.RepoPath] = None
         #: Previously active environment
-        self._previous_active = None
-        self._dev_specs = None
+        self._previous_active: Optional[Environment] = None
+        self._dev_specs: Optional[Dict[str, Dict[str, str]]] = None
 
         # Load the manifest file contents into memory
         self._load_manifest_file()
@@ -831,9 +831,9 @@ class Environment:
                 self._read()
 
     @property
-    def unify(self):
+    def unify(self) -> bool:
         if self._unify is None:
-            self._unify = spack.config.get("concretizer:unify", False)
+            self._unify = bool(spack.config.get("concretizer:unify", False))
         return self._unify
 
     @unify.setter
@@ -876,9 +876,9 @@ class Environment:
             else:
                 self.spec_lists[name] = user_specs
 
-    def _construct_state_from_manifest(self):
+    def _construct_state_from_manifest(self) -> None:
         """Set up user specs and views from the manifest file."""
-        self.spec_lists = collections.OrderedDict()
+        self.spec_lists = {}
 
         for item in spack.config.get("definitions", []):
             self._process_definition(item)
@@ -906,38 +906,26 @@ class Environment:
             self.views = {}
 
     @property
-    def user_specs(self):
+    def user_specs(self) -> SpecList:
         return self.spec_lists[user_speclist_name]
 
     @property
-    def dev_specs(self):
-        if not self._dev_specs:
-            self._dev_specs = self._read_dev_specs()
+    def dev_specs(self) -> Dict[str, Dict[str, str]]:
+        if self._dev_specs is None:
+            self._dev_specs = {
+                name: {"spec": str(info["spec"]), "path": info.get("path", name)}
+                for name, info in spack.config.get("develop", {}).items()
+            }
         return self._dev_specs
 
-    def _read_dev_specs(self):
-        dev_specs = {}
-        dev_config = spack.config.get("develop", {})
-        for name, entry in dev_config.items():
-            local_entry = {"spec": str(entry["spec"])}
-            # default path is the spec name
-            if "path" not in entry:
-                local_entry["path"] = name
-            else:
-                local_entry["path"] = entry["path"]
-            dev_specs[name] = local_entry
-        return dev_specs
-
-    def clear(self, re_read=False):
+    def clear(self, re_read: bool = False) -> None:
         """Clear the contents of the environment
 
         Arguments:
             re_read: If ``True``, do not clear ``new_specs``. This value cannot be read from yaml,
                 and needs to be maintained when re-reading an existing environment.
         """
-        self.spec_lists = collections.OrderedDict()
-        self.spec_lists[user_speclist_name] = SpecList()
-
+        self.spec_lists = {user_speclist_name: SpecList()}
         self._dev_specs = {}
         self.concretized_user_specs = []  # user specs from last concretize
         self.concretized_order = []  # roots of last concretize, in order
@@ -949,57 +937,59 @@ class Environment:
             self.new_specs = []  # write packages for these on write()
 
     @property
-    def active(self):
+    def active(self) -> bool:
         """True if this environment is currently active."""
-        return _active_environment and self.path == _active_environment.path
+        if not _active_environment:
+            return False
+        return self.path == _active_environment.path
 
     @property
-    def manifest_path(self):
+    def manifest_path(self) -> str:
         """Path to spack.yaml file in this environment."""
         return os.path.join(self.path, manifest_name)
 
     @property
-    def _transaction_lock_path(self):
+    def _transaction_lock_path(self) -> str:
         """The location of the lock file used to synchronize multiple
         processes updating the same environment.
         """
         return os.path.join(self.env_subdir_path, "transaction_lock")
 
     @property
-    def lock_path(self):
+    def lock_path(self) -> str:
         """Path to spack.lock file in this environment."""
         return os.path.join(self.path, lockfile_name)
 
     @property
-    def _lock_backup_v1_path(self):
+    def _lock_backup_v1_path(self) -> str:
         """Path to backup of v1 lockfile before conversion to v2"""
         return self.lock_path + ".backup.v1"
 
     @property
-    def repos_path(self):
+    def repos_path(self) -> str:
         return os.path.join(self.env_subdir_path, "repos")
 
     @property
-    def view_path_default(self):
+    def view_path_default(self) -> str:
         # default path for environment views
         return os.path.join(self.env_subdir_path, "view")
 
     @property
-    def repo(self):
+    def repo(self) -> spack.repo.RepoPath:
         if self._repo is None:
             self._repo = make_repo_path(self.repos_path)
         return self._repo
 
     @property
-    def scope_name(self):
+    def scope_name(self) -> str:
         """Name of the config scope of this environment's manifest file."""
         return self.manifest.scope_name
 
-    def destroy(self):
+    def destroy(self) -> None:
         """Remove this environment from Spack entirely."""
         shutil.rmtree(self.path)
 
-    def update_stale_references(self, from_list=None):
+    def update_stale_references(self, from_list: Optional[str] = None) -> None:
         """Iterate over spec lists updating references."""
         if not from_list:
             from_list = next(iter(self.spec_lists.keys()))
@@ -1015,7 +1005,7 @@ class Environment:
             new_reference = dict((n, self.spec_lists[n]) for n in list(self.spec_lists.keys())[:i])
             speclist.update_reference(new_reference)
 
-    def add(self, user_spec, list_name=user_speclist_name):
+    def add(self, user_spec: str, list_name: str = user_speclist_name) -> bool:
         """Add a single user_spec (non-concretized) to the Environment
 
         Returns:
@@ -1054,8 +1044,8 @@ class Environment:
         change_spec: Spec,
         list_name: str = user_speclist_name,
         match_spec: Optional[Spec] = None,
-        allow_changing_multiple_specs=False,
-    ):
+        allow_changing_multiple_specs: bool = False,
+    ) -> None:
         """
         Find the spec identified by `match_spec` and change it to `change_spec`.
 
@@ -1102,7 +1092,7 @@ class Environment:
                 )
         self.update_stale_references(from_list=list_name)
 
-    def remove(self, query_spec, list_name=user_speclist_name, force=False):
+    def remove(self, query_spec: str, list_name: str = user_speclist_name, force=False) -> None:
         """Remove specs from an environment that match a query_spec"""
         err_msg_header = (
             f"Cannot remove '{query_spec}' from '{list_name}' definition "
@@ -1161,11 +1151,13 @@ class Environment:
                 del self.concretized_order[i]
                 del self.specs_by_hash[dag_hash]
 
-    def is_develop(self, spec):
+    def is_develop(self, spec: Spec) -> bool:
         """Returns true when the spec is built from local sources"""
         return spec.name in self.dev_specs
 
-    def concretize(self, force=False, tests=False):
+    def concretize(
+        self, force: bool = False, tests: Union[bool, Iterable[str]] = False
+    ) -> List[Tuple[Spec, Spec]]:
         """Concretize user_specs in this environment.
 
         Only concretizes specs that haven't been concretized yet unless
@@ -1204,8 +1196,7 @@ class Environment:
         if self.unify is False:
             return self._concretize_separately(tests=tests)
 
-        msg = "concretization strategy not implemented [{0}]"
-        raise SpackEnvironmentError(msg.format(self.unify))
+        raise SpackEnvironmentError(f"concretization strategy not implemented [{self.unify}]")
 
     def deconcretize(self, spec: spack.spec.Spec, concrete: bool = True):
         """
@@ -1265,7 +1256,7 @@ class Environment:
         return new_user_specs, kept_user_specs, specs_to_concretize
 
     def _concretize_together_where_possible(
-        self, tests: bool = False
+        self, tests: Union[bool, Iterable[str]] = False
     ) -> List[Tuple[spack.spec.Spec, spack.spec.Spec]]:
         # Avoid cyclic dependency
         import spack.solver.asp
@@ -1303,7 +1294,7 @@ class Environment:
         return result
 
     def _concretize_together(
-        self, tests: bool = False
+        self, tests: Union[bool, Iterable[str]] = False
     ) -> List[Tuple[spack.spec.Spec, spack.spec.Spec]]:
         """Concretization strategy that concretizes all the specs
         in the same DAG.
@@ -1457,7 +1448,9 @@ class Environment:
         ]
         return results
 
-    def concretize_and_add(self, user_spec, concrete_spec=None, tests=False):
+    def concretize_and_add(
+        self, user_spec: str, concrete_spec: Optional[Spec] = None, tests: bool = False
+    ) -> Spec:
         """Concretize and add a single spec to the environment.
 
         Concretize the provided ``user_spec`` and add it along with the
@@ -1496,7 +1489,7 @@ class Environment:
         return concrete
 
     @property
-    def default_view(self):
+    def default_view(self) -> ViewDescriptor:
         if not self.has_view(default_view_name):
             raise SpackEnvironmentError(f"{self.name} does not have a default view enabled")
 
@@ -1564,7 +1557,7 @@ class Environment:
             msg = f"[ENVIRONMENT] error trying to delete the default view: {str(e)}"
             tty.debug(msg)
 
-    def regenerate_views(self):
+    def regenerate_views(self) -> None:
         if not self.views:
             tty.debug("Skip view update, this environment does not maintain a view")
             return
@@ -1572,7 +1565,7 @@ class Environment:
         for view in self.views.values():
             view.regenerate(self.concrete_roots())
 
-    def check_views(self):
+    def check_views(self) -> None:
         """Checks if the environments default view can be activated."""
         try:
             # This is effectively a no-op, but it touches all packages in the
@@ -1646,16 +1639,15 @@ class Environment:
 
         return env_mod
 
-    def _add_concrete_spec(self, spec, concrete, new=True):
+    def _add_concrete_spec(self, spec: Spec, concrete: Spec, new: bool = True) -> None:
         """Called when a new concretized spec is added to the environment.
 
         This ensures that all internal data structures are kept in sync.
 
         Arguments:
-            spec (Spec): user spec that resulted in the concrete spec
-            concrete (Spec): spec concretized within this environment
-            new (bool): whether to write this spec's package to the env
-                repo on write()
+            spec: user spec that resulted in the concrete spec
+            concrete: spec concretized within this environment
+            new: whether to write this spec's package to the env repo on write()
         """
         assert concrete.concrete
 
@@ -1671,7 +1663,7 @@ class Environment:
         self.concretized_order.append(h)
         self.specs_by_hash[h] = concrete
 
-    def _dev_specs_that_need_overwrite(self):
+    def _dev_specs_that_need_overwrite(self) -> List[str]:
         """Return the hashes of all specs that need to be reinstalled due to source code change."""
         changed_dev_specs = [
             s
@@ -1697,7 +1689,7 @@ class Environment:
             if depth == 0 or spec.installed
         ]
 
-    def _partition_roots_by_install_status(self):
+    def _partition_roots_by_install_status(self) -> Tuple[List[Spec], List[Spec]]:
         """Partition root specs into those that do not have to be passed to the
         installer, and those that should be, taking into account development
         specs. This is done in a single read transaction per environment instead
@@ -1714,12 +1706,12 @@ class Environment:
                     installed.append(spec)
         return installed, uninstalled
 
-    def uninstalled_specs(self):
+    def uninstalled_specs(self) -> List[Spec]:
         """Return root specs that are not installed, or are installed, but
         are development specs themselves or have those among their dependencies."""
         return self._partition_roots_by_install_status()[1]
 
-    def install_all(self, **install_args):
+    def install_all(self, **install_args) -> None:
         """Install all concretized specs in an environment.
 
         Note: this does not regenerate the views for the environment;
@@ -1730,7 +1722,7 @@ class Environment:
         """
         self.install_specs(None, **install_args)
 
-    def install_specs(self, specs: Optional[List[Spec]] = None, **install_args):
+    def install_specs(self, specs: Optional[List[Spec]] = None, **install_args) -> None:
         roots = self.concrete_roots()
         specs = specs if specs is not None else roots
 
@@ -1751,22 +1743,21 @@ class Environment:
         """Returns a list of all concrete specs"""
         return list(self.all_specs_generator())
 
-    def all_hashes(self):
+    def all_hashes(self) -> List[str]:
         """Return hashes of all specs."""
         return [s.dag_hash() for s in self.all_specs_generator()]
 
-    def roots(self):
+    def roots(self) -> Generator[Spec, None, None]:
         """Specs explicitly requested by the user *in this environment*.
 
-        Yields both added and installed specs that have user specs in
-        `spack.yaml`.
+        Yields both added and installed specs that have user specs in `spack.yaml`.
         """
         concretized = dict(self.concretized_specs())
         for spec in self.user_specs:
             concrete = concretized.get(spec)
             yield concrete if concrete else spec
 
-    def added_specs(self):
+    def added_specs(self) -> Generator[Spec, None, None]:
         """Specs that are not yet installed.
 
         Yields the user spec for non-concretized specs, and the concrete
@@ -1783,12 +1774,12 @@ class Environment:
                 elif not concrete.installed:
                     yield concrete
 
-    def concretized_specs(self):
+    def concretized_specs(self) -> Generator[Tuple[Spec, Spec], None, None]:
         """Tuples of (user spec, concrete spec) for all concrete specs."""
         for s, h in zip(self.concretized_user_specs, self.concretized_order):
             yield (s, self.specs_by_hash[h])
 
-    def concrete_roots(self):
+    def concrete_roots(self) -> List[Spec]:
         """Same as concretized_specs, except it returns the list of concrete
         roots *without* associated user spec"""
         return [root for _, root in self.concretized_specs()]
@@ -1806,7 +1797,7 @@ class Environment:
                     break
         return matches
 
-    def get_one_by_hash(self, dag_hash):
+    def get_one_by_hash(self, dag_hash: str) -> Spec:
         """Returns the single spec from the environment which matches the
         provided hash.  Raises an AssertionError if no specs match or if
         more than one spec matches."""
@@ -1823,7 +1814,7 @@ class Environment:
         ]
 
     @spack.repo.autospec
-    def matching_spec(self, spec):
+    def matching_spec(self, spec: Spec) -> Optional[Spec]:
         """
         Given a spec (likely not concretized), find a matching concretized
         spec in the environment.
@@ -1895,10 +1886,10 @@ class Environment:
             f"{spec} matches multiple specs in the environment {self.name}: \n{matches_str}"
         )
 
-    def removed_specs(self):
+    def removed_specs(self) -> Generator[Spec, None, None]:
         """Tuples of (user spec, concrete spec) for all specs that will be
         removed on next concretize."""
-        needed = set()
+        needed: Set[Spec] = set()
         for s, c in self.concretized_specs():
             if s in self.user_specs:
                 for d in c.traverse():
@@ -1909,7 +1900,7 @@ class Environment:
                 if d not in needed:
                     yield d
 
-    def _get_environment_specs(self, recurse_dependencies=True):
+    def _get_environment_specs(self, recurse_dependencies:bool=True) -> List[Spec]:
         """Returns the specs of all the packages in an environment.
 
         If these specs appear under different user_specs, only one copy
@@ -1926,7 +1917,7 @@ class Environment:
 
         return specs
 
-    def _to_lockfile_dict(self):
+    def _to_lockfile_dict(self) -> Dict[str, Any]:
         """Create a dictionary to store a lockfile for this environment."""
         concrete_specs = {}
         for s in traverse.traverse_nodes(self.specs_by_hash.values(), key=traverse.by_dag_hash):
@@ -1946,7 +1937,7 @@ class Environment:
             spack_dict["type"] = "release"
 
         # this is the lockfile we'll write out
-        data = {
+        return {
             # metadata about the format
             "_meta": {
                 "file-type": "spack-lockfile",
@@ -1961,15 +1952,13 @@ class Environment:
             "concrete_specs": concrete_specs,
         }
 
-        return data
-
-    def _read_lockfile(self, file_or_json):
+    def _read_lockfile(self, file_or_json) -> int:
         """Read a lockfile from a file or from a raw string."""
         lockfile_dict = sjson.load(file_or_json)
         self._read_lockfile_dict(lockfile_dict)
-        return lockfile_dict["_meta"]["lockfile-version"]
+        return int(lockfile_dict["_meta"]["lockfile-version"])
 
-    def _read_lockfile_dict(self, d):
+    def _read_lockfile_dict(self, d: dict) -> None:
         """Read a lockfile dictionary into this environment."""
         self.specs_by_hash = {}
 
