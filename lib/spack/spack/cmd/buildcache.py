@@ -6,16 +6,19 @@ import argparse
 import copy
 import glob
 import hashlib
+import io
 import json
 import multiprocessing
 import multiprocessing.pool
 import os
 import shutil
 import sys
+import tarfile
 import tempfile
 import urllib.request
 from typing import Dict, List, Optional, Tuple, Union
 
+import llnl.util.filesystem as fs
 import llnl.util.tty as tty
 from llnl.string import plural
 from llnl.util.lang import elide_list
@@ -35,6 +38,7 @@ import spack.spec
 import spack.stage
 import spack.store
 import spack.user_environment
+import spack.util.archive
 import spack.util.crypto
 import spack.util.url as url_util
 import spack.util.web as web_util
@@ -344,6 +348,94 @@ class NoPool:
 MaybePool = Union[multiprocessing.pool.Pool, NoPool]
 
 
+class GeneratedBaseImage:
+    manifest: dict
+    config: dict
+
+    def __init__(self, *roots: Spec) -> None:
+        self.manifest = default_manifest()
+        self.config = default_config(_archspec_to_gooarch(roots[0]), "linux")
+
+    def create(self, *specs: Spec, path: str) -> Tuple[str, str]:
+        entries: List[Tuple[tarfile.TarInfo, Optional[io.BytesIO]]] = []
+
+        def add_dir(path: str) -> None:
+            tarinfo = tarfile.TarInfo(path)
+            tarinfo.mode = 0o755
+            tarinfo.type = tarfile.DIRTYPE
+            entries.append((tarinfo, None))
+
+        def add_symlink(path: str, to: str) -> None:
+            tarinfo = tarfile.TarInfo(path)
+            tarinfo.mode = 0o755
+            tarinfo.type = tarfile.SYMTYPE
+            tarinfo.linkname = to
+            entries.append((tarinfo, None))
+
+        def add_file(path: str, content: bytes) -> None:
+            tarinfo = tarfile.TarInfo(path)
+            tarinfo.mode = 0o755
+            tarinfo.type = tarfile.REGTYPE
+            tarinfo.size = len(content)
+            entries.append((tarinfo, io.BytesIO(content)))
+
+        for dir in ("/bin", "/usr", "/tmp", "/etc"):
+            add_dir(dir)
+
+        # Add the /usr/bin symlink
+        add_symlink("/usr/bin", to="/bin")
+
+        # bash
+        try:
+            bash: Spec = next(
+                s for s in traverse.traverse_nodes(specs, order="breadth") if s.name == "bash"
+            )
+            bash_exe = str(bash.prefix.bin.bash)
+            assert os.path.exists(bash_exe)
+            add_symlink("/bin/sh", to=bash_exe)
+            add_symlink("/bin/bash", to=bash_exe)
+        except (AssertionError, StopIteration):
+            pass
+
+        # env
+        try:
+            coreutils: Spec = next(
+                s for s in traverse.traverse_nodes(specs, order="breadth") if s.name == "coreutils"
+            )
+            env_exe = str(coreutils.prefix.bin.env)
+            assert os.path.exists(env_exe)
+            add_symlink("/usr/bin/env", to=env_exe)
+        except (AssertionError, StopIteration):
+            pass
+
+        # ld
+        try:
+            glibc: Spec = next(
+                s for s in traverse.traverse_nodes(specs, order="breadth") if s.name == "glibc"
+            )
+            ld_path = fs.find_first(glibc.prefix.lib, "ld-*.so.*")
+            assert ld_path
+            add_symlink(os.path.join("/lib64", os.path.basename(ld_path)), to=ld_path)
+        except (AssertionError, StopIteration):
+            pass
+
+        # /etc files
+        add_file("/etc/passwd", content=b"root:x:0:0:root:/root:/usr/bin/bash\n")
+        add_file("/etc/shadow", content=b"root:*:17937:0:99999:7:::\n")
+
+        entries.sort(key=lambda e: e[0].name)
+
+        with spack.util.archive.gzip_compressed_tarfile(path) as (
+            tar,
+            gzip_checksum,
+            tarfile_checksum,
+        ):
+            for entry in entries:
+                tar.addfile(*entry)
+
+        return gzip_checksum.hexdigest(), tarfile_checksum.hexdigest()
+
+
 def _make_pool() -> MaybePool:
     """Can't use threading because it's unsafe, and can't use spawned processes because of globals.
     That leaves only forking"""
@@ -413,7 +505,12 @@ def push_fn(args):
 
     # TODO: unify this logic in the future.
     if target_image:
-        base_image = ImageReference.from_string(args.base_image) if args.base_image else None
+        if args.base_image == "generated":
+            base_image = GeneratedBaseImage()
+        elif args.base_image:
+            base_image = ImageReference.from_string(args.base_image)
+        else:
+            base_image = None
         with tempfile.TemporaryDirectory(
             dir=spack.stage.get_stage_root()
         ) as tmpdir, _make_pool() as pool:
@@ -658,10 +755,11 @@ def _put_manifest(
 
 def _update_base_images(
     *,
-    base_image: Optional[ImageReference],
+    base_image: Optional[Union[ImageReference, GeneratedBaseImage]],
     target_image: ImageReference,
     spec: spack.spec.Spec,
     base_image_cache: Dict[str, Tuple[dict, dict]],
+    tmpdir: str,
 ):
     """For a given spec and base image, copy the missing layers of the base image with matching
     arch to the registry of the target image. If no base image is specified, create a dummy
@@ -674,6 +772,8 @@ def _update_base_images(
             default_manifest(),
             default_config(architecture, "linux"),
         )
+    elif isinstance(base_image, GeneratedBaseImage):
+        base_image_cache[architecture] = _generate_base_image(spec, tmpdir=tmpdir)
     else:
         base_image_cache[architecture] = copy_missing_layers_with_retry(
             base_image, target_image, architecture
@@ -683,7 +783,7 @@ def _update_base_images(
 def _push_oci(
     *,
     target_image: ImageReference,
-    base_image: Optional[ImageReference],
+    base_image: Optional[Union[ImageReference, GeneratedBaseImage]],
     installed_specs_with_deps: List[Spec],
     tmpdir: str,
     pool: MaybePool,
@@ -756,6 +856,7 @@ def _push_oci(
             target_image=target_image,
             spec=spec,
             base_image_cache=base_images,
+            tmpdir=tmpdir,
         )
 
     def extra_config(spec: Spec):
