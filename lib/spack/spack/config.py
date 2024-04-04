@@ -1069,6 +1069,7 @@ def _validate_section_name(section: str) -> None:
 def validate(
     data: YamlConfigDict, schema: YamlConfigDict, filename: Optional[str] = None
 ) -> YamlConfigDict:
+    return data
     """Validate data read in from a Spack YAML file.
 
     Arguments:
