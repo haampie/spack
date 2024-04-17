@@ -20,7 +20,7 @@ class GccRuntime(Package):
     homepage = "https://gcc.gnu.org"
     has_code = False
 
-    tags = ["runtime"]
+    #tags = ["runtime"]
 
     # gcc-runtime versions are declared dynamically
     skip_version_audit = ["platform=linux", "platform=darwin"]
