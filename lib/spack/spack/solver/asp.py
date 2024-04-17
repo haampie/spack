@@ -66,7 +66,7 @@ GitOrStandardVersion = Union[spack.version.GitVersion, spack.version.StandardVer
 TransformFunction = Callable[["spack.spec.Spec", List[AspFunction]], List[AspFunction]]
 
 #: Enable the addition of a runtime node
-WITH_RUNTIME = sys.platform != "win32"
+WITH_RUNTIME = False
 
 #: Data class that contain configuration on what a
 #: clingo solve should output.
