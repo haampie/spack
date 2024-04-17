@@ -6,7 +6,7 @@
 from spack.package import *
 
 
-class PyWheel(Package, PythonExtension):
+class PyWheel(Package):
     """A built-package format for Python."""
 
     homepage = "https://github.com/pypa/wheel"
@@ -15,4 +15,4 @@ class PyWheel(Package, PythonExtension):
 
     version("0.41.2", sha256="75909db2664838d015e3d9139004ee16711748a52c8f336b52882266540215d8")
 
-    extends("python")
+    depends_on("python")
