@@ -30,11 +30,6 @@ class Glib(Package):
 
     version("2.78.3", sha256="609801dd373796e515972bf95fc0b2daa44545481ee2f465c4f204d224b2bc21")
     variant("libmount", default=False, description="Build with libmount support")
-    variant(
-        "tracing",
-        values=any_combination_of("dtrace", "systemtap"),
-        description="Enable tracing support",
-    )
 
     # Uses distutils in gio/gdbus-2.0/codegen/utils.py
     depends_on("python@:3.11", type=("build", "run"), when="@2.53.4:")
