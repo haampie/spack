@@ -6,7 +6,7 @@
 from spack.package import *
 
 
-class Gperf(AutotoolsPackage, GNUMirrorPackage):
+class Gperf(Package):
     """GNU gperf is a perfect hash function generator. For a given
     list of strings, it produces a hash function and hash table, in
     form of C or C++ code, for looking up a value depending on the
