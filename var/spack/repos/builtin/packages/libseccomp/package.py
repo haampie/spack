@@ -6,7 +6,7 @@
 from spack.package import *
 
 
-class Libseccomp(AutotoolsPackage):
+class Libseccomp(Package):
     """The main libseccomp repository"""
 
     homepage = "https://github.com/seccomp/libseccomp"
