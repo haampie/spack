@@ -12,10 +12,7 @@ from spack.package import *
 
 
 class SingularityBase(MakefilePackage):
-    #depends_on("go@1.16:")
-    depends_on("conmon", type=("build", "run"))
-
-
+    pass
 
 class Singularityce(SingularityBase):
     """Singularity is a container technology focused on building portable
