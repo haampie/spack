@@ -46,7 +46,6 @@ class Python(Package):
     version("3.11.7", sha256="068c05f82262e57641bd93458dfa883128858f5f4997aad7a36fd25b13b29209")
     version("3.9.1", sha256="29cb91ba038346da0bd9ab84a0a55a845d872c341a4da6879f462e94c741f117")
     version("3.8.4", sha256="32c4d9817ef11793da4d0d95b3191c4db81d2e45544614e8449255ca9ae3cc18")
-    version("3.8.0", sha256="f1069ad3cae8e7ec467aa98a6565a62a48ef196cb8f1455a245a08db5e1792df")
 
     extendable = True
 

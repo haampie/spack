@@ -19,7 +19,7 @@ class IntelOneapiRuntime(Package):
 
     maintainers("rscohn2")
 
-    tags = ["runtime"]
+    # tags = ["runtime"]
 
     requires("%oneapi")
 
