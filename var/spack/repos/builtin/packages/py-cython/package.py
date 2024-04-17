@@ -19,7 +19,4 @@ class PyCython(PythonPackage):
     version("3.0.6", sha256="399d185672c667b26eabbdca420c98564583798af3bc47670a8a09e9f19dd660")
     version("0.29.14", sha256="e4d6bb8703d0319eb04b7319b12ea41580df44fd84d83ccda13ea463c6801414")
     version("0.29", sha256="94916d1ede67682638d3cc0feb10648ff14dc51fb7a7f147f4fedce78eaaea97")
-    version("0.23.4", sha256="fec42fecee35d6cc02887f1eef4e4952c97402ed2800bfe41bbd9ed1a0730d8e")
 
-    # https://github.com/cython/cython/commit/430e2ca220c8fed49604daf578df98aadb33a87d
-    depends_on("python@:3.8", when="@:0.29.13", type=("build", "link", "run"))
