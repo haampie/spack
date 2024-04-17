@@ -42,13 +42,6 @@ class AutotoolsPackage(spack.package_base.PackageBase):
 
     build_system("autotools")
 
-    with when("build_system=autotools"):
-        depends_on("gnuconfig", type="build", when="target=ppc64le:")
-        depends_on("gnuconfig", type="build", when="target=aarch64:")
-        depends_on("gnuconfig", type="build", when="target=riscv64:")
-        depends_on("gmake", type="build")
-        conflicts("platform=windows")
-
     def flags_to_build_system_args(self, flags):
         """Produces a list of all command line arguments to pass specified
         compiler flags to configure."""

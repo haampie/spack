@@ -334,7 +334,7 @@ class PythonPackage(PythonExtension):
 
     with spack.multimethod.when("build_system=python_pip"):
         extends("python")
-        depends_on("py-pip", type="build")
+        #depends_on("py-pip", type="build")
         # FIXME: technically wheel is only needed when building from source, not when
         # installing a downloaded wheel, but I don't want to add wheel as a dep to every
         # package manually

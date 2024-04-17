@@ -31,9 +31,6 @@ class MakefilePackage(spack.package_base.PackageBase):
 
     build_system("makefile")
 
-    with when("build_system=makefile"):
-        conflicts("platform=windows")
-        depends_on("gmake", type="build")
 
 
 @spack.builder.builder("makefile")
