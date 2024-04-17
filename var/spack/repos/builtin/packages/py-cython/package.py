@@ -21,12 +21,5 @@ class PyCython(PythonPackage):
     version("0.29", sha256="94916d1ede67682638d3cc0feb10648ff14dc51fb7a7f147f4fedce78eaaea97")
     version("0.23.4", sha256="fec42fecee35d6cc02887f1eef4e4952c97402ed2800bfe41bbd9ed1a0730d8e")
 
-    # https://github.com/cython/cython/issues/5751 (distutils not yet dropped)
-    depends_on("python@:3.11", type=("build", "link", "run"))
-
-    # https://github.com/cython/cython/commit/1cd24026e9cf6d63d539b359f8ba5155fd48ae21
-    # collections.Iterable was removed in Python 3.10
-    depends_on("python@:3.9", when="@:0.29.14", type=("build", "link", "run"))
-
     # https://github.com/cython/cython/commit/430e2ca220c8fed49604daf578df98aadb33a87d
     depends_on("python@:3.8", when="@:0.29.13", type=("build", "link", "run"))
