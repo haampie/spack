@@ -370,7 +370,6 @@ class CMakeBuilder(BaseBuilder):
         args.extend(
             [
                 define("CMAKE_INSTALL_RPATH_USE_LINK_PATH", True),
-                define("CMAKE_INSTALL_RPATH", spack.build_environment.get_rpaths(pkg)),
                 define("CMAKE_PREFIX_PATH", spack.build_environment.get_cmake_prefix_path(pkg)),
             ]
         )
