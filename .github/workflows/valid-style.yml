@@ -94,22 +94,32 @@ jobs:
       with:
         version: '1.10'
     - uses: julia-actions/cache@v2
-    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+    - name: Checkout base branch
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       with:
         ref: ${{ github.event.pull_request.base.sha }}
         path: old
-    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+    - name: Checkout PR branch
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       with:
         path: new
-    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+    - name: Install circular import checker
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       with:
         repository: haampie/circular-import-fighter
         path: circular-import-fighter
-    - run: |
+    - name: Install dependencies
+      run: |
         cd circular-import-fighter
+        make -j dependencies
+    - name: Check for new import cycles
+      run: |
+        cd circular-import-fighter
+        printf '\033[1;37mComputing import cycles (before)\033[0m\n'
         make SPACK_ROOT=../old
         edges_before=$(grep -oP 'edges to delete: \K\d+' solution)
         make clean-graph
+        printf '\033[1;37mComputing import cycles (after)\033[0m\n'
         make SPACK_ROOT=../new
         edges_after=$(grep -oP 'edges to delete: \K\d+' solution)
         if [ $edges_after -gt $edges_before ]; then
