@@ -112,19 +112,25 @@ jobs:
       run: |
         cd circular-import-fighter
         make -j dependencies
-    - name: Check for new import cycles
+    - name: Import cycles (before)
       run: |
         cd circular-import-fighter
-        printf '\033[1;37mComputing import cycles (before)\033[0m\n'
         make SPACK_ROOT=../old
-        edges_before=$(grep -oP 'edges to delete: \K\d+' solution)
+        cp solution solution.old
+    - name: Import cycles (after)
+      run: |
         make clean-graph
-        printf '\033[1;37mComputing import cycles (after)\033[0m\n'
         make SPACK_ROOT=../new
-        edges_after=$(grep -oP 'edges to delete: \K\d+' solution)
+        cp solution solution.new
+    - name: Compare import cycles
+      run: |
+        edges_before=$(grep -oP 'edges to delete: \K\d+' solution.old)
+        edges_after=$(grep -oP 'edges to delete: \K\d+' solution.new)
         if [ $edges_after -gt $edges_before ]; then
-          printf '\033[1;31mImport check failed: %s imports need to be deleted, previously this was %s\033[0m\n' "$edges_after" "$edges_before"
-          printf '\033[1;31mSee above for the set of import statements that cause circular dependencies.\033[0m\n'
+          printf '\033[1;31mImport check failed: %s imports need to be deleted, ' "$edges_after"
+          printf 'previously this was %s\033[0m\n'  "$edges_before"
+          printf '\033[1;31mCompare Import cyles (before) and Import cycles (after) to see '
+          printf 'problematic import statements\033[0m\n'
           exit 1
         else
           printf '\033[1;32mImport check passed: %s <= %s\033[0m\n' "$edges_after" "$edges_before"
