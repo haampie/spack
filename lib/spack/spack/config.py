@@ -58,7 +58,6 @@ import spack.schema.packages
 import spack.schema.repos
 import spack.schema.upstreams
 import spack.schema.view
-import spack.store
 import spack.spec
 
 # Hacked yaml for configuration files preserves line numbers.
