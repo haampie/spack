@@ -113,10 +113,9 @@ jobs:
         make SPACK_ROOT=../new
         edges_after=$(grep -oP 'edges to delete: \K\d+' solution)
         if [ $edges_after -gt $edges_before ]; then
-          echo "Import check failed: $edges_after < $edges_before"
+          printf '\033[1;31mImport check failed: %s > %s\033[0m\n' "$edges_after" "$edges_before"
+          printf '\033[1;31mFix circular imports introduced by the PR.\033[0m\n'
           exit 1
-        elif [ $edges_after -lt $edges_before ]; then
-          echo "Import check passed: $edges_after < $edges_before"
         else
-          echo "Import check passed: $edges_after == $edges_before"
+          printf '\033[1;32mImport check passed: %s <= %s\033[0m\n' "$edges_after" "$edges_before"
         fi
