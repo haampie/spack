@@ -1,7 +1,14 @@
 name: windows
 
 on:
-  workflow_call:
+  push:
+    branches:
+      - develop
+      - releases/**
+  pull_request:
+    branches:
+      - develop
+      - releases/**  
 
 concurrency:
   group: windows-${{github.ref}}-${{github.event.pull_request.number || github.run_number}}
@@ -57,6 +64,9 @@ jobs:
         ./share/spack/qa/validate_last_exit.ps1
         coverage combine -a
         coverage xml
+    - name: tmate on error
+      uses: mxschmitt/action-tmate@v3
+      if: failure()
     - uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d
       with:
         flags: unittests,windows
