@@ -286,6 +286,7 @@ class Python(Package):
         depends_on("sqlite@3.7.15:", when="@3.10:+sqlite3")
         depends_on("gdbm", when="+dbm")  # alternatively ndbm or berkeley-db
         depends_on("libnsl", when="+nis")
+        depends_on("libtirpc", when="+nis")
         depends_on("zlib-api", when="+zlib")
         depends_on("bzip2", when="+bz2")
         depends_on("xz libs=shared", when="+lzma")
@@ -350,6 +351,14 @@ class Python(Package):
     # See https://github.com/python/cpython/issues/106424
     # datetime.now(timezone.utc) segfaults
     conflicts("@3.9:", when="%oneapi@2022.2.1:2023")
+
+    # nis cannot be turned off in setup.py or configure; avoid picking up system versions
+    conflicts("@:3.12 ~nis platform=linux")
+    conflicts("@:3.12 ~nis platform=freebsd")
+    conflicts("@:3.12 ~nis platform=darwin")
+
+    # nis was removed
+    conflicts("@3.13: +nis")
 
     # Used to cache various attributes that are expensive to compute
     _config_vars: Dict[str, Dict[str, str]] = {}
