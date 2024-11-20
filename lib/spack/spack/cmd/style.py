@@ -13,6 +13,7 @@ from typing import Dict, List, Optional
 import llnl.util.tty as tty
 import llnl.util.tty.color as color
 from llnl.util.filesystem import working_dir
+from llnl.util.lang import memoized
 
 import spack.paths
 import spack.util.git
@@ -368,6 +369,7 @@ def run_black(black_cmd, file_list, args):
     return returncode
 
 
+@memoized
 def _module_part(root: str, expr: str):
     parts = expr.split(".")
     while parts:
