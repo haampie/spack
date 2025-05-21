@@ -361,7 +361,7 @@ def migrate_v2_imports(
 
                     if is_import:
                         if isinstance(child, (ast.stmt, ast.expr)):
-                            best_line = (child.end_lineno or child.lineno) + 1
+                            best_line = (getattr(child, "end_lineno", None) or child.lineno) + 1
 
                     if not seen_import and is_import:
                         seen_import = True
@@ -424,6 +424,9 @@ def migrate_v2_imports(
 
                     depth = node.module.count(".")
 
+                    # not all python versions have end_lineno for ImportFrom
+                    end_lineno = getattr(node, "end_lineno", None)
+
                     # simple case of find and replace
                     # from spack.pkg.builtin.my_pkg import MyPkg
                     # -> from spack_repo.builtin.packages.my_pkg.package import MyPkg
@@ -442,13 +445,13 @@ def migrate_v2_imports(
                     # from spack.pkg.builtin import (boost, cmake as foo)
                     # -> import spack_repo.builtin.packages.boost.package as boost
                     # -> import spack_repo.builtin.packages.cmake.package as foo
-                    elif depth == 2 and node.end_lineno is not None:
+                    elif depth == 2 and end_lineno is not None:
                         _, _, namespace = node.module.rpartition(".")
                         indent = original_lines[node.lineno - 1][: node.col_offset]
                         multiline_updates.append(
                             (
                                 node.lineno,
-                                node.end_lineno + 1,
+                                end_lineno + 1,
                                 [
                                     f"{indent}import spack_repo.{namespace}.packages."
                                     f"{alias.name}.package as {alias.asname or alias.name}"
@@ -492,8 +495,8 @@ def migrate_v2_imports(
                         module_replacements[alias.name] = _spack_pkg_to_spack_repo(alias.name)
                         inline_updates.append(
                             (
-                                alias.lineno,
-                                alias.col_offset,
+                                node.lineno,
+                                node.col_offset,
                                 alias.name,
                                 module_replacements[alias.name],
                             )
