@@ -95,24 +95,47 @@ class _7zip(Package):
     pass
 """
 
-OLD_NUMPY = b"""\
-# some comment
+# this is written like this to be explicit about line endings and indentation
+OLD_NUMPY = (
+    b"# some comment\r\n"
+    b"\r\n"
+    b"import spack.pkg.builtin.foo, spack.pkg.builtin.bar\r\n"
+    b"from spack.package import *\r\n"
+    b"from something.unrelated import AutotoolsPackage\r\n"
+    b"\r\n"
+    b"if True:\r\n"
+    b"\tfrom spack.pkg.builtin import (\r\n"
+    b"\t\tfoo,\r\n"
+    b"\t\tbar as baz,\r\n"
+    b"\t)\r\n"
+    b"\r\n"
+    b"class PyNumpy(CMakePackage, AutotoolsPackage):\r\n"
+    b"\tgenerator('ninja')\r\n"
+    b"\r\n"
+    b"\tdef example(self):\r\n"
+    b"\t\t# unchanged comment: spack.pkg.builtin.foo.something\r\n"
+    b"\t\treturn spack.pkg.builtin.foo.example(), foo, baz\r\n"
+)
 
-from spack.package import *
-
-class PyNumpy(CMakePackage):
-    generator("ninja")
-"""
-
-NEW_NUMPY = b"""\
-# some comment
-
-from spack_repo.builtin.build_systems.cmake import CMakePackage, generator
-from spack.package import *
-
-class PyNumpy(CMakePackage):
-    generator("ninja")
-"""
+NEW_NUMPY = (
+    b"# some comment\r\n"
+    b"\r\n"
+    b"import spack_repo.builtin.packages.foo.package, spack_repo.builtin.packages.bar.package\r\n"
+    b"from spack_repo.builtin.build_systems.cmake import CMakePackage, generator\r\n"
+    b"from spack.package import *\r\n"
+    b"from something.unrelated import AutotoolsPackage\r\n"
+    b"\r\n"
+    b"if True:\r\n"
+    b"\timport spack_repo.builtin.packages.foo.package as foo\r\n"
+    b"\timport spack_repo.builtin.packages.bar.package as baz\r\n"
+    b"\r\n"
+    b"class PyNumpy(CMakePackage, AutotoolsPackage):\r\n"
+    b"\tgenerator('ninja')\r\n"
+    b"\r\n"
+    b"\tdef example(self):\r\n"
+    b"\t\t# unchanged comment: spack.pkg.builtin.foo.something\r\n"
+    b"\t\treturn spack_repo.builtin.packages.foo.package.example(), foo, baz\r\n"
+)
 
 
 def test_repo_migrate(tmp_path: pathlib.Path, config):
@@ -142,7 +165,6 @@ def test_repo_migrate(tmp_path: pathlib.Path, config):
     assert pkg_py_numpy_new.read_bytes() == NEW_NUMPY
 
 
-@pytest.mark.not_on_windows("Known failure on windows")
 def test_migrate_diff(git: Executable, tmp_path: pathlib.Path):
     root, _ = spack.repo.create_repo(str(tmp_path), "foo", package_api=(2, 0))
     r = pathlib.Path(root)
