@@ -563,15 +563,16 @@ def migrate_v2_imports(
             updated_lines[start - 1 : end - 1] = new_lines
 
         if not fix:
-            rel_pkg_path = os.path.relpath(pkg_path, start=root)
+            rel_pkg_path = os.path.relpath(pkg_path, start=root).replace(os.sep, "/")
             diff = difflib.unified_diff(
                 original_lines,
                 updated_lines,
                 n=3,
                 fromfile=f"a/{rel_pkg_path}",
                 tofile=f"b/{rel_pkg_path}",
+                lineterm=newline,
             )
-            out.write("".join(diff))
+            out.writelines(diff)
             continue
 
         tmp_file = pkg_path + ".tmp"
