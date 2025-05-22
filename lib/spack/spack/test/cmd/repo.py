@@ -190,7 +190,7 @@ def test_migrate_diff(git: Executable, tmp_path: pathlib.Path):
 
     # apply the patch and verify the changes
     with working_dir(str(r)):
-        git("apply", str(tmp_path / "imports.patch"))
+        git("apply", "--ignore-whitespace", str(tmp_path / "imports.patch"))
 
     assert pkg_7zip.read_bytes() == NEW_7ZIP
     assert pkg_py_numpy_new.read_bytes() == NEW_NUMPY

@@ -580,9 +580,13 @@ def migrate_v2_imports(
                 n=3,
                 fromfile=f"a/{rel_pkg_path}",
                 tofile=f"b/{rel_pkg_path}",
-                lineterm=newline,
+                lineterm="\n",
             )
-            patch_file.write("".join(diff).encode("utf-8"))
+            for line in diff:
+                # enforce \n line endings for the patch file
+                if newline != "\n" and line.endswith(newline):
+                    line = line[: -len(newline)] + "\n"
+                patch_file.write(line.encode("utf-8"))
             continue
 
         tmp_file = pkg_path + ".tmp"
