@@ -356,12 +356,16 @@ def migrate_v2_imports(
                         best_line = child.lineno  # add it right before spack.package
                         break
 
-                    # otherwise put it right after the last import statement
                     is_import = isinstance(child, (ast.Import, ast.ImportFrom))
 
                     if is_import:
                         if isinstance(child, (ast.stmt, ast.expr)):
-                            best_line = (getattr(child, "end_lineno", None) or child.lineno) + 1
+                            end_lineno = getattr(child, "end_lineno", None)
+                            if end_lineno is not None:
+                                # put it right after the last import statement
+                                best_line = end_lineno + 1
+                            else:  # old versions of python don't have end_lineno; put it before.
+                                best_line = child.lineno
 
                     if not seen_import and is_import:
                         seen_import = True
@@ -445,7 +449,17 @@ def migrate_v2_imports(
                     # from spack.pkg.builtin import (boost, cmake as foo)
                     # -> import spack_repo.builtin.packages.boost.package as boost
                     # -> import spack_repo.builtin.packages.cmake.package as foo
-                    elif depth == 2 and end_lineno is not None:
+                    elif depth == 2:
+                        if end_lineno is None:
+                            success = False
+                            print(
+                                f"{pkg_path}:{node.lineno}: cannot rewrite {node.module} "
+                                "import statement, since this Python version does not "
+                                "provide end_lineno. Best to update to Python 3.8+",
+                                file=err,
+                            )
+                            continue
+
                         _, _, namespace = node.module.rpartition(".")
                         indent = original_lines[node.lineno - 1][: node.col_offset]
                         multiline_updates.append(
@@ -467,6 +481,7 @@ def migrate_v2_imports(
                             f"{pkg_path}:{node.lineno}: don't know how to rewrite `{node.module}`",
                             file=err,
                         )
+                        continue
 
                 # Subtract the symbols that are imported so we don't repeatedly add imports.
                 for alias in node.names:
