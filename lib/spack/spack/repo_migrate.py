@@ -328,10 +328,15 @@ def migrate_v2_imports(
         #: List of (line from, line to, new lines) tuples of line replacements
         multiline_updates: List[Tuple[int, int, List[str]]] = []
 
-        with open(pkg_path, "r", encoding="utf-8", newline="") as file:
-            original_lines = file.readlines()
+        try:
+            with open(pkg_path, "r", encoding="utf-8", newline="") as file:
+                original_lines = file.readlines()
+        except (OSError, UnicodeDecodeError) as e:
+            success = False
+            print(f"Skipping {pkg_path}: {e}", file=err)
+            continue
 
-        if len(original_lines) < 2:  # assume packagepy files have at least 2 lines...
+        if len(original_lines) < 2:  # assume package.py files have at least 2 lines...
             continue
 
         if original_lines[0].endswith("\r\n"):
@@ -582,15 +587,16 @@ def migrate_v2_imports(
                 tofile=f"b/{rel_pkg_path}",
                 lineterm="\n",
             )
-            for line in diff:
-                patch_file.write(line.encode("utf-8"))
+            for _line in diff:
+                patch_file.write(_line.encode("utf-8"))
             continue
 
         tmp_file = pkg_path + ".tmp"
 
         # binary mode to avoid newline conversion issues; utf-8 was already required upon read.
         with open(tmp_file, "wb") as file:
-            file.write("".join(updated_lines).encode("utf-8"))
+            for _line in updated_lines:
+                file.write(_line.encode("utf-8"))
 
         os.replace(tmp_file, pkg_path)
 

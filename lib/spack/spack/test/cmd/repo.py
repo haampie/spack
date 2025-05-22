@@ -192,5 +192,13 @@ def test_migrate_diff(git: Executable, tmp_path: pathlib.Path):
     with working_dir(str(r)):
         git("apply", str(tmp_path / "imports.patch"))
 
-    assert pkg_7zip.read_bytes() == NEW_7ZIP
-    assert pkg_py_numpy_new.read_bytes() == NEW_NUMPY
+    # Git may change line endings upon applying the patch, so let Python normalize them to LF and
+    # compare text contents, not bytes.
+    assert (
+        pkg_7zip.read_text(encoding="utf-8")
+        == io.TextIOWrapper(io.BytesIO(NEW_7ZIP), encoding="utf-8").read()
+    )
+    assert (
+        pkg_py_numpy_new.read_text(encoding="utf-8")
+        == io.TextIOWrapper(io.BytesIO(NEW_NUMPY), encoding="utf-8").read()
+    )
