@@ -32,7 +32,7 @@ def _same_contents(f: str, g: str) -> bool:
 
 
 def migrate_v1_to_v2(
-    repo: spack.repo.Repo, fix: bool, out: IO[str] = sys.stdout, err: IO[str] = sys.stderr
+    repo: spack.repo.Repo, *, patch_file: Optional[IO[bytes]], err: IO[str] = sys.stderr
 ) -> Tuple[bool, Optional[spack.repo.Repo]]:
     """To upgrade a repo from Package API v1 to v2 we need to:
     1. ensure ``spack_repo/<namespace>`` parent dirs to the ``repo.yaml`` file.
@@ -141,7 +141,7 @@ def migrate_v1_to_v2(
 
     rename_regex = re.compile("^(" + "|".join(re.escape(k) for k in rename.keys()) + ")")
 
-    if fix:
+    if not patch_file:
         os.makedirs(os.path.join(new_root, repo.subdirectory), exist_ok=True)
 
     def _relocate(rel_path: str) -> Tuple[str, str]:
@@ -153,18 +153,20 @@ def migrate_v1_to_v2(
         new = os.path.join(new_root, new_rel)
         return old, new
 
-    if not fix:
-        print("The following directories, files and symlinks will be created:\n", file=out)
+    if patch_file:
+        patch_file.write(b"The following directories, files and symlinks will be created:\n")
 
     for rel_path in dirs_to_create:
         _, new_path = _relocate(rel_path)
-        if fix:
+        if not patch_file:
             try:
                 os.mkdir(new_path)
             except FileExistsError:  # not an error if the directory already exists
                 continue
         else:
-            print(f"create directory {new_path}", file=out)
+            patch_file.write(b"create directory ")
+            patch_file.write(new_path.encode("utf-8"))
+            patch_file.write(b"\n")
 
     for rel_path in files_to_copy:
         old_path, new_path = _relocate(rel_path)
@@ -177,10 +179,14 @@ def migrate_v1_to_v2(
                 )
                 return False, None
             continue
-        if fix:
+        if not patch_file:
             shutil.copy2(old_path, new_path)
         else:
-            print(f"copy {old_path} -> {new_path}", file=out)
+            patch_file.write(b"copy ")
+            patch_file.write(old_path.encode("utf-8"))
+            patch_file.write(b" -> ")
+            patch_file.write(new_path.encode("utf-8"))
+            patch_file.write(b"\n")
 
     for rel_path, ino in symlink_to_ino.items():
         old_path, new_path = _relocate(rel_path)
@@ -201,24 +207,28 @@ def migrate_v1_to_v2(
                 return False, None
             continue
 
-        if fix:
+        if not patch_file:
             os.symlink(tgt, new_path)
         else:
-            print(f"create symlink {new_path} -> {tgt}", file=out)
+            patch_file.write(b"create symlink ")
+            patch_file.write(new_path.encode("utf-8"))
+            patch_file.write(b" -> ")
+            patch_file.write(tgt.encode("utf-8"))
+            patch_file.write(b"\n")
 
-    if fix:
+    if not patch_file:
         with open(os.path.join(new_root, "repo.yaml"), "w", encoding="utf-8") as f:
             spack.util.spack_yaml.dump(updated_config, f)
         updated_repo = spack.repo.from_path(new_root)
     else:
-        print(file=out)
+        patch_file.write(b"\n")
         updated_repo = repo  # compute the import diff on the v1 repo since v2 doesn't exist yet
 
     result = migrate_v2_imports(
-        updated_repo.packages_path, updated_repo.root, fix=fix, out=out, err=err
+        updated_repo.packages_path, updated_repo.root, patch_file=patch_file, err=err
     )
 
-    return result, (updated_repo if fix else None)
+    return result, (updated_repo if patch_file else None)
 
 
 def _spack_pkg_to_spack_repo(modulename: str) -> str:
@@ -232,7 +242,7 @@ def _spack_pkg_to_spack_repo(modulename: str) -> str:
 
 
 def migrate_v2_imports(
-    packages_dir: str, root: str, fix: bool, out: IO[str] = sys.stdout, err: IO[str] = sys.stderr
+    packages_dir: str, root: str, patch_file: Optional[IO[bytes]], err: IO[str] = sys.stderr
 ) -> bool:
     """In Package API v2.0, packages need to explicitly import package classes and a few other
     symbols from the build_systems module. This function automatically adds the missing imports
@@ -562,7 +572,7 @@ def migrate_v2_imports(
         for start, end, new_lines in multiline_updates:
             updated_lines[start - 1 : end - 1] = new_lines
 
-        if not fix:
+        if patch_file:
             rel_pkg_path = os.path.relpath(pkg_path, start=root).replace(os.sep, "/")
             diff = difflib.unified_diff(
                 original_lines,
@@ -572,7 +582,7 @@ def migrate_v2_imports(
                 tofile=f"b/{rel_pkg_path}",
                 lineterm=newline,
             )
-            out.writelines(diff)
+            patch_file.write("".join(diff).encode("utf-8"))
             continue
 
         tmp_file = pkg_path + ".tmp"

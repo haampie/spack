@@ -181,9 +181,9 @@ def test_migrate_diff(git: Executable, tmp_path: pathlib.Path):
 
     stderr = io.StringIO()
 
-    with open(tmp_path / "imports.patch", "w", encoding="utf-8") as stdout:
+    with open(tmp_path / "imports.patch", "wb") as patch_file:
         spack.repo_migrate.migrate_v2_imports(
-            str(r / "packages"), str(r), fix=False, out=stdout, err=stderr
+            str(r / "packages"), str(r), patch_file=patch_file, err=stderr
         )
 
     assert f"Skipping {pkg_broken}" in stderr.getvalue()
