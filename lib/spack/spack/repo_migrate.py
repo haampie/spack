@@ -583,9 +583,6 @@ def migrate_v2_imports(
                 lineterm="\n",
             )
             for line in diff:
-                # enforce \n line endings for the patch file
-                if newline != "\n" and line.endswith(newline):
-                    line = line[: -len(newline)] + "\n"
                 patch_file.write(line.encode("utf-8"))
             continue
 
