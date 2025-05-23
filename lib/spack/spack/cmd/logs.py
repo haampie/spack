@@ -65,6 +65,7 @@ def logs(parser, args):
     if len(specs) != 1:
         raise SpackCommandError("Too many specs. Supply only one.")
 
-    concrete_spec = spack.cmd.matching_spec_from_env(specs[0])
+    env = spack.cmd.require_active_env(purpose="logs")
+    concrete_spec = spack.cmd.disambiguate_spec(specs[0], env)
 
     _logs(specs[0], concrete_spec)
