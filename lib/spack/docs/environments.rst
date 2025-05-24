@@ -79,7 +79,7 @@ to manage the environment.
 
 .. note::
 
-   All managed environments by default are stored in the
+   By default, all managed environments are stored in the
    ``$SPACK_ROOT/var/spack/environments`` folder. This location can be changed
    by setting the ``environments_root`` variable in ``config.yaml``.
 
@@ -100,8 +100,8 @@ The ``.spack-env`` subdirectory also contains:
   * ``logs/``: A subdirectory containing the build logs for the packages
     in this environment.
 
-Spack Environments can also be created from either the user input, or
-manifest, file or the lockfile. Create an environment from a manifest using:
+Spack Environments can also be created from either the user input, or manifest,
+file or the lockfile. Create an environment from a manifest using:
 
 .. code-block:: console
 
@@ -169,7 +169,7 @@ user's prompt to begin with the environment name in brackets.
 The ``activate`` command can also be used to create a new environment, if it is
 not already defined, by adding the ``--create`` flag. Managed and independent
 environments can both be created using the same flags that `spack env create`
-accepts.  If an environment already exists then spack will simply activate it
+accepts.  If an environment already exists then Spack will simply activate it
 and ignore the create-specific flags.
 
 .. code-block:: console
@@ -288,7 +288,7 @@ packages will be listed as roots of the environment.
 
 All of the Spack commands that act on the list of installed specs are
 environment-aware in this way, including ``install``,
-``uninstall``, ``find``, ``extensions``, etcetera. In the
+``uninstall``, ``find``, ``extensions``, etc. In the
 :ref:`environment-configuration` section we will discuss
 environment-aware commands further.
 
@@ -438,7 +438,7 @@ Developing Packages in a Spack Environment
 The ``spack develop`` command allows one to develop Spack packages in
 an environment. It requires a spec containing a concrete version, and
 will configure Spack to install the package from local source.
-If a version is not provided from the command line interface then spack
+If a version is not provided from the command line interface then Spack
 will automatically pick the highest version the package has defined.
 This means any infinity versions (``develop``, ``main``, ``stable``) will be
 preferred in this selection process.
@@ -449,7 +449,7 @@ any time the environment is installed if the package's local source
 code has been modified. Spack's native implementation to check for modifications
 is to check if ``mtime`` is newer than the installation.
 A custom check can be created by overriding the ``detect_dev_src_change`` method
-in your package class. This is particularly useful for projects using custom spack repo's
+in your package class. This is particularly useful for projects using custom Spack repos
 to drive development and want to optimize performance.
 
 Spack ensures that all instances of a
@@ -481,11 +481,11 @@ The supplied location will become the build-directory for that package in all fu
 .. warning::
    Potential pitfalls of setting the build directory
     Spack does not check for out-of-source build compatibility with the packages and
-    so the onerous of making sure the package supports out-of-source builds is on
+    so the onus of making sure the package supports out-of-source builds is on
     the user.
     For example, most ``autotool`` and ``makefile`` packages do not support out-of-source builds
     while all ``CMake`` packages do.
-    Understanding these nuances are on the software developers and we strongly encourage
+    Understanding these nuances is on the software developers and we strongly encourage
     developers to only redirect the build directory if they understand their package's
     build-system.
 
@@ -502,7 +502,7 @@ script for it:
 
 This creates a file called ``loads`` in the environment directory.
 Sourcing that file in Bash will make the environment available to the
-user; and can be included in ``.bashrc`` files, etc.  The ``loads``
+user, and can be included in ``.bashrc`` files, etc.  The ``loads``
 file may also be copied out of the environment, renamed, etc.
 
 
@@ -539,7 +539,7 @@ from the command line.
 
 You can also include an environment directly in the ``spack.yaml`` file. It
 involves adding the ``include_concrete`` heading in the yaml followed by the
-absolute path to the independent environments. Note, that you may use Spack
+absolute path to the independent environments. Note that you may use Spack
 config variables such as ``$spack`` or environment variables as long as the
 expression expands to an absolute path.
 
@@ -561,7 +561,7 @@ get the concrete specs from the included environments.
 Updating an included environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If changes were made to the base environment and you want that reflected in the
-included environment you will need to reconcretize both the base environment and the
+included environment you will need to re-concretize both the base environment and the
 included environment for the change to be implemented. For example:
 
 .. code-block:: console
@@ -613,7 +613,7 @@ the ``myenv`` environment. But if we were to add another spec to ``myenv``,
    ==> 0 installed packages
 
 It isn't until you run the ``spack concretize`` command that the combined
-environment will get the updated information from the reconcretized base environmennt.
+environment will get the updated information from the re-concretized base environment.
 
 .. code-block:: console
 
@@ -659,7 +659,7 @@ Inline configurations
 Inline environment-scope configuration is done using the same yaml
 format as standard Spack configuration scopes, covered in the
 :ref:`configuration` section. Each section is contained under a
-top-level yaml object with it's name. For example, a ``spack.yaml``
+top-level yaml object with its name. For example, a ``spack.yaml``
 manifest file containing some package preference configuration (as in
 a ``packages.yaml`` file) could contain:
 
@@ -779,7 +779,7 @@ concretization error would happen when both ``hdf5+mpi`` and ``hdf5~mpi`` are sp
 in an environment.
 
 The second mode is to *unify when possible*: this makes concretization of root specs
-more independendent. Instead of requiring reuse of dependencies across different root
+more independent. Instead of requiring reuse of dependencies across different root
 specs, it is only maximized:
 
 .. code-block:: yaml
@@ -1007,7 +1007,7 @@ Modifying Environment Variables
 -------------------------------
 
 Spack Environments can modify the active shell's environment variables when activated.  The environment can be
-configured to set, unset, prepend, or append using ``env_vars`` configuration in the ``spack.yaml``  or through config scopes
+configured to set, unset, prepend, or append using ``env_vars`` configuration in the ``spack.yaml``  or through a config scopes
 file:
 
 .. code-block:: yaml
@@ -1110,7 +1110,7 @@ package. This view selects all packages that depend on MPI, and
 excludes those built with the GCC compiler at version 18.5.
 The root specs with their (transitive) link and run type dependencies
 will be put in the view due to the  ``link: all`` option,
-and the files in the view will be symlinks to the spack install
+and the files in the view will be symlinks to the Spack install
 directories.
 
 .. code-block:: yaml
@@ -1188,7 +1188,7 @@ expansions as shown below:
    projections:
      all: "{name}-{version}/{compiler.name}-{compiler.version}/$date/$SYSTEM_ENV_VARIBLE"
 
-where ``$date`` is the spack configuration variable that will expand with the ``YYYY-MM-DD``
+where ``$date`` is the Spack configuration variable that will expand with the ``YYYY-MM-DD``
 format and ``$SYSTEM_ENV_VARIABLE`` is an environment variable defined in the shell.
 
 The entries in the projections configuration file must all be either
@@ -1261,9 +1261,9 @@ the Spack environment from the user's environment variables.
 Generating Depfiles from Environments
 ------------------------------------------
 
-Spack can generate ``Makefile``\s to make it easier to build multiple
-packages in an environment in parallel. Generated ``Makefile``\s expose
-targets that can be included in existing ``Makefile``\s, to allow
+Spack can generate ``Makefiles`` to make it easier to build multiple
+packages in an environment in parallel. Generated ``Makefiles`` expose
+targets that can be included in existing ``Makefiles``, to allow
 other targets to depend on the environment installation.
 
 A typical workflow is as follows:
@@ -1299,8 +1299,8 @@ By default the following phony convenience targets are available:
 Specifying dependencies on generated ``make`` targets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An interesting question is how to include generated ``Makefile``\s in your own
-``Makefile``\s. This comes up when you want to install an environment that provides
+An interesting question is how to include generated ``Makefiles`` in your own
+``Makefiles``. This comes up when you want to install an environment that provides
 executables required in a command for a make target of your own.
 
 The example below shows how to accomplish this: the ``env`` target specifies
@@ -1333,7 +1333,7 @@ gets installed and is available for use in the ``env`` target.
 
 This works as follows: when ``make`` is invoked, it first "remakes" the missing
 include ``env.mk`` as there is a target for it. This triggers concretization of
-the environment and makes spack output ``env.mk``. At that point the
+the environment and makes Spack output ``env.mk``. At that point the
 generated target ``spack/env`` becomes available through ``include env.mk``.
 
 As it is typically undesirable to remake ``env.mk`` as part of ``make clean``,
@@ -1341,7 +1341,7 @@ the include is conditional.
 
 .. note::
 
-   When including generated ``Makefile``\s, it is important to use
+   When including generated ``Makefiles``, it is important to use
    the ``--make-prefix`` flag and use the non-phony target
    ``<prefix>/env`` as prerequisite, instead of the phony target
    ``<prefix>/all``.
@@ -1350,7 +1350,7 @@ the include is conditional.
 Building a subset of the environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The generated ``Makefile``\s contain install targets for each spec, identified
+The generated ``Makefiles`` contain install targets for each spec, identified
 by ``<name>-<version>-<hash>``. This allows you to install only a subset of the
 packages in the environment. When packages are unique in the environment, it's
 enough to know the name and let tab-completion fill out the version and hash.
@@ -1375,7 +1375,7 @@ output (``spack install --verbose``) while its dependencies are installed silent
 Adding post-install hooks
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Another advanced use-case of generated ``Makefile``\s is running a post-install
+Another advanced use-case of generated ``Makefiles`` is running a post-install
 command for each package. These "hooks" could be anything from printing a
 post-install message, running tests, or pushing just-built binaries to a buildcache.
 
@@ -1392,7 +1392,7 @@ And we now include it in a different ``Makefile``, in which we create a target
 depends on the particular package installation. In this target we automatically
 have the target-specific ``HASH`` and ``SPEC`` variables at our disposal. They
 are respectively the spec hash (excluding leading ``/``), and a human-readable spec.
-Finally, we have an entrypoint target ``push`` that will update the buildcache
+Finally, we have an entry point target ``push`` that will update the buildcache
 index once every package is pushed. Note how this target uses the generated
 ``example/SPACK_PACKAGE_IDS`` variable to define its prerequisites.
 
