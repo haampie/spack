@@ -15,13 +15,13 @@ on Makefiles to build software.
 Phases
 ^^^^^^
 
-The ``WafBuilder`` and ``WafPackage`` base classes come with the following phases:
+The ``WafBuilder`` and ``WafPackage`` base classes come with the following phases:.
 
 #. ``configure`` - configure the project
 #. ``build`` - build the project
 #. ``install`` - install the project
 
-By default, these phases run:
+By default, these phases run:.
 
 .. code-block:: console
 
@@ -30,14 +30,14 @@ By default, these phases run:
    $ python waf install
 
 
-Each of these are standard Waf commands and can be found by running:
+Each of these are standard Waf commands and can be found by running:.
 
 .. code-block:: console
 
    $ python waf --help
 
 
-Each phase provides a ``<phase>`` function that runs:
+Each phase provides a ``<phase>`` function that runs:.
 
 .. code-block:: console
 
@@ -98,13 +98,13 @@ the following dependency automatically:
 Waf only supports Python 2.5 and up.
 
 ^^^^^^^^^^^^^^^^^^^^^^^^
-Passing arguments to waf
+Passing arguments to Waf
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 As previously mentioned, each phase comes with a ``<phase_args>``
 function that can be used to pass arguments to that particular
 phase. For example, if you need to pass arguments to the build
-phase, you can use:
+phase, you can use:.
 
 .. code-block:: python
 
@@ -123,5 +123,5 @@ A list of valid options can be found by running ``./waf --help``.
 External documentation
 ^^^^^^^^^^^^^^^^^^^^^^
 
-For more information on the Waf build system, see:
+For more information on the Waf build system, see:.
 https://waf.io/book/

@@ -41,8 +41,8 @@ As previously mentioned, SCons allows developers to add subcommands like
    $ scons install
 
 
-To facilitate this, the ``SConsBuilder`` and ``SconsPackage`` base classes provide the
-following phases:
+To facilitate this, the ``SConsBuilder`` and ``SConsPackage`` base classes provide the
+following phases:.
 
 #. ``build`` - build the package
 #. ``install`` - install the package
@@ -51,7 +51,7 @@ Package developers often add unit tests that can be invoked with
 ``scons test`` or ``scons check``. Spack provides a ``build_test`` method
 to handle this. Since we don't know which one the package developer
 chose, the ``build_test`` method does nothing by default, but can be easily
-overridden like so:
+overridden like so:.
 
 .. code-block:: python
 
@@ -67,7 +67,7 @@ SCons packages can be identified by their ``SConstruct`` files. These
 files handle everything from setting up subcommands and command-line
 options to linking and compiling.
 
-One thing to look for is the ``EnsureSConsVersion`` function:
+One thing to look for is the ``EnsureSConsVersion`` function:.
 
 .. code-block:: none
 
@@ -83,7 +83,7 @@ Build system dependencies
 
 At the bare minimum, packages that use the SCons build system need a
 ``scons`` dependency. Since this is always the case, the ``SConsPackage``
-base class already contains:
+base class already contains:.
 
 .. code-block:: python
 
@@ -91,7 +91,7 @@ base class already contains:
 
 
 If you want to specify a particular version requirement, you can override
-this in your package:
+this in your package:.
 
 .. code-block:: python
 
@@ -108,7 +108,7 @@ build a package is ``scons --help``. Some packages like
 don't bother overwriting the default SCons help message, so this isn't
 very useful, but other packages like
 `serf <https://github.com/spack/spack/blob/develop/var/spack/repos/spack_repo/builtin/packages/serf/package.py>`_
-print a list of valid command-line variables:
+print a list of valid command-line variables:.
 
 .. code-block:: console
 
@@ -227,11 +227,11 @@ You'll notice that cantera provides a ``scons help`` subcommand. Running
 ``scons help`` prints a list of valid command-line variables.
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-Passing arguments to scons
+Passing arguments to SCons
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Now that you know what arguments the project accepts, you can add them to
-the package build phase. This is done by overriding ``build_args`` like so:
+the package build phase. This is done by overriding ``build_args`` like so:.
 
 .. code-block:: python
 
@@ -267,7 +267,7 @@ cases, SCons packages are not compatible with Spack's compiler wrappers,
 and linking must be done manually.
 
 First of all, check the list of valid options for anything relating to
-environment variables. For example, cantera has the following option:
+environment variables. For example, cantera has the following option:.
 
 .. code-block:: none
 
@@ -283,7 +283,7 @@ Spack's compiler wrappers. If you don't see an option related to
 environment variables, try using Spack's compiler wrappers by passing
 ``spack_cc``, ``spack_cxx``, and ``spack_fc`` via the ``CC``, ``CXX``,
 and ``FC`` arguments, respectively. If you pass them to the build and
-you see an error message like:
+you see an error message like:.
 
 .. code-block:: none
 

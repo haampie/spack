@@ -21,7 +21,7 @@ provides support functions to the automatically generated code.
 Phases
 ^^^^^^
 
-The ``SIPBuilder`` and ``SIPPackage`` base classes come with the following phases:
+The ``SIPBuilder`` and ``SIPPackage`` base classes come with the following phases:.
 
 #. ``configure`` - configure the package
 #. ``build`` - build the package
@@ -67,7 +67,7 @@ Passing arguments to ``sip-build``
 
 Each phase comes with a ``<phase_args>`` function that can be used to pass
 arguments to that particular phase. For example, if you need to pass
-arguments to the configure phase, you can use:
+arguments to the configure phase, you can use:.
 
 .. code-block:: python
 
@@ -85,7 +85,7 @@ Just because a package successfully built does not mean that it built
 correctly. The most reliable test of whether or not the package was
 correctly installed is to attempt to import all of the modules that
 get installed. To get a list of modules, run the following command
-in the site-packages directory:
+in the site-packages directory:.
 
 .. code-block:: console
 
@@ -119,7 +119,7 @@ whereas a "module" is a single Python file.
 The ``SIPPackage`` base class automatically detects these module
 names for you. If, for whatever reason, the module names detected
 are wrong, you can provide the names yourself by overriding
-``import_modules`` like so:
+``import_modules`` like so:.
 
 .. code-block:: python
 
@@ -138,7 +138,7 @@ or by running ``spack test run`` after the installation has finished.
 External documentation
 ^^^^^^^^^^^^^^^^^^^^^^
 
-For more information on the SIP build system, see:
+For more information on the SIP build system, see:.
 
 * https://www.riverbankcomputing.com/software/sip/intro
 * https://www.riverbankcomputing.com/static/Docs/sip/

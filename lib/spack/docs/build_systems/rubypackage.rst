@@ -16,12 +16,12 @@ Phases
 ^^^^^^
 
 The ``RubyBuilder`` and ``RubyPackage`` base classes provide the following phases that
-can be overridden:
+can be overridden:.
 
 #. ``build`` - build everything needed to install
 #. ``install`` - install everything from build directory
 
-For packages that come with a ``*.gemspec`` file, these phases run:
+For packages that come with a ``*.gemspec`` file, these phases run:.
 
 .. code-block:: console
 
@@ -29,7 +29,7 @@ For packages that come with a ``*.gemspec`` file, these phases run:
    $ gem install *.gem
 
 
-For packages that come with a ``Rakefile`` file, these phases run:
+For packages that come with a ``Rakefile`` file, these phases run:.
 
 .. code-block:: console
 
@@ -38,14 +38,14 @@ For packages that come with a ``Rakefile`` file, these phases run:
 
 
 For packages that come pre-packaged as a ``*.gem`` file, the build
-phase is skipped and the install phase runs:
+phase is skipped and the install phase runs:.
 
 .. code-block:: console
 
    $ gem install *.gem
 
 
-These are all standard ``gem`` commands and can be found by running:
+These are all standard ``gem`` commands and can be found by running:.
 
 .. code-block:: console
 
@@ -68,7 +68,7 @@ presence of any of the following files:
 * ``setup.rb`` (not yet supported)
 
 However, not all Ruby packages are released as source code. Some are only
-released as ``*.gem`` files. These files can be extracted using:
+released as ``*.gem`` files. These files can be extracted using:.
 
 .. code-block:: console
 
@@ -79,7 +79,7 @@ released as ``*.gem`` files. These files can be extracted using:
 Description
 ^^^^^^^^^^^
 
-The ``*.gemspec`` file may contain something like:
+The ``*.gemspec`` file may contain something like:.
 
 .. code-block:: ruby
 
@@ -107,21 +107,21 @@ Build system dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 All Ruby packages require Ruby at build and run-time. For this reason,
-the base class contains:
+the base class contains:.
 
 .. code-block:: python
 
    extends("ruby")
 
 
-The ``*.gemspec`` file may contain something like:
+The ``*.gemspec`` file may contain something like:.
 
 .. code-block:: ruby
 
    required_ruby_version = ">= 2.3.0"
 
 
-This can be added to the Spack package using:
+This can be added to the Spack package using:.
 
 .. code-block:: python
 
@@ -159,7 +159,7 @@ often the developers assume people will use ``gem`` and won't have to
 worry about it. Always check the ``*.gemspec`` file to find the true
 dependencies.
 
-Check for the following clues in the ``*.gemspec`` file:
+Check for the following clues in the ``*.gemspec`` file:.
 
 * ``add_runtime_dependency``
 
