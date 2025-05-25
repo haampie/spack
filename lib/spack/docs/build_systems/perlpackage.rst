@@ -15,13 +15,13 @@ build system.
 Phases
 ^^^^^^
 
-The ``PerlBuilder`` and ``PerlPackage`` base classes come with 3 phases that can be overridden:
+The ``PerlBuilder`` and ``PerlPackage`` base classes come with three phases that can be overridden:
 
 #. ``configure`` - configure the package
 #. ``build`` - build the package
 #. ``install`` - install the package
 
-Perl packages have 2 common modules used for module installation:
+Perl packages have two common modules used for module installation:
 
 """""""""""""""""""""""
 ``ExtUtils::MakeMaker``
@@ -68,7 +68,7 @@ working.
 Finding Perl packages
 ^^^^^^^^^^^^^^^^^^^^^
 
-Most Perl modules are hosted on CPAN - The Comprehensive Perl Archive
+Most Perl modules are hosted on CPAN, the Comprehensive Perl Archive
 Network. If you need to find a package for ``XML::Parser``, for example,
 you should search for "CPAN XML::Parser".
 
@@ -113,7 +113,7 @@ Build system dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Every ``PerlPackage`` obviously depends on Perl at build and run-time,
-so ``PerlPackage`` contains:
+so ``PerlPackage`` contains:.
 
 .. code-block:: python
 
@@ -127,14 +127,14 @@ Although newer versions of Perl include ``ExtUtils::MakeMaker`` and
 ``Module::Build`` as "core" modules, you may want to add dependencies
 on ``perl-extutils-makemaker`` and ``perl-module-build`` anyway. Many
 people add Perl as an external package, and we want the build to work
-properly. If your package uses ``Makefile.PL`` to build, add:
+properly. If your package uses ``Makefile.PL`` to build, add:.
 
 .. code-block:: python
 
    depends_on("perl-extutils-makemaker", type="build")
 
 
-If your package uses ``Build.PL`` to build, add:
+If your package uses ``Build.PL`` to build, add:.
 
 .. code-block:: python
 
@@ -159,7 +159,7 @@ Passing arguments to configure
 Packages that have non-Perl dependencies often use command-line
 variables to specify their installation directory. You can pass
 arguments to ``Makefile.PL`` or ``Build.PL`` by overriding
-``configure_args`` like so:
+``configure_args`` like so:.
 
 .. code-block:: python
 
@@ -177,14 +177,14 @@ Testing
 ^^^^^^^
 
 ``PerlPackage`` provides a simple stand-alone test of the successfully
-installed package to confirm that installed perl module(s) can be used.
+installed package to confirm that installed Perl module(s) can be used.
 These tests can be performed any time after the installation using
 ``spack -v test run``. (For more information on the command, see 
 :ref:`cmd-spack-test-run`.)
 
-The base class automatically detects perl modules based on the presence
+The base class automatically detects Perl modules based on the presence
 of ``*.pm`` files under the package's library directory. For example,
-the files under ``perl-bignum``'s perl library are:
+the files under ``perl-bignum``'s Perl library are:.
 
 .. code-block:: console
 
@@ -198,7 +198,7 @@ the files under ``perl-bignum``'s perl library are:
    ./bignum.pm
 
 
-which results in the package having the ``use_modules`` property containing:
+which results in the package having the ``use_modules`` property containing:.
 
 .. code-block:: python
 
@@ -217,7 +217,7 @@ which results in the package having the ``use_modules`` property containing:
    This list can often be used to catch missing dependencies.
 
 If the list is somehow wrong, you can provide the names of the modules
-yourself by overriding ``use_modules`` like so:
+yourself by overriding ``use_modules`` like so:.
 
  .. code-block:: python
 
@@ -226,7 +226,7 @@ yourself by overriding ``use_modules`` like so:
 If you only want a subset of the automatically detected modules to be
 tested, you could instead define the ``skip_modules`` property on the
 package. So, instead of overriding ``use_modules`` as shown above, you
-could define the following:
+could define the following:.
 
  .. code-block:: python
 
@@ -245,14 +245,14 @@ Alternatives to Spack
 If you need to maintain a stack of Perl modules for a user and don't
 want to add all of them to Spack, a good alternative is ``cpanm``.
 If Perl is already installed on your system, it should come with a
-``cpan`` executable. To install ``cpanm``, run the following command:
+``cpan`` executable. To install ``cpanm``, run the following command:.
 
 .. code-block:: console
 
    $ cpan App::cpanminus
 
 
-Now, you can install any Perl module you want by running:
+Now, you can install any Perl module you want by running:.
 
 .. code-block:: console
 

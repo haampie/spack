@@ -46,7 +46,7 @@ important to understand.
 
 **build backend**
    Libraries used to define how to build a wheel. Examples
-   include `setuptools <https://setuptools.pypa.io/>`__,
+   include `setuptools <https://setuptools.pypa.io/>`_,
    `flit <https://flit.pypa.io/>`_,
    `poetry <https://python-poetry.org/>`_,
    `hatchling <https://hatch.pypa.io/latest/>`_,
@@ -77,7 +77,7 @@ be downloaded from::
 
    https://pypi.io/packages/py3/a/azureml_sdk/azureml_sdk-1.11.0-py3-none-any.whl
 
-Once you've found a URL to download the package from, run:
+Once you've found a URL to download the package from, run:.
 
 .. code-block:: console
 
@@ -203,7 +203,7 @@ contains a ``[build-system]`` section. For example:
 This section does two things: the ``requires`` key lists build
 dependencies of the project, and the ``build-backend`` key defines
 the build backend. All of these build dependencies should be added as
-dependencies to your package:
+dependencies to your package:.
 
 .. code-block:: python
 
@@ -222,11 +222,11 @@ information on the design of ``pyproject.toml``.
 Depending on which build backend a project uses, there are various
 places that run-time dependencies can be listed. Most modern build
 backends support listing dependencies directly in ``pyproject.toml``.
-Look for dependencies under the following keys:
+Look for dependencies under the following keys:.
 
 * ``requires-python`` under ``[project]``
 
-  This specifies the version of Python that is required
+  This specifies the version of Python that is required.
 
 * ``dependencies`` under ``[project]``
 
@@ -269,7 +269,7 @@ If the ``pyproject.toml`` lists ``setuptools.build_meta`` as a
 uses setuptools to build. Setuptools is a replacement for the
 distutils library, and has almost the exact same API. In addition to
 ``pyproject.toml``, dependencies can be listed in the ``setup.py`` or
-``setup.cfg`` file. Look for the following arguments:
+  ``setup.cfg`` file. Look for the following arguments:.
 
 * ``python_requires``
 
@@ -289,7 +289,7 @@ distutils library, and has almost the exact same API. In addition to
 
   These packages are optional dependencies that enable additional
   functionality. You should add a variant that optionally adds these
-  dependencies. This variant should be False by default.
+  dependencies. This variant should be ``False`` by default.
 
 * ``tests_require``
 
@@ -307,7 +307,7 @@ for documentation on version specifiers in setuptools.
 flit
 """"
 
-There are actually two possible ``build-backend`` for flit, ``flit``
+There are actually two possible build backends for flit, ``flit``
 and ``flit_core``. If you see these in the ``pyproject.toml``, add a
 build dependency to your package. With flit, all dependencies are
 listed directly in the ``pyproject.toml`` file. Older versions of
@@ -315,7 +315,7 @@ flit used to store this info in a ``flit.ini`` file, so check for
 this too.
 
 In addition to the default ``pyproject.toml`` keys listed above,
-older versions of flit may use the following keys:
+older versions of flit may use the following keys:.
 
 * ``requires`` under ``[tool.flit.metadata]``
 
@@ -326,7 +326,7 @@ older versions of flit may use the following keys:
 
   This section includes keys with lists of optional dependencies
   needed to enable those features. You should add a variant that
-  optionally adds these dependencies. This variant should be False
+  optionally adds these dependencies. This variant should be ``False``
   by default.
 
 See https://flit.pypa.io/en/latest/pyproject_toml.html for
@@ -336,7 +336,7 @@ more information.
 poetry
 """"""
 
-Like flit, poetry also has two possible ``build-backend``, ``poetry``
+Like flit, poetry also has two possible build backends, ``poetry``
 and ``poetry_core``. If you see these in the ``pyproject.toml``, add
 a build dependency to your package. With poetry, all dependencies are
 listed directly in the ``pyproject.toml`` file. Dependencies are
@@ -393,7 +393,7 @@ file is simply a zip file, and can be extracted using:
 
 The zip file will not contain a ``setup.py``, but it will contain a
 ``METADATA`` file which contains all the information you need to
-write a ``package.py`` build recipe. Check for lines like::
+write a ``package.py`` build recipe. Check for lines like:.::
 
    Requires-Python: >=3.5,<4
    Requires-Dist: azureml-core (~=1.11.0)
@@ -429,7 +429,7 @@ Config settings
 These settings are passed to
 `PEP 517 <https://peps.python.org/pep-0517/>`__ build backends.
 For example, ``py-scipy`` package allows you to specify the name of
-the BLAS/LAPACK library you want pkg-config to search for:
+the BLAS/LAPACK library you want pkg-config to search for:.
 
 .. code-block:: python
 
@@ -456,7 +456,7 @@ Global options
 
 These flags are added directly after ``setup.py`` when pip runs
 ``python setup.py install``. For example, the ``py-pyyaml`` package
-has an optional dependency on ``libyaml`` that can be enabled like so:
+has an optional dependency on ``libyaml`` that can be enabled like so:.
 
 .. code-block:: python
 
@@ -485,7 +485,7 @@ Install options
 
 These flags are added directly after ``install`` when pip runs
 ``python setup.py install``. For example, the ``py-pyyaml`` package
-allows you to specify the directories to search for ``libyaml``:
+allows you to specify the directories to search for ``libyaml``:.
 
 .. code-block:: python
 
@@ -524,7 +524,7 @@ Just because a package successfully built does not mean that it built
 correctly. The most reliable test of whether or not the package was
 correctly installed is to attempt to import all of the modules that
 get installed. To get a list of modules, run the following command
-in the source directory:
+in the source directory:.
 
 .. code-block:: console
 
@@ -586,13 +586,13 @@ of module names to be skipped can be defined by using ``skip_modules``.
 If a defined module has submodules, they are skipped as well, e.g.,
 in case the ``plotting`` modules should be excluded from the
 automatically detected ``import_modules`` ``["nilearn", "nilearn.surface",
-"nilearn.plotting", "nilearn.plotting.data"]`` set:
+"nilearn.plotting", "nilearn.plotting.data"]`` set:.
 
 .. code-block:: python
 
         skip_modules = ["nilearn.plotting"]
 
-This will set ``import_modules`` to ``["nilearn", "nilearn.surface"]``
+This will set ``import_modules`` to ``["nilearn", "nilearn.surface"]``.
 
 Import tests can be run during the installation using ``spack install
 --test=root`` or at any time after the installation using
@@ -607,7 +607,7 @@ run these tests during the installation by adding test methods after
 installation.
 
 For example, ``py-numpy`` adds the following as a check to run
-after the ``install`` phase:
+after the ``install`` phase:.
 
 .. code-block:: python
 
@@ -630,10 +630,10 @@ when testing is enabled during the installation (i.e., ``spack install
 Setup file in a sub-directory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Many C/C++ libraries provide optional Python bindings in a
+Many C/C++ libraries provide optional Python language bindings in a
 subdirectory. To tell pip which directory to build from, you can
 override the ``build_directory`` attribute. For example, if a package
-provides Python bindings in a ``python`` directory, you can use:
+provides Python language bindings in a ``python`` directory, you can use:.
 
 .. code-block:: python
 
@@ -654,7 +654,7 @@ Choosing a build system
 First of all, you need to select a build system. ``spack create``
 usually does this for you, but if for whatever reason you need to do
 this manually, choose ``PythonPackage`` if and only if the package
-contains one of the following files:
+contains one of the following files:.
 
 * ``pyproject.toml``
 * ``setup.py``
@@ -702,7 +702,7 @@ For example:
 
 These packages are primarily used as Python libraries, not as
 command-line tools. You may see C/C++ packages that have optional
-Python language-bindings, such as:
+Python language bindings, such as:
 
 * antlr
 * cantera
@@ -710,7 +710,7 @@ Python language-bindings, such as:
 * pagmo
 * vtk
 
-Don't prepend these kind of packages with ``py-``. When in doubt,
+Don't prepend these kinds of packages with ``py-``. When in doubt,
 think about how this package will be used. Is it primarily a Python
 library that will be imported in other Python scripts? Or is it a
 command-line tool, or C/C++/Fortran program with optional Python
@@ -766,8 +766,8 @@ and ``pip`` may be a perfectly valid alternative to using Spack. The
 main advantage of Spack over ``pip`` is its ability to compile
 non-Python dependencies. It can also build cythonized versions of a
 package or link to an optimized BLAS/LAPACK library like MKL,
-resulting in calculations that run orders of magnitudes faster.
-Spack does not offer a significant advantage over other python-management
+resulting in calculations that run orders of magnitude faster.
+Spack does not offer a significant advantage over other Python-management
 systems for installing and using tools like flake8 and sphinx.
 But if you need packages with non-Python dependencies like
 numpy and scipy, Spack will be very valuable to you.

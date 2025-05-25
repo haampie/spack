@@ -53,7 +53,7 @@ By default, these phases run:
 
 Any of these phases can be overridden in your package as necessary.
 There is also a ``check`` method that looks for a ``check`` target
-in the Makefile. If a ``check`` target exists and the user runs:
+in the Makefile. If a ``check`` target exists and the user runs:.
 
 .. code-block:: console
 
@@ -70,7 +70,7 @@ Packages that use the QMake build system can be identified by the
 presence of a ``<project-name>.pro`` file. This file declares things
 like build instructions and dependencies.
 
-One thing to look for is the ``minQtVersion`` function:
+One thing to look for is the ``minQtVersion`` function:.
 
 .. code-block:: none
 
@@ -86,7 +86,7 @@ Build system dependencies
 
 At the bare minimum, packages that use the QMake build system need a
 ``qt`` dependency. Since this is always the case, the ``QMakePackage``
-base class already contains:
+base class already contains:.
 
 .. code-block:: python
 
@@ -94,7 +94,7 @@ base class already contains:
 
 
 If you want to specify a particular version requirement, or need to
-link to the ``qt`` libraries, you can override this in your package:
+link to the ``qt`` libraries, you can override this in your package:.
 
 .. code-block:: python
 
@@ -105,7 +105,7 @@ Passing arguments to qmake
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you need to pass any arguments to the ``qmake`` call, you can
-override the ``qmake_args`` method like so:
+override the ``qmake_args`` method like so:.
 
 .. code-block:: python
 
@@ -121,7 +121,7 @@ This method can be used to pass flags as well as variables.
 
 If the ``*.pro`` file used to tell QMake how to build the package is
 found in a sub-directory, you can tell Spack to run all phases in this
-sub-directory by adding the following to the package:
+sub-directory by adding the following to the package:.
 
 .. code-block:: python
 

@@ -36,7 +36,7 @@ By default, these phases run:
 
 Any of these phases can be overridden in your package as necessary.
 There is also a ``check`` method that looks for a ``test`` target
-in the build file. If a ``test`` target exists and the user runs:
+in the build file. If a ``test`` target exists and the user runs:.
 
 .. code-block:: console
 
@@ -54,7 +54,7 @@ presence of a ``meson.build`` file. This file declares things
 like build instructions and dependencies.
 
 One thing to look for is the ``meson_version`` key that gets passed
-to the ``project`` function:
+to the ``project`` function:.
 
 .. code-block:: none
    :emphasize-lines: 10
@@ -80,8 +80,8 @@ Build system dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 At the bare minimum, packages that use the Meson build system need
-``meson`` and ```ninja``` dependencies. Since this is always the case,
-the ``MesonPackage`` base class already contains:
+``meson`` and ``ninja`` dependencies. Since this is always the case,
+the ``MesonPackage`` base class already contains:.
 
 .. code-block:: python
 
@@ -90,7 +90,7 @@ the ``MesonPackage`` base class already contains:
 
 
 If you need to specify a particular version requirement, you can
-override this in your package:
+override this in your package:.
 
 .. code-block:: python
 
@@ -103,7 +103,7 @@ Finding meson flags
 ^^^^^^^^^^^^^^^^^^^
 
 To get a list of valid flags that can be passed to ``meson``, run the
-following command in the directory that contains ``meson.build``:
+following command in the directory that contains ``meson.build``:.
 
 .. code-block:: console
 
@@ -115,7 +115,7 @@ Passing arguments to meson
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you need to pass any arguments to the ``meson`` call, you can
-override the ``meson_args`` method like so:
+override the ``meson_args`` method like so:.
 
 .. code-block:: python
 

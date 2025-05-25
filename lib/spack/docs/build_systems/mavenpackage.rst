@@ -10,7 +10,7 @@ Maven
 
 Apache Maven is a general-purpose build system that does not rely
 on Makefiles to build software. It is designed for building and
-managing and Java-based project.
+managing Java-based projects.
 
 ^^^^^^
 Phases
@@ -67,7 +67,7 @@ This specifies the versions of Java and Maven that are required to
 build the package. See
 https://docs.oracle.com/middleware/1212/core/MAVEN/maven_version.htm#MAVEN402
 for a description of this version range syntax. In this case, you
-should add:
+should add:.
 
 .. code-block:: python
 
