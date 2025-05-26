@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import os
+import shutil
 
 from spack_repo.builtin.build_systems.cuda import CudaPackage
 from spack_repo.builtin.build_systems.generic import Package
@@ -181,6 +182,7 @@ class Petsc(Package, CudaPackage, ROCmPackage):
     variant("shared", default=True, description="Enables the build of shared libraries")
     variant("mpi", default=True, description="Activates MPI support")
     variant("double", default=True, description="Switches between single and double precision")
+    variant('examples', default=True, description='Install PETSc tutorial/example and test source files')
     variant("complex", default=False, description="Build with complex numbers")
     variant("debug", default=False, description="Compile in debug mode")
     variant("sycl", default=False, description="Enable sycl build")
@@ -777,6 +779,29 @@ class Petsc(Package, CudaPackage, ROCmPackage):
 
         if self.run_tests:
             make('check PETSC_ARCH="" PETSC_DIR={0}'.format(prefix), parallel=False)
+
+    @run_after("install")
+    def remove_examples_and_tests(self):
+        spec = self.spec
+        if "~examples" in spec:
+            # Path to the examples directory
+            examples_dir = os.path.join(self.prefix, "share", "petsc", "examples")
+            # Path to the test directory, trying to match ".share/petsc/test" under prefix
+            test_dir = os.path.join(self.prefix, ".share", "petsc", "test")
+
+            # Remove share/petsc/examples if it exists
+            if os.path.isdir(examples_dir):
+                print(f"PETSc ~examples: Removing {examples_dir}")
+                shutil.rmtree(examples_dir)
+            else:
+                print(f"PETSc ~examples: Directory not found, skipping removal: {examples_dir}")
+
+            # Remove .share/petsc/test if it exists
+            if os.path.isdir(test_dir):
+                print(f"PETSc ~examples: Removing {test_dir}")
+                shutil.rmtree(test_dir)
+            else:
+                print(f"PETSc ~examples: Directory not found, skipping removal: {test_dir}")
 
     def setup_build_environment(self, env: EnvironmentModifications) -> None:
         # configure fails if these env vars are set outside of Spack
