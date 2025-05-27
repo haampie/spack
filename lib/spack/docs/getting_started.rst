@@ -208,9 +208,11 @@ Check Installation
 ^^^^^^^^^^^^^^^^^^
 
 With Spack installed, you should be able to run some basic Spack
-commands.  For example:
+commands. For example, to see how Spack would configure and install `netcdf-c` (or to view its configuration if already installed and the spec matches), you can use:
 
 .. command-output:: spack spec netcdf-c
+
+This command shows the result of Spack's concretization process for a given package name or abstract spec. To find packages that are already installed, `spack find` is typically used (see :ref:`basic-usage`).
 
 In theory, Spack doesn't need any additional installation; just
 download and run!  But in real life, additional steps are usually
@@ -334,6 +336,8 @@ This loads the environment module for gcc-4.9.0 to add it to
    ``packages.yaml`` file.  If you are using a compiler from a
    module, then you should add this field manually.
    See the section on :ref:`compilers-requiring-modules`.
+
+Note: `spack compiler find` is a specialized command for locating compilers. Spack also provides a more general command, `spack external find <package-name>`, for discovering other pre-installed software. While `spack compiler find` is tailored for the specific needs of compiler discovery (like identifying C, C++, and Fortran compilers associated with a single installation), `spack external find` can be configured for a wider variety of tools (see :ref:`Making a package discoverable with spack external find <make-package-findable>` in the Packaging Guide for more details).
 
 .. _cmd-spack-compiler-info:
 
