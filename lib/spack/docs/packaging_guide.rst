@@ -18,13 +18,13 @@ There are two key parts of Spack:
 
 #. **Specs**: expressions for describing builds of software, and
 #. **Packages**: Python modules that describe how to build and
-   test software according to a spec.
+   test software according to a *spec*.
 
-Specs allow a user to describe a *particular* build in a way that a
+*Specs* allow a user to describe a *particular* build in a way that a
 package author can understand.  Packages allow the packager to
 encapsulate the build logic for different versions, compilers,
 options, platforms, and dependency combinations in one place.
-Essentially, a package translates a spec into build logic. It
+Essentially, a package translates a *spec* into build logic. It
 also allows the packager to write spec-specific tests of the
 installed software.
 
@@ -3393,20 +3393,20 @@ this:
 
    $ spack install mpileaks ^callpath@1.0+debug ^libelf@0.8.11
 
-Spack parses the command line and builds a spec from the description.
-The spec says that ``mpileaks`` should be built with the ``callpath``
+Spack parses the command line and builds a *spec* from the description.
+The *spec* says that ``mpileaks`` should be built with the ``callpath``
 library at 1.0 and with the debug option enabled, and with ``libelf``
 version 0.8.11.  Spack will also look at the ``depends_on`` calls in
-all of these packages, and it will build a spec from that.  The specs
-from the command line and the specs built from package descriptions
+all of these packages, and it will build a *spec* from that.  The *specs*
+from the command line and the *specs* built from package descriptions
 are then combined, and the constraints are checked against each other
 to make sure they're satisfiable.
 
 What we have after this is done is called an *abstract spec*.  An
-abstract spec is partially specified.  In other words, it could
+*abstract spec* is partially specified.  In other words, it could
 describe more than one build of a package.  Spack does this to make
 things easier on the user: they should only have to specify as much of
-the package spec as they care about.  Here's an example partial spec
+the package *spec* as they care about.  Here's an example partial *spec*
 DAG, based on the constraints above:
 
 .. code-block:: none
@@ -3439,12 +3439,12 @@ package is built, just so long as it works.
 Concretization
 ^^^^^^^^^^^^^^
 
-An abstract spec is useful for the user, but you can't install an
-abstract spec.  Spack has to take the abstract spec and "fill in" the
+An *abstract spec* is useful for the user, but you can't install an
+*abstract spec*.  Spack has to take the *abstract spec* and "fill in" the
 remaining unspecified parts in order to install.  This process is
 called **concretization**.  Concretization happens in between the time
 the user runs ``spack install`` and the time the ``install()`` method
-is called.  The concretized version of the spec above might look like
+is called.  The concretized version of the *spec* above might look like
 this:
 
 .. code-block:: none

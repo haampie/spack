@@ -184,7 +184,7 @@ two configurations of the same version of a package, one built with boost
 
 This can all be done on the command line using the *spec* syntax.
 Spack calls the descriptor used to refer to a particular package
-configuration a **spec**. In the commands above, ``mpileaks`` and
+configuration a *spec*. In the commands above, ``mpileaks`` and
 ``mpileaks@3.0.4`` are both valid *specs*. We'll talk more about how
 you can use them to customize an installation in :ref:`sec-specs`.
 
@@ -471,7 +471,7 @@ but how do you figure out which are already installed?
 ``spack find``
 ^^^^^^^^^^^^^^
 
-``spack find`` shows the *specs* of installed packages. A spec is
+``spack find`` shows the *specs* of installed packages. A *spec* is
 like a name, but it has a version, compiler, architecture, and build
 options associated with it. In Spack, you can have many installations
 of the same package with different specs.
@@ -1048,12 +1048,12 @@ Specs & dependencies
 
 We know that ``spack install``, ``spack uninstall``, and other
 commands take a package name with an optional version specifier. In
-Spack, that descriptor is called a *spec*. Spack uses specs to refer
+Spack, that descriptor is called a *spec*. Spack uses *specs* to refer
 to a particular build configuration (or configurations) of a package.
-Specs are more than a package name and a version; you can use them to
+*Specs* are more than a package name and a version; you can use them to
 specify the compiler, compiler version, architecture, compile options,
 and dependency options for a build. In this section, we'll go over
-the full syntax of specs.
+the full syntax of *specs*.
 
 Here is an example of a much longer spec than we've seen thus far:
 
