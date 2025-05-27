@@ -12,9 +12,14 @@ import re
 import shutil
 from contextlib import closing, contextmanager
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, BinaryIO, ContextManager, TYPE_CHECKING
 
 import _vendoring.jsonschema
+
+if TYPE_CHECKING:
+    import spack.spec
+    import spack.stage
+    import spack.mirrors.mirror
 
 import llnl.util.filesystem as fsys
 import llnl.util.tty as tty
@@ -80,14 +85,14 @@ class BlobRecord:
         checksum_alg: str,
         checksum: str,
     ) -> None:
-        self.content_length = content_length
-        self.media_type = media_type
-        self.compression_alg = compression_alg
-        self.checksum_alg = checksum_alg
-        self.checksum = checksum
+        self.content_length: int = content_length
+        self.media_type: str = media_type
+        self.compression_alg: str = compression_alg
+        self.checksum_alg: str = checksum_alg
+        self.checksum: str = checksum
 
     @classmethod
-    def from_dict(cls, record_dict):
+    def from_dict(cls, record_dict: Dict[str, Any]) -> "BlobRecord":
         return BlobRecord(
             record_dict["contentLength"],
             record_dict["mediaType"],
@@ -96,7 +101,7 @@ class BlobRecord:
             record_dict["checksum"],
         )
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "contentLength": self.content_length,
             "mediaType": self.media_type,
@@ -111,7 +116,7 @@ class BuildcacheManifest:
     number and an array of data blobs, each of which is represented by a
     BlobRecord."""
 
-    def __init__(self, layout_version: int, data: Optional[List[BlobRecord]] = None):
+    def __init__(self, layout_version: int, data: Optional[List[BlobRecord]] = None) -> None:
         self.version: int = layout_version
         if data:
             self.data: List[BlobRecord] = [
@@ -127,7 +132,7 @@ class BuildcacheManifest:
         else:
             self.data = []
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {"version": self.version, "data": [rec.to_dict() for rec in self.data]}
 
     @classmethod
@@ -185,12 +190,12 @@ class URLBuildcacheEntry:
     SPEC_URL_REGEX = re.compile(r"(.+)/v([\d]+)/manifests/.+")
     LAYOUT_VERSION = 3
     BUILDCACHE_INDEX_MEDIATYPE = f"application/vnd.spack.db.v{spack.database._DB_VERSION}+json"
-    SPEC_MEDIATYPE = f"application/vnd.spack.spec.v{spack.spec.SPECFILE_FORMAT_VERSION}+json"
+    SPEC_MEDIATYPE = f"application/vnd.spack.spec.v{spack.spec.SPECFILE_FORMAT_VERSION}+json"  # type: ignore[attr-defined]
     TARBALL_MEDIATYPE = "application/vnd.spack.install.v2.tar+gzip"
     PUBLIC_KEY_MEDIATYPE = "application/pgp-keys"
     PUBLIC_KEY_INDEX_MEDIATYPE = "application/vnd.spack.keyindex.v1+json"
-    BUILDCACHE_INDEX_FILE = "index.manifest.json"
-    COMPONENT_PATHS = {
+    BUILDCACHE_INDEX_FILE: str = "index.manifest.json"
+    COMPONENT_PATHS: Dict[BuildcacheComponent, List[str]] = {
         BuildcacheComponent.BLOB: ["blobs"],
         BuildcacheComponent.INDEX: [f"v{LAYOUT_VERSION}", "manifests", "index"],
         BuildcacheComponent.KEY: [f"v{LAYOUT_VERSION}", "manifests", "key"],
@@ -201,15 +206,15 @@ class URLBuildcacheEntry:
     }
 
     def __init__(
-        self, mirror_url: str, spec: Optional[spack.spec.Spec] = None, allow_unsigned: bool = False
-    ):
+        self, mirror_url: str, spec: Optional["spack.spec.Spec"] = None, allow_unsigned: bool = False
+    ) -> None:
         """Lazily initialize the object"""
         self.mirror_url: str = mirror_url
-        self.spec: Optional[spack.spec.Spec] = spec
+        self.spec: Optional["spack.spec.Spec"] = spec
         self.allow_unsigned: bool = allow_unsigned
         self.manifest: Optional[BuildcacheManifest] = None
         self.remote_manifest_url: str = ""
-        self.stages: Dict[BlobRecord, spack.stage.Stage] = {}
+        self.stages: Dict[BlobRecord, "spack.stage.Stage"] = {}
 
     @classmethod
     def get_layout_version(cls) -> int:
@@ -252,7 +257,7 @@ class URLBuildcacheEntry:
         return rematch.group(1)
 
     @classmethod
-    def get_index_url(cls, mirror_url: str):
+    def get_index_url(cls, mirror_url: str) -> str:
         return url_util.join(
             mirror_url,
             *cls.get_relative_path_components(BuildcacheComponent.INDEX),
@@ -266,14 +271,14 @@ class URLBuildcacheEntry:
         return cls.COMPONENT_PATHS[component]
 
     @classmethod
-    def get_manifest_filename(cls, spec: spack.spec.Spec) -> str:
+    def get_manifest_filename(cls, spec: "spack.spec.Spec") -> str:
         """Given a concrete spec, compute and return the name (i.e. basename) of
         the manifest file representing it"""
-        spec_formatted = spec.format_path("{name}-{version}-{hash}")
+        spec_formatted: str = spec.format_path("{name}-{version}-{hash}")
         return f"{spec_formatted}.spec.manifest.json"
 
     @classmethod
-    def get_manifest_url(cls, spec: spack.spec.Spec, mirror_url: str) -> str:
+    def get_manifest_url(cls, spec: "spack.spec.Spec", mirror_url: str) -> str:
         """Given a concrete spec and a base url, return the full url where the
         spec manifest should be found"""
         path_components = cls.get_relative_path_components(BuildcacheComponent.SPEC)
@@ -345,8 +350,8 @@ class URLBuildcacheEntry:
         Returns the local path to the staged blob
         """
         if record not in self.stages:
-            blob_url = self.get_blob_url(self.mirror_url, record)
-            blob_stage = spack.stage.Stage(blob_url)
+            blob_url: str = self.get_blob_url(self.mirror_url, record)
+            blob_stage: "spack.stage.Stage" = spack.stage.Stage(blob_url) # type: ignore[attr-defined]
 
             # Fetch the blob, or else cleanup and exit early
             try:
@@ -488,10 +493,10 @@ class URLBuildcacheEntry:
 
         return self.fetch_blob(self.get_blob_record(BuildcacheComponent.TARBALL))
 
-    def get_archive_stage(self) -> Optional[spack.stage.Stage]:
+    def get_archive_stage(self) -> Optional["spack.stage.Stage"]:
         return self.stages[self.get_blob_record(BuildcacheComponent.TARBALL)]
 
-    def remove(self):
+    def remove(self) -> None:
         """Remove a binary package (spec file and tarball) and the associated
         manifest from the mirror."""
         if self.manifest:
@@ -524,7 +529,7 @@ class URLBuildcacheEntry:
     def push_blob(cls, mirror_url: str, blob_path: str, record: BlobRecord) -> None:
         """Push the blob_path file to mirror as a blob represented by the given
         record"""
-        blob_destination_url = cls.get_blob_url(mirror_url, record)
+        blob_destination_url: str = cls.get_blob_url(mirror_url, record)
         web_util.push_to_url(blob_path, blob_destination_url, keep_original=False)
 
     @classmethod
@@ -554,9 +559,11 @@ class URLBuildcacheEntry:
 
         if signing_key:
             manifest_path = sign_file(signing_key, manifest_path)
-
-        manifest_destination_url = url_util.join(
-            mirror_url, *cls.get_relative_path_components(component_type), manifest_file_name
+        
+        # Ensure all parts are strings for url_util.join
+        path_parts: List[str] = [str(p) for p in cls.get_relative_path_components(component_type)]
+        manifest_destination_url: str = url_util.join(
+            mirror_url, *path_parts, manifest_file_name
         )
 
         web_util.push_to_url(manifest_path, manifest_destination_url, keep_original=False)
@@ -604,7 +611,7 @@ class URLBuildcacheEntry:
 
     def push_binary_package(
         self,
-        spec: spack.spec.Spec,
+        spec: "spack.spec.Spec",
         tarball_path: str,
         checksum_algorithm: str,
         tarball_checksum: str,
@@ -706,7 +713,7 @@ class URLBuildcacheEntry:
         # even if we deleted the pre-existing one.
         web_util.push_to_url(manifest_path, self.remote_manifest_url, keep_original=False)
 
-    def destroy(self):
+    def destroy(self) -> None:
         """Destroy any existing stages"""
         for blob_stage in self.stages.values():
             blob_stage.destroy()
@@ -738,21 +745,19 @@ class URLBuildcacheEntryV2(URLBuildcacheEntry):
     def __init__(
         self,
         push_url_base: str,
-        spec: Optional[spack.spec.Spec] = None,
+        spec: Optional["spack.spec.Spec"] = None,
         allow_unsigned: bool = False,
-    ):
+    ) -> None:
         """Lazily initialize the object"""
-        self.mirror_url: str = push_url_base
-        self.spec: Optional[spack.spec.Spec] = spec
-        self.allow_unsigned: bool = allow_unsigned
-
-        self.has_metadata: bool = False
-        self.has_tarball: bool = False
-        self.has_signed: bool = False
-        self.has_unsigned: bool = False
-        self.spec_stage: Optional[spack.stage.Stage] = None
+        super().__init__(push_url_base, spec, allow_unsigned) # Call parent constructor
+        # Initialize V2 specific fields
+        self.has_metadata: bool = False # Different from parent
+        self.has_tarball: bool = False  # New field
+        self.has_signed: bool = False   # New field
+        self.has_unsigned: bool = False # New field
+        self.spec_stage: Optional["spack.stage.Stage"] = None
         self.local_specfile_path: str = ""
-        self.archive_stage: Optional[spack.stage.Stage] = None
+        self.archive_stage: Optional["spack.stage.Stage"] = None
         self.local_archive_path: str = ""
 
         self.remote_spec_url: str = ""
@@ -774,22 +779,22 @@ class URLBuildcacheEntryV2(URLBuildcacheEntry):
         raise BuildcacheEntryError("spack can no longer write to v2 buildcaches")
 
     def _get_spec_url(
-        self, spec: spack.spec.Spec, mirror_url: str, ext: str = ".spec.json.sig"
+        self, spec: "spack.spec.Spec", mirror_url: str, ext: str = ".spec.json.sig"
     ) -> str:
-        spec_formatted = spec.format_path(
+        spec_formatted: str = spec.format_path(
             "{architecture}-{compiler.name}-{compiler.version}-{name}-{version}-{hash}"
         )
-        path_components = self.get_relative_path_components(BuildcacheComponent.SPEC)
+        path_components: List[str] = self.get_relative_path_components(BuildcacheComponent.SPEC)
         return url_util.join(mirror_url, *path_components, f"{spec_formatted}{ext}")
 
-    def _get_tarball_url(self, spec: spack.spec.Spec, mirror_url: str) -> str:
-        directory_name = spec.format_path(
+    def _get_tarball_url(self, spec: "spack.spec.Spec", mirror_url: str) -> str:
+        directory_name: str = spec.format_path(
             "{architecture}/{compiler.name}-{compiler.version}/{name}-{version}"
         )
-        spec_formatted = spec.format_path(
+        spec_formatted: str = spec.format_path(
             "{architecture}-{compiler.name}-{compiler.version}-{name}-{version}-{hash}"
         )
-        filename = f"{spec_formatted}.spack"
+        filename: str = f"{spec_formatted}.spack"
         return url_util.join(
             mirror_url,
             *self.get_relative_path_components(BuildcacheComponent.BLOB),
@@ -797,7 +802,7 @@ class URLBuildcacheEntryV2(URLBuildcacheEntry):
             filename,
         )
 
-    def _check_metadata_exists(self):
+    def _check_metadata_exists(self) -> None:
         if not self.spec:
             return
 
@@ -851,7 +856,7 @@ class URLBuildcacheEntryV2(URLBuildcacheEntry):
                 f"Mirror {self.mirror_url} does not have signed metadata for spec"
             )
 
-        self.spec_stage = spack.stage.Stage(self.remote_spec_url)
+        self.spec_stage = spack.stage.Stage(self.remote_spec_url) # type: ignore[attr-defined]
 
         # Fetch the spec file, or else cleanup and exit early
         try:
@@ -876,7 +881,11 @@ class URLBuildcacheEntryV2(URLBuildcacheEntry):
             raise BuildcacheEntryError("Buildcache entry does not have valid metadata file") from e
 
         try:
-            self.spec = spack.spec.Spec.from_dict(spec_dict)
+            # Ensure self.spec is correctly typed if assigned here
+            loaded_spec = spack.spec.Spec.from_dict(spec_dict) # type: ignore[attr-defined]
+            if not isinstance(loaded_spec, spack.spec.Spec): # type: ignore[attr-defined]
+                raise TypeError("Loaded spec is not of type spack.spec.Spec")
+            self.spec = loaded_spec
         except Exception as err:
             raise BuildcacheEntryError("Fetched spec dict does not contain valid spec") from err
 
@@ -896,12 +905,14 @@ class URLBuildcacheEntryV2(URLBuildcacheEntry):
 
         self.remote_archive_checksum_algorithm = bchecksum["hash_algorithm"]
         self.remote_archive_checksum_hash = bchecksum["hash"]
+        if not self.spec: # Should be set by this point if spec_dict was valid
+            raise BuildcacheEntryError("Spec not available to determine tarball URL")
         self.remote_archive_url = self._get_tarball_url(self.spec, self.mirror_url)
 
         return self.spec_dict
 
     def fetch_archive(self) -> str:
-        self.fetch_metadata()
+        self.fetch_metadata() # Ensures self.spec and remote_archive_url are set
 
         # Adding this, we can avoid passing a dictionary of stages around the
         # install logic, and in fact completely avoid fetching the metadata in
@@ -910,7 +921,7 @@ class URLBuildcacheEntryV2(URLBuildcacheEntry):
             self.spec_stage.destroy()
             self.spec_stage = None
 
-        self.archive_stage = spack.stage.Stage(self.remote_archive_url)
+        self.archive_stage = spack.stage.Stage(self.remote_archive_url) # type: ignore[attr-defined]
 
         # Fetch the archive file, or else cleanup and exit early
         try:
@@ -933,18 +944,18 @@ class URLBuildcacheEntryV2(URLBuildcacheEntry):
 
         return self.local_archive_path
 
-    def get_archive_stage(self) -> Optional[spack.stage.Stage]:
+    def get_archive_stage(self) -> Optional["spack.stage.Stage"]:
         return self.archive_stage
 
     @classmethod
-    def get_manifest_filename(cls, spec: spack.spec.Spec) -> str:
+    def get_manifest_filename(cls, spec: "spack.spec.Spec") -> str:
         raise BuildcacheEntryError("v2 buildcache entries do not have a manifest file")
 
     @classmethod
-    def get_manifest_url(cls, spec: spack.spec.Spec, mirror_url: str) -> str:
+    def get_manifest_url(cls, spec: "spack.spec.Spec", mirror_url: str) -> str:
         raise BuildcacheEntryError("v2 buildcache entries do not have a manifest url")
 
-    def read_manifest(self, manifest_url: Optional[str] = None) -> BuildcacheManifest:
+    def read_manifest(self, manifest_url: Optional[str] = None) -> BuildcacheManifest: # type: ignore[override]
         raise BuildcacheEntryError("v2 buildcache entries do not have a manifest file")
 
     def remove(self):
@@ -1001,9 +1012,9 @@ class URLBuildcacheEntryV2(URLBuildcacheEntry):
     ) -> None:
         raise BuildcacheEntryError("v2 buildcache layout is unaware of manifests and blobs")
 
-    def push_binary_package(
+    def push_binary_package( # type: ignore[override]
         self,
-        spec: spack.spec.Spec,
+        spec: "spack.spec.Spec",
         tarball_path: str,
         checksum_algorithm: str,
         tarball_checksum: str,
@@ -1023,7 +1034,7 @@ class URLBuildcacheEntryV2(URLBuildcacheEntry):
 
 def get_url_buildcache_class(
     layout_version: int = CURRENT_BUILD_CACHE_LAYOUT_VERSION,
-) -> Type[URLBuildcacheEntry]:
+) -> Type[URLBuildcacheEntry]: # Note: Return type should be Type[URLBuildcacheEntry]
     """Given a layout version, return the class responsible for managing access
     to buildcache entries of that version"""
     if layout_version == 2:
@@ -1036,7 +1047,7 @@ def get_url_buildcache_class(
         )
 
 
-def check_mirror_for_layout(mirror: spack.mirrors.mirror.Mirror):
+def check_mirror_for_layout(mirror: "spack.mirrors.mirror.Mirror") -> None:
     """Check specified mirror, and warn if missing layout.json"""
     cache_class = get_url_buildcache_class()
     if not cache_class.check_layout_json_exists(mirror.fetch_url):
@@ -1060,9 +1071,10 @@ def validate_checksum(file_path, checksum_algorithm, expected_checksum) -> None:
         )
 
 
-def _get_compressor(compression: str, writable: io.BufferedIOBase) -> io.BufferedIOBase:
+def _get_compressor(compression: str, writable: BinaryIO) -> BinaryIO:
     if compression == "gzip":
-        return gzip.GzipFile(filename="", mode="wb", compresslevel=6, mtime=0, fileobj=writable)
+        # gzip.GzipFile is compatible with BinaryIO
+        return gzip.GzipFile(filename="", mode="wb", compresslevel=6, mtime=0, fileobj=writable) # type: ignore[return-value]
     elif compression == "none":
         return writable
     else:
@@ -1076,34 +1088,34 @@ def compression_writer(output_path: str, compression: str, checksum_algo: str):
     the checksum algorithm used by the ChecksumWriter.
 
     Yields a tuple containing:
-        io.IOBase: writer that can compress (or not) as it writes
+        IOBase: writer that can compress (or not) as it writes
         ChecksumWriter: provides checksum and length of written data
     """
-    with open(output_path, "wb") as writer, ChecksumWriter(
-        fileobj=writer, algorithm=hash_fun_for_algo(checksum_algo)
-    ) as checksum_writer, closing(
-        _get_compressor(compression, checksum_writer)
-    ) as compress_writer:
+    with open(output_path, "wb") as writer, \
+         ChecksumWriter(fileobj=writer, algorithm=hash_fun_for_algo(checksum_algo)) as checksum_writer, \
+         closing(_get_compressor(compression, checksum_writer)) as compress_writer: # type: ignore[arg-type]
+        # The type of compress_writer depends on _get_compressor, can be GzipFile or the original writer
         yield compress_writer, checksum_writer
 
 
 def compressed_json_from_dict(
-    output_path: str, spec_dict: dict, checksum_algo: str
+    output_path: str, spec_dict: Dict[str, Any], checksum_algo: str
 ) -> Tuple[str, int]:
     """Compress the spec dict and write it to the given path
 
     Return the checksum (using the given algorithm) and size on disk of the file
     """
-    with compression_writer(output_path, "gzip", checksum_algo) as (
-        f_bin,
-        checker,
-    ), io.TextIOWrapper(f_bin, encoding="utf-8") as f_txt:
-        json.dump(spec_dict, f_txt, separators=(",", ":"))
+    # The actual type yielded by compression_writer is specific (e.g. GzipFile or BinaryIO)
+    # but for TextIOWrapper, BinaryIO is expected.
+    with compression_writer(output_path, "gzip", checksum_algo) as (f_bin_any, checker):
+        f_bin = cast(BinaryIO, f_bin_any) # Cast to BinaryIO for TextIOWrapper
+        with io.TextIOWrapper(f_bin, encoding="utf-8") as f_txt:
+            json.dump(spec_dict, f_txt, separators=(",", ":"))
 
     return checker.hexdigest(), checker.length
 
 
-def get_valid_spec_file(path: str, max_supported_layout: int) -> Tuple[Dict, int]:
+def get_valid_spec_file(path: str, max_supported_layout: int) -> Tuple[Dict[str, Any], int]:
     """Read and validate a spec file, returning the spec dict with its layout version, or raising
     InvalidMetadataFile if invalid."""
     try:
@@ -1141,12 +1153,12 @@ def get_valid_spec_file(path: str, max_supported_layout: int) -> Tuple[Dict, int
 
 def sign_file(key: str, file_path: str) -> str:
     """sign and return the path to the signed file"""
-    signed_file_path = f"{file_path}.sig"
+    signed_file_path: str = f"{file_path}.sig"
     spack.util.gpg.sign(key, file_path, signed_file_path, clearsign=True)
     return signed_file_path
 
 
-def try_verify(specfile_path):
+def try_verify(specfile_path: str) -> bool:
     """Utility function to attempt to verify a local file.  Assumes the
     file is a clearsigned signature file.
 
@@ -1176,23 +1188,23 @@ class MirrorURLAndVersion:
     url: str
     version: int
 
-    def __init__(self, url: str, version: int):
+    def __init__(self, url: str, version: int) -> None:
         self.url = url
         self.version = version
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.url}__v{self.version}"
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, MirrorURLAndVersion):
             return self.url == other.url and self.version == other.version
         return False
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.url, self.version))
 
     @classmethod
-    def from_string(cls, s: str):
+    def from_string(cls, s: str) -> "MirrorURLAndVersion":
         parts = s.split("__v")
         return cls(parts[0], int(parts[1]))
 
@@ -1202,9 +1214,9 @@ class MirrorForSpec:
     an associated concrete spec"""
 
     url_and_version: MirrorURLAndVersion
-    spec: spack.spec.Spec
+    spec: "spack.spec.Spec"
 
-    def __init__(self, url_and_version: MirrorURLAndVersion, spec: spack.spec.Spec):
+    def __init__(self, url_and_version: MirrorURLAndVersion, spec: "spack.spec.Spec") -> None:
         self.url_and_version = url_and_version
         self.spec = spec
 
