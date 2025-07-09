@@ -137,10 +137,8 @@ def last_two_git_commits(git):
     yield regex.findall(git_log_out)
 
 
-def write_file(filename, contents):
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(contents)
-
+# Removed write_file helper as its only call site is being refactored.
+# If it's used elsewhere and I missed it, this will need to be undone or write_file modified.
 
 commit_counter = 0
 
@@ -183,8 +181,9 @@ def mock_git_version_info(git, tmp_path: Path, override_git_repos_cache_path):
     """
     repo_dir = tmp_path / "git_version_info_repo"
     repo_dir.mkdir()
-    repo_path = str(repo_dir)
-    filename = "file.txt"
+    repo_path_str = str(repo_dir) # For working_dir
+    filename_str = "file.txt"
+    file_path_obj = repo_dir / filename_str
 
     def commit(message):
         global commit_counter
@@ -198,7 +197,7 @@ def mock_git_version_info(git, tmp_path: Path, override_git_repos_cache_path):
         )
         commit_counter += 1
 
-    with working_dir(repo_path):
+    with working_dir(repo_path_str):
         git("init")
 
         git("config", "user.name", "Spack")
@@ -212,44 +211,44 @@ def mock_git_version_info(git, tmp_path: Path, override_git_repos_cache_path):
 
         # Add two commits on main branch
         # A commit without a previous version counts as "0"
-        write_file(filename, "[0]")
-        git("add", filename)
+        file_path_obj.write_text("[0]", encoding="utf-8")
+        git("add", filename_str)
         commit("first commit")
         commits.append(latest_commit())
 
         # Tag second commit as v1.0
-        write_file(filename, "[1, 0]")
+        file_path_obj.write_text("[1, 0]", encoding="utf-8")
         commit("second commit")
         commits.append(latest_commit())
         git("tag", "v1.0")
 
         # Add two commits and a tag on 1.x branch
         git("checkout", "-b", "1.x")
-        write_file(filename, "[1, 0, 'git', 1]")
+        file_path_obj.write_text("[1, 0, 'git', 1]", encoding="utf-8")
         commit("first 1.x commit")
         commits.append(latest_commit())
 
-        write_file(filename, "[1, 1]")
+        file_path_obj.write_text("[1, 1]", encoding="utf-8")
         commit("second 1.x commit")
         commits.append(latest_commit())
         git("tag", "v1.1")
 
         # Add two commits and a tag on main branch
         git("checkout", "main")
-        write_file(filename, "[1, 0, 'git', 1]")
+        file_path_obj.write_text("[1, 0, 'git', 1]", encoding="utf-8")
         commit("third main commit")
         commits.append(latest_commit())
-        write_file(filename, "[2, 0]")
+        file_path_obj.write_text("[2, 0]", encoding="utf-8")
         commit("fourth main commit")
         commits.append(latest_commit())
         git("tag", "v2.0")
 
         # Add two more commits on 1.x branch to ensure we aren't cheating by using time
         git("checkout", "1.x")
-        write_file(filename, "[1, 1, 'git', 1]")
+        file_path_obj.write_text("[1, 1, 'git', 1]", encoding="utf-8")
         commit("third 1.x commit")
         commits.append(latest_commit())
-        write_file(filename, "[1, 2]")
+        file_path_obj.write_text("[1, 2]", encoding="utf-8")
         commit("fourth 1.x commit")
         commits.append(latest_commit())
         git("tag", "1.2")  # test robust parsing to different syntax, no v
@@ -258,7 +257,7 @@ def mock_git_version_info(git, tmp_path: Path, override_git_repos_cache_path):
         commits = list(reversed(commits))
 
     # Return the git directory to install, the filename used, and the commits
-    yield repo_path, filename, commits
+    yield repo_path_str, filename_str, commits
 
 
 @pytest.fixture
@@ -728,14 +727,13 @@ class RepoBuilder:
             "dependencies": dependencies,
         }
         template = spack.tengine.make_environment().get_template("mock-repository/package.pyt")
-        package_py = self._recipe_filename(name)
-        os.makedirs(os.path.dirname(package_py), exist_ok=True)
-        with open(package_py, "w", encoding="utf-8") as f:
-            f.write(template.render(context))
+        package_py_path = pathlib.Path(self._recipe_filename(name))
+        package_py_path.parent.mkdir(parents=True, exist_ok=True)
+        package_py_path.write_text(template.render(context), encoding="utf-8")
 
     def remove(self, name: str) -> None:
-        package_py = self._recipe_filename(name)
-        shutil.rmtree(os.path.dirname(package_py))
+        package_py_path = pathlib.Path(self._recipe_filename(name)) # Use Path for consistency
+        shutil.rmtree(package_py_path.parent) # Use parent of Path
 
     def _add_build_system(self) -> None:
         """Add spack_repo.<namespace>.build_systems.test_build_system with
@@ -744,10 +742,9 @@ class RepoBuilder:
             "mock-repository/build_system.pyt"
         )
         text = template.render({"build_system_name": self.build_system_name})
-        build_system_py = os.path.join(self.root, "build_systems", "test_build_system.py")
-        os.makedirs(os.path.dirname(build_system_py), exist_ok=True)
-        with open(build_system_py, "w", encoding="utf-8") as f:
-            f.write(text)
+        build_system_py_path = pathlib.Path(self.root) / "build_systems" / "test_build_system.py"
+        build_system_py_path.parent.mkdir(parents=True, exist_ok=True)
+        build_system_py_path.write_text(text, encoding="utf-8")
 
     def _recipe_filename(self, name: str) -> str:
         return os.path.join(
@@ -1332,9 +1329,8 @@ def mock_archive(request, tmp_path_factory: pytest.TempPathFactory):
     repodir = source_dir
 
     # Create the configure script
-    configure_path = str(source_dir / "configure")
-    with open(configure_path, "w", encoding="utf-8") as f:
-        f.write(
+    configure_file = source_dir / "configure"
+    configure_file.write_text(
             "#!/bin/sh\n"
             "prefix=$(echo $1 | sed 's/--prefix=//')\n"
             "cat > Makefile <<EOF\n"
@@ -1343,9 +1339,8 @@ def mock_archive(request, tmp_path_factory: pytest.TempPathFactory):
             "install:\n"
             "\tmkdir -p $prefix\n"
             "\ttouch $prefix/dummy_file\n"
-            "EOF\n"
-        )
-    os.chmod(configure_path, 0o755)
+            "EOF\n", encoding="utf-8")
+    configure_file.chmod(0o755)
 
     # Archive it
     with working_dir(str(tmpdir)):

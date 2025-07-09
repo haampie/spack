@@ -92,10 +92,8 @@ def test_repo_last_mtime(mock_packages):
 
 
 def test_repo_invisibles(mutable_mock_repo, extra_repo):
-    with open(
-        os.path.join(extra_repo[0].root, extra_repo[1], ".invisible"), "w", encoding="utf-8"
-    ):
-        pass
+    invisible_file_path = pathlib.Path(extra_repo[0].root) / extra_repo[1] / ".invisible"
+    invisible_file_path.touch()
     extra_repo[0].all_package_names()
 
 
@@ -731,14 +729,12 @@ def test_repo_descriptors_construct(tmp_path: pathlib.Path):
 
             elif action == "checkout":
                 # The spack-repo-index.yaml is optional; we test Spack reads from it.
-                with open(os.path.join("spack-repo-index.yaml"), "w", encoding="utf-8") as f:
-                    f.write(
+                pathlib.Path("spack-repo-index.yaml").write_text(
                         """\
 repo_index:
   paths:
   - spack_repo/foo
-"""
-                    )
+""", encoding="utf-8")
 
             return ""
 
@@ -819,14 +815,12 @@ def test_repo_descriptors_update(tmp_path: pathlib.Path):
 
             elif action == "checkout":
                 # The spack-repo-index.yaml is optional; we test Spack reads from it.
-                with open(os.path.join("spack-repo-index.yaml"), "w", encoding="utf-8") as f:
-                    f.write(
+                pathlib.Path("spack-repo-index.yaml").write_text(
                         """\
 repo_index:
   paths:
   - spack_repo/foo
-"""
-                    )
+""", encoding="utf-8")
 
             return ""
 

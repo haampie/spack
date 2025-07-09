@@ -98,28 +98,24 @@ def test_get_config_scope(mock_low_high_config):
 
 
 def test_get_config_scope_merged(mock_low_high_config):
-    low_path = mock_low_high_config.scopes["low"].path
-    high_path = mock_low_high_config.scopes["high"].path
+    low_path_obj = pathlib.Path(mock_low_high_config.scopes["low"].path)
+    high_path_obj = pathlib.Path(mock_low_high_config.scopes["high"].path)
 
-    fs.mkdirp(low_path)
-    fs.mkdirp(high_path)
+    fs.mkdirp(str(low_path_obj))
+    fs.mkdirp(str(high_path_obj))
 
-    with open(os.path.join(low_path, "repos.yaml"), "w", encoding="utf-8") as f:
-        f.write(
+    (low_path_obj / "repos.yaml").write_text(
             """\
 repos:
   repo3: repo3
-"""
-        )
+""", encoding="utf-8")
 
-    with open(os.path.join(high_path, "repos.yaml"), "w", encoding="utf-8") as f:
-        f.write(
+    (high_path_obj / "repos.yaml").write_text(
             """\
 repos:
   repo1: repo1
   repo2: repo2
-"""
-        )
+""", encoding="utf-8")
 
     assert (
         config("get", "repos").strip()
@@ -311,10 +307,9 @@ def test_config_add_from_file(mutable_empty_config, tmp_path: pathlib.Path):
     dirty: true
 """
 
-    file = str(tmp_path / "spack.yaml")
-    with open(file, "w", encoding="utf-8") as f:
-        f.write(contents)
-    config("add", "-f", file)
+    file_path = tmp_path / "spack.yaml"
+    file_path.write_text(contents, encoding="utf-8")
+    config("add", "-f", str(file_path))
     output = config("get", "config")
 
     assert (
@@ -332,10 +327,9 @@ def test_config_add_from_file_multiple(mutable_empty_config, tmp_path: pathlib.P
     template_dirs: [test1]
 """
 
-    file = str(tmp_path / "spack.yaml")
-    with open(file, "w", encoding="utf-8") as f:
-        f.write(contents)
-    config("add", "-f", file)
+    file_path = tmp_path / "spack.yaml"
+    file_path.write_text(contents, encoding="utf-8")
+    config("add", "-f", str(file_path))
     output = config("get", "config")
 
     assert (
@@ -354,10 +348,9 @@ def test_config_add_override_from_file(mutable_empty_config, tmp_path: pathlib.P
     template_dirs: [test2]
 """
 
-    file = str(tmp_path / "spack.yaml")
-    with open(file, "w", encoding="utf-8") as f:
-        f.write(contents)
-    config("add", "-f", file)
+    file_path = tmp_path / "spack.yaml"
+    file_path.write_text(contents, encoding="utf-8")
+    config("add", "-f", str(file_path))
     output = config("get", "config")
 
     assert (
@@ -375,10 +368,9 @@ def test_config_add_override_leaf_from_file(mutable_empty_config, tmp_path: path
     template_dirs:: [test2]
 """
 
-    file = str(tmp_path / "spack.yaml")
-    with open(file, "w", encoding="utf-8") as f:
-        f.write(contents)
-    config("add", "-f", file)
+    file_path = tmp_path / "spack.yaml"
+    file_path.write_text(contents, encoding="utf-8")
+    config("add", "-f", str(file_path))
     output = config("get", "config")
 
     assert (
@@ -400,10 +392,9 @@ def test_config_add_update_dict_from_file(mutable_empty_config, tmp_path: pathli
 """
 
     # create temp file and add it to config
-    file = str(tmp_path / "spack.yaml")
-    with open(file, "w", encoding="utf-8") as f:
-        f.write(contents)
-    config("add", "-f", file)
+    file_path = tmp_path / "spack.yaml"
+    file_path.write_text(contents, encoding="utf-8")
+    config("add", "-f", str(file_path))
 
     # get results
     output = config("get", "packages")
@@ -428,12 +419,11 @@ def test_config_add_invalid_file_fails(tmp_path: pathlib.Path):
 """
 
     # create temp file and add it to config
-    file = str(tmp_path / "spack.yaml")
-    with open(file, "w", encoding="utf-8") as f:
-        f.write(contents)
+    file_path = tmp_path / "spack.yaml"
+    file_path.write_text(contents, encoding="utf-8")
 
     with pytest.raises((spack.config.ConfigFormatError)):
-        config("add", "-f", file)
+        config("add", "-f", str(file_path))
 
 
 def test_config_remove_value(mutable_empty_config):
@@ -579,17 +569,16 @@ def test_config_update_not_needed(mutable_config):
 def test_config_update_can_handle_comments(mutable_config):
     # Create an outdated config file with comments
     scope = spack.config.default_modify_scope()
-    cfg_file = spack.config.CONFIG.get_config_filename(scope, "config")
-    with open(cfg_file, mode="w", encoding="utf-8") as f:
-        f.write(
+    cfg_file_str = spack.config.CONFIG.get_config_filename(scope, "config")
+    cfg_path = pathlib.Path(cfg_file_str)
+    cfg_path.write_text(
             """
 config:
   # system cmake in /usr
   install_tree: './foo'
   # Another comment after the outdated section
   install_hash_length: 7
-"""
-        )
+""", encoding="utf-8")
 
     # Try to update it, it should not raise errors
     config("update", "-y", "config")
@@ -599,8 +588,7 @@ config:
     assert "root" in data["install_tree"]
 
     # Check the comment is there
-    with open(cfg_file, encoding="utf-8") as f:
-        text = "".join(f.readlines())
+    text = cfg_path.read_text(encoding="utf-8")
 
     assert "# system cmake in /usr" in text
     assert "# Another comment after the outdated section" in text
@@ -609,14 +597,13 @@ config:
 @pytest.mark.regression("18050")
 def test_config_update_works_for_empty_paths(mutable_config):
     scope = spack.config.default_modify_scope()
-    cfg_file = spack.config.CONFIG.get_config_filename(scope, "config")
-    with open(cfg_file, mode="w", encoding="utf-8") as f:
-        f.write(
+    cfg_file_str = spack.config.CONFIG.get_config_filename(scope, "config")
+    cfg_path = pathlib.Path(cfg_file_str)
+    cfg_path.write_text(
             """
 config:
     install_tree: ''
-"""
-        )
+""", encoding="utf-8")
 
     # Try to update it, it should not raise errors
     output = config("update", "-y", "config")

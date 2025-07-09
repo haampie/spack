@@ -177,19 +177,18 @@ def test_user_view_path_is_not_canonicalized_in_yaml(tmp_path: pathlib.Path, con
 
 
 def test_environment_cant_modify_environments_root(tmp_path: pathlib.Path):
-    filename = str(tmp_path / "spack.yaml")
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(
+    yaml_path = tmp_path / "spack.yaml"
+    yaml_path.write_text(
             """\
  spack:
    config:
      environments_root: /a/black/hole
    view: false
    specs: []
- """
-        )
+ """, encoding="utf-8")
     with fs.working_dir(str(tmp_path)):
         with pytest.raises(ev.SpackEnvironmentError):
+            # Environment is initialized with the directory containing spack.yaml
             e = ev.Environment(str(tmp_path))
             ev.activate(e)
 
@@ -347,10 +346,10 @@ def test_environment_pickle(tmp_path: pathlib.Path):
 def test_error_on_nonempty_view_dir(tmp_path: pathlib.Path):
     """Error when the target is not an empty dir"""
     with fs.working_dir(str(tmp_path)):
-        os.mkdir("empty_dir")
-        os.mkdir("nonempty_dir")
-        with open(os.path.join("nonempty_dir", "file"), "wb"):
-            pass
+        (tmp_path / "empty_dir").mkdir()
+        nonempty_dir_path = tmp_path / "nonempty_dir"
+        nonempty_dir_path.mkdir()
+        (nonempty_dir_path / "file").write_bytes(b"")
         os.symlink("empty_dir", "symlinked_empty_dir")
         os.symlink("does_not_exist", "broken_link")
         os.symlink("broken_link", "file")

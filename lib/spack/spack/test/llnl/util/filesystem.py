@@ -935,14 +935,13 @@ def test_rename_dest_exists(tmp_path: pathlib.Path):
     def setup_test_files():
         a_dir = tmp_path / "a"
         a_dir.mkdir()
-        a = a_dir / "file1"
-        b = a_dir / "file2"
-        fs.touchp(str(a))
-        fs.touchp(str(b))
-        with open(a, "w", encoding="utf-8") as oa, open(b, "w", encoding="utf-8") as ob:
-            oa.write("I am A")
-            ob.write("I am B")
-        yield a, b
+        a_file = a_dir / "file1"  # Renamed to avoid conflict with outer 'a'
+        b_file = a_dir / "file2"  # Renamed to avoid conflict with outer 'b'
+        fs.touchp(str(a_file))
+        fs.touchp(str(b_file))
+        a_file.write_text("I am A", encoding="utf-8")
+        b_file.write_text("I am B", encoding="utf-8")
+        yield a_file, b_file
         shutil.rmtree(str(a_dir))
 
     @contextmanager
@@ -997,18 +996,16 @@ def test_rename_dest_exists(tmp_path: pathlib.Path):
     # test rename onto itself
     a_dir = tmp_path / "a"
     a_dir.mkdir()
-    a = a_dir / "file1"
-    b = a
-    fs.touchp(str(a))
-    with open(a, "w", encoding="utf-8") as oa:
-        oa.write("I am A")
-    fs.rename(str(a), str(b))
+    a_file_identity = a_dir / "file1"  # Renamed to avoid conflict
+    b_file_identity = a_file_identity      # Renamed to avoid conflict
+    fs.touchp(str(a_file_identity))
+    a_file_identity.write_text("I am A", encoding="utf-8")
+    fs.rename(str(a_file_identity), str(b_file_identity))
     # check a, or b, doesn't matter, same file
-    assert os.path.exists(a)
+    assert os.path.exists(a_file_identity)
     # ensure original file was not duplicated
     assert len(os.listdir(str(a_dir))) == 1
-    with open(a, "r", encoding="utf-8") as oa:
-        assert oa.read()
+    assert a_file_identity.read_text(encoding="utf-8") == "I am A" # Check content
     shutil.rmtree(str(a_dir))
 
     # test rename onto symlink
@@ -1313,9 +1310,8 @@ def test_find_input_types(tmp_path: pathlib.Path):
 def test_edit_in_place_through_temporary_file(tmp_path: pathlib.Path):
     (tmp_path / "example.txt").write_text("Hello")
     current_ino = os.stat(tmp_path / "example.txt").st_ino
-    with fs.edit_in_place_through_temporary_file(str(tmp_path / "example.txt")) as temporary:
-        os.unlink(temporary)
-        with open(temporary, "w", encoding="utf-8") as f:
-            f.write("World")
+    with fs.edit_in_place_through_temporary_file(str(tmp_path / "example.txt")) as temporary_str_path:
+        os.unlink(temporary_str_path)
+        pathlib.Path(temporary_str_path).write_text("World", encoding="utf-8")
     assert (tmp_path / "example.txt").read_text() == "World"
     assert os.stat(tmp_path / "example.txt").st_ino == current_ino

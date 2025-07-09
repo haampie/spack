@@ -800,17 +800,15 @@ class TestStage:
             assert stage.path == testpath
 
 
-def _create_files_from_tree(base, tree):
+def _create_files_from_tree(base_path: pathlib.Path, tree):
     for name, content in tree.items():
-        sub_base = os.path.join(base, name)
+        sub_path = base_path / name
         if isinstance(content, dict):
-            os.mkdir(sub_base)
-            _create_files_from_tree(sub_base, content)
+            sub_path.mkdir()
+            _create_files_from_tree(sub_path, content)
         else:
             assert (content is None) or (isinstance(content, str))
-            with open(sub_base, "w", encoding="utf-8") as f:
-                if content:
-                    f.write(content)
+            sub_path.write_text(content or "", encoding="utf-8")
 
 
 def _create_tree_from_dir_recursive(path):
@@ -831,10 +829,10 @@ def _create_tree_from_dir_recursive(path):
 @pytest.fixture
 def develop_path(tmp_path: pathlib.Path):
     dir_structure = {"a1": {"b1": None, "b2": "b1content"}, "a2": None}
-    srcdir = str(tmp_path / "test-src")
-    os.mkdir(srcdir)
-    _create_files_from_tree(srcdir, dir_structure)
-    yield dir_structure, srcdir
+    srcdir_path = tmp_path / "test-src"
+    srcdir_path.mkdir()
+    _create_files_from_tree(srcdir_path, dir_structure)
+    yield dir_structure, str(srcdir_path)
 
 
 class TestDevelopStage:

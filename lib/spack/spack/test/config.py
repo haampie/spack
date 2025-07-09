@@ -60,9 +60,8 @@ config_override_dict = {"config": {"aliases:": {"be": "build-env", "deps": "depe
 @pytest.fixture()
 def env_yaml(tmp_path: pathlib.Path):
     """Return a sample env.yaml for test purposes"""
-    env_yaml = str(tmp_path / "env.yaml")
-    with open(env_yaml, "w", encoding="utf-8") as f:
-        f.write(
+    env_yaml_path = tmp_path / "env.yaml"
+    env_yaml_path.write_text(
             """\
 spack:
     config:
@@ -73,9 +72,8 @@ spack:
             compiler: [ 'gcc@4.5.3' ]
     repos:
         z: /x/y/z
-"""
-        )
-    return env_yaml
+""", encoding="utf-8")
+    return str(env_yaml_path)
 
 
 def cross_plat_join(*pths):
@@ -762,17 +760,16 @@ def test_config_format_error(mutable_config):
         spack.config.set("compilers", {"bad": "data"}, scope="site")
 
 
-def get_config_error(filename, schema, yaml_string):
+def get_config_error(file_path: pathlib.Path, schema, yaml_string):
     """Parse a YAML string and return the resulting ConfigFormatError.
 
     Fail if there is no ConfigFormatError
     """
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(yaml_string)
+    file_path.write_text(yaml_string, encoding="utf-8")
 
     # parse and return error, or fail.
     try:
-        spack.config.read_config_file(filename, schema)
+        spack.config.read_config_file(str(file_path), schema)
     except spack.config.ConfigFormatError as e:
         return e
     else:
@@ -782,7 +779,7 @@ def get_config_error(filename, schema, yaml_string):
 def test_config_parse_dict_in_list(tmp_path: pathlib.Path):
     with fs.working_dir(str(tmp_path)):
         e = get_config_error(
-            "repos.yaml",
+            tmp_path / "repos.yaml",
             spack.schema.repos.schema,
             """\
 repos:
@@ -794,13 +791,15 @@ repos:
   d: https://foobar.com/baz
 """,
         )
+        # The error message might change to include the full path,
+        # so we check for the base filename and the line number part.
         assert "repos.yaml:2" in str(e)
 
 
 def test_config_parse_str_not_bool(tmp_path: pathlib.Path):
     with fs.working_dir(str(tmp_path)):
         e = get_config_error(
-            "config.yaml",
+            tmp_path / "config.yaml",
             spack.schema.config.schema,
             """\
 config:
@@ -815,7 +814,7 @@ config:
 def test_config_parse_list_in_dict(tmp_path: pathlib.Path):
     with fs.working_dir(str(tmp_path)):
         e = get_config_error(
-            "mirrors.yaml",
+            tmp_path / "mirrors.yaml",
             spack.schema.mirrors.schema,
             """\
 mirrors:
@@ -884,15 +883,13 @@ def test_alternate_override(monkeypatch):
 
 
 def test_immutable_scope(tmp_path: pathlib.Path):
-    config_yaml = str(tmp_path / "config.yaml")
-    with open(config_yaml, "w", encoding="utf-8") as f:
-        f.write(
+    config_yaml_path = tmp_path / "config.yaml"
+    config_yaml_path.write_text(
             """\
 config:
     install_tree:
       root: dummy_tree_value
-"""
-        )
+""", encoding="utf-8")
     scope = spack.config.DirectoryConfigScope("test", str(tmp_path), writable=False)
 
     data = scope.get_section("config")
@@ -929,9 +926,8 @@ def test_single_file_scope_section_override(tmp_path: pathlib.Path, config):
     ``packages`` section is intended to override all other scopes (using the
     "::" syntax).
     """
-    env_yaml = str(tmp_path / "env.yaml")
-    with open(env_yaml, "w", encoding="utf-8") as f:
-        f.write(
+    env_yaml_path = tmp_path / "env.yaml"
+    env_yaml_path.write_text(
             """\
 spack:
     config:
@@ -941,11 +937,10 @@ spack:
             target: [ x86_64 ]
     repos:
         z: /x/y/z
-"""
-        )
+""", encoding="utf-8")
 
     scope = spack.config.SingleFileScope(
-        "env", env_yaml, spack.schema.env.schema, yaml_path=["spack"]
+        "env", str(env_yaml_path), spack.schema.env.schema, yaml_path=["spack"]
     )
 
     with spack.config.override(scope):
@@ -1289,12 +1284,11 @@ def test_config_file_read_perms_failure(tmp_path: pathlib.Path, mutable_empty_co
 def test_config_file_read_invalid_yaml(tmp_path: pathlib.Path, mutable_empty_config):
     """Test reading a configuration file with invalid (unparseable) YAML
     raises a ConfigFileError."""
-    filename = join_path(str(tmp_path), "test.yaml")
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write("spack:\nview")
+    file_path = tmp_path / "test.yaml"
+    file_path.write_text("spack:\nview", encoding="utf-8")
 
     with pytest.raises(spack.config.ConfigFileError, match="parsing YAML"):
-        spack.config.read_config_file(filename)
+        spack.config.read_config_file(str(file_path))
 
 
 @pytest.mark.parametrize(

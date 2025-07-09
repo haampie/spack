@@ -28,48 +28,42 @@ pytestmark = pytest.mark.not_on_windows(
 
 
 def test_version_git_nonsense_output(tmp_path: pathlib.Path, working_env, monkeypatch):
-    git = tmp_path / "git"
-    with open(git, "w", encoding="utf-8") as f:
-        f.write(
+    git_path = tmp_path / "git"
+    git_path.write_text(
             """#!/bin/sh
 echo --|not a hash|----
-"""
-        )
-    fs.set_executable(str(git))
+""", encoding="utf-8")
+    fs.set_executable(str(git_path))
 
-    monkeypatch.setattr(spack.util.git, "git", lambda: exe.which(str(git)))
+    monkeypatch.setattr(spack.util.git, "git", lambda: exe.which(str(git_path)))
     assert spack.spack_version == spack.get_version()
 
 
 def test_version_git_fails(tmp_path: pathlib.Path, working_env, monkeypatch):
-    git = tmp_path / "git"
-    with open(git, "w", encoding="utf-8") as f:
-        f.write(
+    git_path = tmp_path / "git"
+    git_path.write_text(
             """#!/bin/sh
 echo 26552533be04e83e66be2c28e0eb5011cb54e8fa
 exit 1
-"""
-        )
-    fs.set_executable(str(git))
+""", encoding="utf-8")
+    fs.set_executable(str(git_path))
 
-    monkeypatch.setattr(spack.util.git, "git", lambda: exe.which(str(git)))
+    monkeypatch.setattr(spack.util.git, "git", lambda: exe.which(str(git_path)))
     assert spack.spack_version == spack.get_version()
 
 
 def test_git_sha_output(tmp_path: pathlib.Path, working_env, monkeypatch):
-    git = tmp_path / "git"
+    git_path = tmp_path / "git"
     sha = "26552533be04e83e66be2c28e0eb5011cb54e8fa"
-    with open(git, "w", encoding="utf-8") as f:
-        f.write(
+    git_path.write_text(
             """#!/bin/sh
 echo {0}
 """.format(
                 sha
-            )
-        )
-    fs.set_executable(str(git))
+            ), encoding="utf-8")
+    fs.set_executable(str(git_path))
 
-    monkeypatch.setattr(spack.util.git, "git", lambda: exe.which(str(git)))
+    monkeypatch.setattr(spack.util.git, "git", lambda: exe.which(str(git_path)))
     expected = "{0} ({1})".format(spack.spack_version, sha)
     assert expected == spack.get_version()
 
@@ -95,16 +89,13 @@ def test_main_calls_get_version(capsys, working_env, monkeypatch):
 
 
 def test_get_version_bad_git(tmp_path: pathlib.Path, working_env, monkeypatch):
-    bad_git = str(tmp_path / "git")
-    with open(bad_git, "w", encoding="utf-8") as f:
-        f.write(
-            """#!/bin/sh
+    bad_git_path = tmp_path / "git"
+    bad_git_path.write_text("""#!/bin/sh
 exit 1
-"""
-        )
-    fs.set_executable(bad_git)
+""", encoding="utf-8")
+    fs.set_executable(str(bad_git_path))
 
-    monkeypatch.setattr(spack.util.git, "git", lambda: exe.which(bad_git))
+    monkeypatch.setattr(spack.util.git, "git", lambda: exe.which(str(bad_git_path)))
     assert spack.spack_version == spack.get_version()
 
 
@@ -128,15 +119,13 @@ def test_bad_command_line_scopes(tmp_path: pathlib.Path, config):
 
 
 def test_add_command_line_scopes(tmp_path: pathlib.Path, mutable_config):
-    config_yaml = str(tmp_path / "config.yaml")
-    with open(config_yaml, "w", encoding="utf-8") as f:
-        f.write(
+    config_yaml_path = tmp_path / "config.yaml"
+    config_yaml_path.write_text(
             """\
 config:
     verify_ssl: False
     dirty: False
-"""
-        )
+""", encoding="utf-8")
 
     spack.main.add_command_line_scopes(mutable_config, [str(tmp_path)], fail_if_add_env)
     assert mutable_config.get("config:verify_ssl") is False
@@ -157,15 +146,14 @@ spack:
 """
         )
 
-    with open(tmp_path / "spack.yaml", "w", encoding="utf-8") as f:
-        f.write(
+    spack_yaml_path = tmp_path / "spack.yaml"
+    spack_yaml_path.write_text(
             """\
 spack:
   config:
     install_tree:
       root: /tmp/second
-"""
-        )
+""", encoding="utf-8")
 
     config = spack.config.Configuration()
     spack.main.add_command_line_scopes(config, ["example", str(tmp_path)], fail_if_add_env)
@@ -181,9 +169,8 @@ spack:
 
 
 def test_include_cfg(mock_low_high_config, write_config_file, tmp_path: pathlib.Path):
-    cfg1_path = str(tmp_path / "include1.yaml")
-    with open(cfg1_path, "w", encoding="utf-8") as f:
-        f.write(
+    cfg1_path_obj = tmp_path / "include1.yaml"
+    cfg1_path_obj.write_text(
             """\
 config:
   verify_ssl: False
@@ -192,8 +179,8 @@ packages:
   python:
     require:
     - spec: "@3.11:"
-"""
-        )
+""", encoding="utf-8")
+    cfg1_path = str(cfg1_path_obj)
 
     def python_cfg(_spec):
         return f"""\
@@ -204,10 +191,9 @@ packages:
 """
 
     def write_python_cfg(_spec, _cfg_name):
-        cfg_path = str(tmp_path / _cfg_name)
-        with open(cfg_path, "w", encoding="utf-8") as f:
-            f.write(python_cfg(_spec))
-        return cfg_path
+        cfg_path_obj = tmp_path / _cfg_name
+        cfg_path_obj.write_text(python_cfg(_spec), encoding="utf-8")
+        return str(cfg_path_obj)
 
     # This config will not be included
     cfg2_path = write_python_cfg("+shared", "include2.yaml")
@@ -216,10 +202,10 @@ packages:
     # namely $os; we expect that Spack resolves these variables
     # into the actual path of the config
     this_os = spack.platforms.host().default_os
-    cfg3_expanded_path = os.path.join(str(tmp_path), f"{this_os}", "include3.yaml")
-    fs.mkdirp(os.path.dirname(cfg3_expanded_path))
-    with open(cfg3_expanded_path, "w", encoding="utf-8") as f:
-        f.write(python_cfg("+ssl"))
+    cfg3_dir = tmp_path / f"{this_os}"
+    cfg3_dir.mkdir(parents=True, exist_ok=True)
+    cfg3_path_obj = cfg3_dir / "include3.yaml"
+    cfg3_path_obj.write_text(python_cfg("+ssl"), encoding="utf-8")
     cfg3_abstract_path = os.path.join(str(tmp_path), "$os", "include3.yaml")
 
     # This will be included unconditionally
@@ -309,9 +295,8 @@ def test_include_recurse_diamond(tmp_path: pathlib.Path, mutable_config, child, 
     configs_root = tmp_path / "configs"
     configs_root.mkdir()
 
-    def write(path, contents):
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(contents)
+    def write(path: pathlib.Path, contents: str):  # Added type hints
+        path.write_text(contents, encoding="utf-8")
 
     def debug_contents(value):
         return f"config:\n  debug: {value}\n"

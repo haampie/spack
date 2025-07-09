@@ -18,32 +18,36 @@ from spack.hooks.sbang import filter_shebangs_in_directory
 
 
 def test_read_unicode(tmp_path: pathlib.Path, working_env):
-    with fs.working_dir(str(tmp_path)):
-        script_name = "print_unicode.py"
-        script_args: List[str] = []
-        # read the unicode back in and see whether things work
-        if sys.platform == "win32":
-            script = ex.Executable("%s" % (sys.executable))
-            script_args.append(script_name)
-        else:
-            script = ex.Executable("./%s" % script_name)
-
-        os.environ["LD_LIBRARY_PATH"] = spack.main.spack_ld_library_path
-        # make a script that prints some unicode
-        with open(script_name, "w", encoding="utf-8") as f:
-            f.write(
-                """#!{0}
+    script_file: pathlib.Path = tmp_path / "print_unicode.py"
+    script_content = f"""#!{sys.executable}
 print(u'\\xc3')
-""".format(
-                    sys.executable
-                )
-            )
+"""
+    script_file.write_text(script_content, encoding="utf-8")
+    fs.set_executable(str(script_file))
 
-        # make it executable
-        fs.set_executable(script_name)
-        filter_shebangs_in_directory(".", [script_name])
+    original_ld_path = os.environ.get("LD_LIBRARY_PATH")
+    new_ld_path_parts = [spack.main.spack_ld_library_path]
+    if original_ld_path:
+        new_ld_path_parts.append(original_ld_path)
+    os.environ["LD_LIBRARY_PATH"] = os.pathsep.join(new_ld_path_parts)
 
-        assert "\xc3" == script(*script_args, output=str).strip()
+    try:
+        with fs.working_dir(str(tmp_path)):
+            filter_shebangs_in_directory(".", [script_file.name])
+
+            if sys.platform == "win32":
+                script_to_run = ex.Executable(sys.executable)
+                args_for_script = [script_file.name]
+            else:
+                script_to_run = ex.Executable(f"./{script_file.name}")
+                args_for_script = []
+
+            assert "\xc3" == script_to_run(*args_for_script, output=str).strip()
+    finally:
+        if original_ld_path is None:
+            os.environ.pop("LD_LIBRARY_PATH", None)
+        else:
+            os.environ["LD_LIBRARY_PATH"] = original_ld_path
 
 
 def test_which_relative_path_with_slash(tmp_path: pathlib.Path, working_env):
@@ -120,14 +124,12 @@ def make_script_exe(tmp_path: pathlib.Path):
         pytest.skip("Can't test #!/bin/sh scripts on Windows.")
 
     def make_script(name, contents):
-        script = tmp_path / f"{name}.sh"
-        with script.open("w", encoding="utf-8") as f:
-            f.write("#!/bin/sh\n")
-            f.write(contents)
-            f.write("\n")
-        fs.set_executable(str(script))
+        script_path = tmp_path / f"{name}.sh"
+        script_text = f"#!/bin/sh\n{contents}\n"
+        script_path.write_text(script_text, encoding="utf-8")
+        fs.set_executable(str(script_path))
 
-        return ex.Executable(str(script))
+        return ex.Executable(str(script_path))
 
     return make_script
 
