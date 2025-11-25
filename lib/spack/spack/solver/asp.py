@@ -73,14 +73,10 @@ from .core import (
     AspVar,
     NodeArgument,
     SourceContext,
-    ast_sym,
-    ast_type,
     clingo,
     clingo_cffi,
     extract_args,
     fn,
-    parse_files,
-    parse_term,
     using_libc_compatibility,
 )
 from .input_analysis import create_counter, create_graph_analyzer
@@ -1206,12 +1202,7 @@ class PyclingoDriver:
             control_files.append("splices.lp")
 
         timer.start("setup")
-        problem_builder = setup.setup(
-            specs,
-            reuse=reuse,
-            allow_deprecated=allow_deprecated,
-            _use_unsat_cores=output.out is None,
-        )
+        problem_builder = setup.setup(specs, reuse=reuse, allow_deprecated=allow_deprecated)
         timer.stop("setup")
 
         timer.start("ordering")
@@ -2939,7 +2930,6 @@ class SpackSolverSetup:
         *,
         reuse: Optional[List[spack.spec.Spec]] = None,
         allow_deprecated: bool = False,
-        _use_unsat_cores: bool = True,
     ) -> "ProblemInstanceBuilder":
         """Generate an ASP program with relevant constraints for specs.
 
@@ -2951,7 +2941,6 @@ class SpackSolverSetup:
             specs: list of Specs to solve
             reuse: list of concrete specs that can be reused
             allow_deprecated: if True adds deprecated versions into the solve
-            _use_unsat_cores: if True, use unsat cores for internal errors
 
         Return:
             A ProblemInstanceBuilder populated with facts and rules for an ASP solve.
@@ -3107,9 +3096,6 @@ class SpackSolverSetup:
         self.gen.h1("Target Constraints")
         self.define_target_constraints()
 
-        self.gen.h1("Internal errors")
-        self.internal_errors(_use_unsat_cores=_use_unsat_cores)
-
         return self.gen
 
     def compiler_mixing(self):
@@ -3123,27 +3109,6 @@ class SpackSolverSetup:
         if isinstance(should_mix, list):
             for pkg_name in should_mix:
                 self.gen.fact(fn.allow_mixing(pkg_name))
-
-    def internal_errors(self, *, _use_unsat_cores: bool):
-        parent_dir = os.path.dirname(__file__)
-
-        def visit(node):
-            if ast_type(node) == clingo().ast.ASTType.Rule:
-                for term in node.body:
-                    if ast_type(term) == clingo().ast.ASTType.Literal:
-                        if ast_type(term.atom) == clingo().ast.ASTType.SymbolicAtom:
-                            name = ast_sym(term.atom).name
-                            if name == "internal_error":
-                                arg = ast_sym(ast_sym(term.atom).arguments[0])
-                                symbol = AspFunction(name)(arg.string)
-                                if _use_unsat_cores:
-                                    self.assumptions.append((parse_term(str(symbol)), True))
-                                    self.gen.asp_problem.append(f"{{{symbol}}}.")
-                                else:
-                                    self.gen.asp_problem.append(f"{symbol}.")
-
-        path = os.path.join(parent_dir, "concretize.lp")
-        parse_files([path], visit)
 
     def define_runtime_constraints(self) -> List[spack.spec.Spec]:
         """Define the constraints to be imposed on the runtimes, and returns a list of
