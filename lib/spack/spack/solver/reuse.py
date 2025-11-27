@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import enum
 import functools
-from typing import Any, Callable, List, Mapping, Tuple
+from typing import Any, Callable, List, Mapping
 
 import spack.binary_distribution
 import spack.config
@@ -20,7 +20,7 @@ from spack.externals import (
     extract_dicts_from_configuration,
 )
 
-from .runtimes import all_libcs, external_config_with_implicit_externals
+from .runtimes import all_libcs
 
 
 class SpecFilter:
@@ -206,10 +206,9 @@ class ReuseStrategy(enum.Enum):
 
 
 def _create_external_parser(
-    configuration: spack.config.Configuration,
-) -> Tuple[ExternalSpecsParser, Any]:
-    packages_yaml = external_config_with_implicit_externals(configuration)
-    external_dicts = extract_dicts_from_configuration(packages_yaml)
+    configuration: spack.config.Configuration, packages_with_externals: Any
+) -> ExternalSpecsParser:
+    external_dicts = extract_dicts_from_configuration(packages_with_externals)
     result = configuration.get("concretizer:externals:completion")
     if result == "default_variants":
         complete_fn = complete_variants_and_architecture
@@ -217,18 +216,19 @@ def _create_external_parser(
         complete_fn = complete_architecture
     else:
         raise ValueError(f"Unknown value for concretizer:externals:completion: {result!r}")
-    return ExternalSpecsParser(external_dicts, complete_node=complete_fn), packages_yaml
+    return ExternalSpecsParser(external_dicts, complete_node=complete_fn)
 
 
 class ReusableSpecsSelector:
     """Selects specs that can be reused during concretization."""
 
-    def __init__(self, configuration: spack.config.Configuration) -> None:
+    def __init__(
+        self, configuration: spack.config.Configuration, parser: ExternalSpecsParser, packages: Any
+    ) -> None:
         self.configuration = configuration
         self.store = spack.store.create(configuration)
         self.reuse_strategy = ReuseStrategy.ROOTS
 
-        parser, packages = _create_external_parser(configuration)
         reuse_yaml = self.configuration.get("concretizer:reuse", False)
         self.reuse_sources = []
         if not isinstance(reuse_yaml, Mapping):

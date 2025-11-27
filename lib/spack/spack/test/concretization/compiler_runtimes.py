@@ -17,12 +17,14 @@ import spack.solver.asp
 import spack.spec
 from spack.environment.environment import ViewDescriptor
 from spack.solver.reuse import SpecFilter, _create_external_parser
+from spack.solver.runtimes import external_config_with_implicit_externals
 from spack.version import Version
 
 
 def _concretize_with_reuse(*, root_str, reused_str, config):
     reused_spec = spack.concretize.concretize_one(reused_str)
-    parser, packages_yaml = _create_external_parser(config)
+    packages_yaml = external_config_with_implicit_externals(config)
+    parser = _create_external_parser(config, packages_yaml)
     external_specs = SpecFilter.from_packages_yaml(
         parser=parser, packages=packages_yaml, include=[], exclude=[]
     ).selected_specs()

@@ -44,6 +44,7 @@ import spack.variant as vt
 from spack.externals import ExternalDependencyError
 from spack.installer import PackageInstaller
 from spack.solver.reuse import SpecFilter, _create_external_parser
+from spack.solver.runtimes import external_config_with_implicit_externals
 from spack.spec import Spec
 from spack.test.conftest import RepoBuilder
 from spack.version import Version, VersionList, ver
@@ -1988,7 +1989,8 @@ spack:
         ]
         root_spec = Spec("pkg-a foobar=bar")
 
-        parser, packages_config = _create_external_parser(mutable_config)
+        packages_config = external_config_with_implicit_externals(mutable_config)
+        parser = _create_external_parser(mutable_config, packages_config)
         external_specs = SpecFilter.from_packages_yaml(
             parser=parser, packages=packages_config, include=[], exclude=[]
         ).selected_specs()
@@ -2317,7 +2319,8 @@ packages:
         know a concretization exists.
         """
         specs = [Spec(s) for s in specs]
-        parser, packages_config = _create_external_parser(mutable_config)
+        packages_config = external_config_with_implicit_externals(mutable_config)
+        parser = _create_external_parser(mutable_config, packages_config)
         external_specs = SpecFilter.from_packages_yaml(
             parser=parser, packages=packages_config, include=[], exclude=[]
         ).selected_specs()
@@ -3167,7 +3170,13 @@ def test_filtering_reused_specs(
     """Tests that we can select which specs are to be reused, using constraints as filters"""
     # Assume all specs have a runtime dependency
     mutable_config.set("concretizer:reuse", reuse_yaml)
-    selector = spack.solver.asp.ReusableSpecsSelector(mutable_config)
+    packages_with_externals = spack.solver.runtimes.external_config_with_implicit_externals(
+        mutable_config
+    )
+    parser = spack.solver.reuse._create_external_parser(mutable_config, packages_with_externals)
+    selector = spack.solver.asp.ReusableSpecsSelector(
+        mutable_config, parser, packages_with_externals
+    )
     specs = selector.reusable_specs(roots)
 
     assert len(specs) == expected_length
@@ -3202,7 +3211,13 @@ def test_selecting_reused_sources(
     """Tests that we can turn on/off sources of reusable specs"""
     # Assume all specs have a runtime dependency
     mutable_config.set("concretizer:reuse", reuse_yaml)
-    selector = spack.solver.asp.ReusableSpecsSelector(mutable_config)
+    packages_with_externals = spack.solver.runtimes.external_config_with_implicit_externals(
+        mutable_config
+    )
+    parser = spack.solver.reuse._create_external_parser(mutable_config, packages_with_externals)
+    selector = spack.solver.asp.ReusableSpecsSelector(
+        mutable_config, parser, packages_with_externals
+    )
     specs = selector.reusable_specs(["mpileaks"])
     assert len(specs) == expected_length
 

@@ -18,6 +18,7 @@ import spack.spec
 import spack.store
 from spack.cmd.common import arguments
 from spack.solver.reuse import _create_external_parser
+from spack.solver.runtimes import external_config_with_implicit_externals
 
 from ..enums import InstallRecordStatus
 
@@ -331,7 +332,8 @@ def _find_query(args, env):
     q_args = query_arguments(args)
     concretized_but_not_installed = []
     if args.show_configured_externals:
-        parser, packages_config = _create_external_parser(spack.config.CONFIG)
+        packages_config = external_config_with_implicit_externals(spack.config.CONFIG)
+        parser = _create_external_parser(spack.config.CONFIG, packages_config)
         results = spack.solver.reuse.SpecFilter.from_packages_yaml(
             parser=parser, packages=packages_config, include=[], exclude=[]
         ).selected_specs()

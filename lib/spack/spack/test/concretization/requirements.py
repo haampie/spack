@@ -21,6 +21,7 @@ import spack.version
 from spack.installer import PackageInstaller
 from spack.solver.asp import InternalConcretizerError, UnsatisfiableSpecError
 from spack.solver.reuse import SpecFilter, _create_external_parser
+from spack.solver.runtimes import external_config_with_implicit_externals
 from spack.spec import Spec
 from spack.util.url import path_to_file_url
 
@@ -1320,7 +1321,8 @@ def test_requirements_on_compilers_and_reuse(
     reused_nodes = list(reused_spec.traverse())
     update_packages_config(packages_yaml)
     root_specs = [Spec(input_spec)]
-    parser, packages_config = _create_external_parser(mutable_config)
+    packages_config = external_config_with_implicit_externals(mutable_config)
+    parser = _create_external_parser(mutable_config, packages_config)
     external_specs = SpecFilter.from_packages_yaml(
         parser=parser, packages=packages_config, include=[], exclude=[]
     ).selected_specs()
@@ -1506,7 +1508,8 @@ packages:
     update_packages_config(packages_yaml)
     initial_mpileaks = spack.concretize.concretize_one("mpileaks+debug")
     reused_nodes = list(initial_mpileaks.traverse())
-    parser, packages_config = _create_external_parser(mutable_config)
+    packages_config = external_config_with_implicit_externals(mutable_config)
+    parser = _create_external_parser(mutable_config, packages_config)
     external_specs = SpecFilter.from_packages_yaml(
         parser=parser, packages=packages_config, include=[], exclude=[]
     ).selected_specs()
