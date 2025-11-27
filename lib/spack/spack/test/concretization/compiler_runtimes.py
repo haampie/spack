@@ -16,13 +16,16 @@ import spack.repo
 import spack.solver.asp
 import spack.spec
 from spack.environment.environment import ViewDescriptor
-from spack.solver.reuse import SpecFilter
+from spack.solver.reuse import SpecFilter, _create_external_parser
 from spack.version import Version
 
 
 def _concretize_with_reuse(*, root_str, reused_str, config):
     reused_spec = spack.concretize.concretize_one(reused_str)
-    external_specs = SpecFilter.from_packages_yaml(config, include=[], exclude=[]).selected_specs()
+    parser, packages_yaml = _create_external_parser(config)
+    external_specs = SpecFilter.from_packages_yaml(
+        parser=parser, packages=packages_yaml, include=[], exclude=[]
+    ).selected_specs()
     setup = spack.solver.asp.SpackSolverSetup(tests=False)
     driver = spack.solver.asp.PyclingoDriver()
     result, _, _ = driver.solve(

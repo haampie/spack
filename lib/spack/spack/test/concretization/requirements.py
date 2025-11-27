@@ -20,7 +20,7 @@ import spack.util.spack_yaml as syaml
 import spack.version
 from spack.installer import PackageInstaller
 from spack.solver.asp import InternalConcretizerError, UnsatisfiableSpecError
-from spack.solver.reuse import SpecFilter
+from spack.solver.reuse import SpecFilter, _create_external_parser
 from spack.spec import Spec
 from spack.util.url import path_to_file_url
 
@@ -1320,8 +1320,9 @@ def test_requirements_on_compilers_and_reuse(
     reused_nodes = list(reused_spec.traverse())
     update_packages_config(packages_yaml)
     root_specs = [Spec(input_spec)]
+    parser, packages_config = _create_external_parser(mutable_config)
     external_specs = SpecFilter.from_packages_yaml(
-        mutable_config, include=[], exclude=[]
+        parser=parser, packages=packages_config, include=[], exclude=[]
     ).selected_specs()
 
     with spack.config.override("concretizer:reuse", True):
@@ -1505,8 +1506,9 @@ packages:
     update_packages_config(packages_yaml)
     initial_mpileaks = spack.concretize.concretize_one("mpileaks+debug")
     reused_nodes = list(initial_mpileaks.traverse())
+    parser, packages_config = _create_external_parser(mutable_config)
     external_specs = SpecFilter.from_packages_yaml(
-        mutable_config, include=[], exclude=[]
+        parser=parser, packages=packages_config, include=[], exclude=[]
     ).selected_specs()
 
     # Ask for just "mpileaks" and check the spec is reused

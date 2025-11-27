@@ -43,7 +43,7 @@ import spack.util.spack_yaml as syaml
 import spack.variant as vt
 from spack.externals import ExternalDependencyError
 from spack.installer import PackageInstaller
-from spack.solver.reuse import SpecFilter
+from spack.solver.reuse import SpecFilter, _create_external_parser
 from spack.spec import Spec
 from spack.test.conftest import RepoBuilder
 from spack.version import Version, VersionList, ver
@@ -1988,8 +1988,9 @@ spack:
         ]
         root_spec = Spec("pkg-a foobar=bar")
 
+        parser, packages_config = _create_external_parser(mutable_config)
         external_specs = SpecFilter.from_packages_yaml(
-            mutable_config, include=[], exclude=[]
+            parser=parser, packages=packages_config, include=[], exclude=[]
         ).selected_specs()
         with spack.config.override("concretizer:reuse", True):
             solver = spack.solver.asp.Solver()
@@ -2316,8 +2317,9 @@ packages:
         know a concretization exists.
         """
         specs = [Spec(s) for s in specs]
+        parser, packages_config = _create_external_parser(mutable_config)
         external_specs = SpecFilter.from_packages_yaml(
-            mutable_config, include=[], exclude=[]
+            parser=parser, packages=packages_config, include=[], exclude=[]
         ).selected_specs()
         solver = spack.solver.asp.Solver()
         setup = spack.solver.asp.SpackSolverSetup()
