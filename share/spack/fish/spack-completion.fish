@@ -245,12 +245,8 @@ function __fish_spack_repos
     spack repo list --names
 end
 
-function __fish_spack_scopes
-    # TODO: how to list all scopes?
-    set -l scope system site user defaults
-    set -l platform cray darwin linux test
-
-    string join \n $scope
+function __fish_spack_config_scopes
+    spack config scopes
 end
 
 function __fish_spack_specs

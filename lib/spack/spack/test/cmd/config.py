@@ -9,6 +9,7 @@ import re
 
 import pytest
 
+import spack
 import spack.concretize
 import spack.config
 import spack.database
@@ -359,7 +360,7 @@ def test_config_with_c_argument(mutable_empty_config):
     assert config_file in args.config_vars
 
     # Add the path to the config
-    config("add", args.config_vars[0], scope="command_line")
+    config("add", args.config_vars[0])
     output = config("get", "config")
     assert "config:\n  install_tree:\n    root: /path/to/config.yaml" in output
 

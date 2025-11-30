@@ -7,6 +7,7 @@ import re
 
 import pytest
 
+import spack
 import spack.concretize
 import spack.config
 import spack.main

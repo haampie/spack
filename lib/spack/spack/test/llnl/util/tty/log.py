@@ -85,7 +85,7 @@ def test_log_python_output_and_echo_output(capfd, tmp_path: pathlib.Path):
         assert capfd.readouterr()[0] == "force echo\n"
 
 
-def test_log_output_with_control_codes(capfd, tmp_path: pathlib.Path):
+def test_log_output_with_control_codes(tmp_path: pathlib.Path):
     with working_dir(str(tmp_path)):
         with log.log_output("foo.txt"):
             # Print a sample of formatted GCC error output
@@ -133,7 +133,7 @@ def test_log_output_with_filter(capfd, tmp_path: pathlib.Path):
     assert capfd.readouterr()[0] == "bar blah\nblah bar\nbar bar\n"
 
 
-def test_log_output_with_filter_and_append(capfd, tmp_path: pathlib.Path):
+def test_log_output_with_filter_and_append(tmp_path: pathlib.Path):
     with working_dir(str(tmp_path)):
         with log.log_output("foo.txt", filter_fn=_log_filter_fn):
             print("foo blah")
@@ -151,21 +151,20 @@ def test_log_output_with_filter_and_append(capfd, tmp_path: pathlib.Path):
 
 
 @pytest.mark.skipif(not which("echo"), reason="needs echo command")
-def test_log_subproc_and_echo_output_no_capfd(capfd, tmp_path: pathlib.Path):
+def test_log_subproc_and_echo_output_no_capfd(tmp_path: pathlib.Path):
     echo = which("echo", required=True)
 
     # this is split into two tests because capfd interferes with the
     # output logged to file when using a subprocess.  We test the file
     # here, and echoing in test_log_subproc_and_echo_output_capfd below.
-    with capfd.disabled():
-        with working_dir(str(tmp_path)):
-            with log.log_output("foo.txt") as logger:
-                with logger.force_echo():
-                    echo("echo")
-                print("logged")
+    with working_dir(str(tmp_path)):
+        with log.log_output("foo.txt") as logger:
+            with logger.force_echo():
+                echo("echo")
+            print("logged")
 
-            with open("foo.txt", encoding="utf-8") as f:
-                assert f.read() == "echo\nlogged\n"
+        with open("foo.txt", encoding="utf-8") as f:
+            assert f.read() == "echo\nlogged\n"
 
 
 @pytest.mark.skipif(not which("echo"), reason="needs echo command")

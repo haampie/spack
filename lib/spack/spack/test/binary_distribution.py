@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, NamedTuple, Optional
 
 import pytest
 
+import spack
 import spack.binary_distribution
 import spack.concretize
 import spack.config

@@ -6,6 +6,7 @@ import pathlib
 
 import pytest
 
+import spack
 import spack.concretize
 import spack.deptypes as dt
 import spack.environment as ev

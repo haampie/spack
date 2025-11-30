@@ -10,13 +10,15 @@ import textwrap
 
 import pytest
 
+import spack
 import spack.cmd
 import spack.cmd.commands
+import spack.config
 import spack.main
 import spack.paths
 from spack.cmd.commands import _dest_to_fish_complete, _positional_to_subroutine
 
-commands = spack.main.SpackCommand("commands", subprocess=True)
+commands = spack.main.SpackCommand("commands")
 
 parser = spack.main.make_argument_parser()
 spack.main.add_all_commands(parser)
@@ -59,22 +61,29 @@ def test_subcommands():
     assert "spack compiler add" in out2
 
 
-@pytest.mark.not_on_windows("subprocess not supported on Windows")
-def test_override_alias():
+def test_alias_overrides_builtin(mutable_config: spack.config.Configuration, capfd):
     """Test that spack commands cannot be overriden by aliases."""
-
-    install = spack.main.SpackCommand("install", subprocess=True)
-    instal = spack.main.SpackCommand("instal", subprocess=True)
-
-    out = install(fail_on_error=False, global_args=["-c", "config:aliases:install:find"])
-    assert "install requires a package argument or active environment" in out
+    mutable_config.set("config:aliases", {"install": "find"})
+    cmd, args = spack.main.resolve_alias("install", ["install", "-v"])
+    assert cmd == "install" and args == ["install", "-v"]
+    out = capfd.readouterr().err
     assert "Alias 'install' (mapping to 'find') attempts to override built-in command" in out
 
-    out = install(fail_on_error=False, global_args=["-c", "config:aliases:foo bar:find"])
+
+def test_alias_with_space(mutable_config: spack.config.Configuration, capfd):
+    """Test that spack aliases with spaces are rejected."""
+    mutable_config.set("config:aliases", {"foo bar": "find"})
+    cmd, args = spack.main.resolve_alias("install", ["install", "-v"])
+    assert cmd == "install" and args == ["install", "-v"]
+    out = capfd.readouterr().err
     assert "Alias 'foo bar' (mapping to 'find') contains a space, which is not supported" in out
 
-    out = instal(fail_on_error=False, global_args=["-c", "config:aliases:instal:find"])
-    assert "install requires a package argument or active environment" not in out
+
+def test_alias_resolves_properly(mutable_config: spack.config.Configuration):
+    """Test that spack aliases resolve properly."""
+    mutable_config.set("config:aliases", {"my_find": "find"})
+    cmd, args = spack.main.resolve_alias("my_find", ["my_find", "-v"])
+    assert cmd == "find" and args == ["find", "-v"]
 
 
 def test_rst():

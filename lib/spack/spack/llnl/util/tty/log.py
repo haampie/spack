@@ -549,6 +549,7 @@ class nixlog:
             self.write_fd.close()
 
         else:
+            # raise Exception("no")
             # Handle I/O the Python way. This won't redirect lower-level
             # output, but it's the best we can do, and the caller
             # shouldn't expect any better, since *they* have apparently

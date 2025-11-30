@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import spack
 import spack.concretize
 import spack.main
 import spack.repo

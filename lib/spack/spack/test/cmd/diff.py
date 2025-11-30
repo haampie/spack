@@ -6,6 +6,7 @@ import os
 
 import pytest
 
+import spack
 import spack.cmd.diff
 import spack.concretize
 import spack.main

@@ -6,6 +6,7 @@ import argparse
 
 import pytest
 
+import spack
 import spack.cmd
 import spack.cmd.common.arguments as arguments
 import spack.config

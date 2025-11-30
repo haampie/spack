@@ -6,6 +6,7 @@ import shutil
 
 import pytest
 
+import spack
 import spack.cmd.compiler
 import spack.compilers.config
 import spack.config

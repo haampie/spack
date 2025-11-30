@@ -9,6 +9,7 @@ import pytest
 
 import spack.vendor.archspec.cpu
 
+import spack
 import spack.concretize
 import spack.config
 import spack.environment as ev

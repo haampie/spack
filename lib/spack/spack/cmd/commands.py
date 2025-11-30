@@ -355,6 +355,7 @@ _dest_to_fish_complete = {
     ("", "comment"): "-f",
     ("", "compiler_spec"): "-f -a '(__fish_spack_installed_compilers)'",
     ("", "config_scopes"): "-f -a '(__fish_complete_directories)'",
+    ("", "scope"): "-f -a '(__fish_spack_config_scopes)'",
     ("", "extendable"): "-f -a '(__fish_spack_extensions)'",
     ("", "installed_specs?"): "-f -a '(__fish_spack_installed_specs)'",
     ("", "job_url"): "-f",
@@ -613,14 +614,6 @@ class FishCompletionWriter(ArgparseWriter):
             elif isinstance(dest, (set, frozenset)):
                 dest = sorted(dest)
 
-            # Remove platform-specific choices to avoid hard-coding the platform.
-            if dest is not None:
-                valid_choices = []
-                for choice in dest:
-                    if spack.platforms.host().name not in choice:
-                        valid_choices.append(choice)
-                dest = valid_choices
-
             # To provide description for optionals, and also possible values,
             # we need to use two split completion command.
             # Otherwise, each option will have same description.
@@ -641,14 +634,27 @@ class FishCompletionWriter(ArgparseWriter):
             if nargs != 0:
                 prefix = f"{prefix} -r"
 
-            if dest is not None:
-                # If there are choices, we provide a completion for all possible values.
-                commands.append(f"{prefix} -f -a {shlex.quote(' '.join(dest))}")
+            # dest is either a list of choices or a single-element list [action.dest]
+            # For single-element lists, try the predefined completion mapping
+            # For multi-element lists, infer the dest name from the flags
+            dest_name = None
+            if len(dest) == 1:
+                dest_name = dest[0]
             else:
-                # Otherwise, we try to find a predefined completion for it
-                value = _fish_dest_get_complete(prog, dest)
-                if value is not None:
-                    commands.append(f"{prefix} {value}")
+                # Try to infer dest from flags (e.g., --scope -> "scope")
+                for flag in flags:
+                    if flag.startswith("--"):
+                        dest_name = flag[2:].replace("-", "_")
+                        break
+
+            value = _fish_dest_get_complete(prog, dest_name) if dest_name else None
+
+            if value is not None:
+                # Use predefined dynamic completion
+                commands.append(f"{prefix} {value}")
+            elif len(dest) > 0:
+                # Fall back to hardcoding the choices
+                commands.append(f"{prefix} -f -a {shlex.quote(' '.join(dest))}")
 
             if help:
                 commands.append(f"{prefix} -d {shlex.quote(help)}")
