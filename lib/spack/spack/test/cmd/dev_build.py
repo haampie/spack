@@ -320,7 +320,7 @@ spack:
 
 
 def test_dev_build_multiple(
-    tmp_path: pathlib.Path, install_mockery, mutable_mock_env_path, mock_fetch, installer_variant
+    tmp_path: pathlib.Path, install_mockery, mutable_mock_env_path, mock_fetch
 ):
     """Test spack install with multiple developer builds
 
