@@ -41,6 +41,15 @@ buildcache = SpackCommand("buildcache")
 find = SpackCommand("find")
 
 
+@pytest.fixture(params=["old", "new"])
+def installer_variant(request):
+    """Parametrize a test over the old and new installer."""
+    if request.param == "new" and sys.platform == "win32":
+        pytest.skip("New installer not supported on Windows")
+    with spack.config.override("config:installer", request.param):
+        yield request.param
+
+
 @pytest.fixture()
 def noop_install(monkeypatch):
     def noop(*args, **kwargs):
@@ -537,7 +546,9 @@ def test_cdash_upload_build_error(capfd, tmp_path: pathlib.Path, mock_fetch, ins
 
 
 @pytest.mark.disable_clean_stage_check
-def test_cdash_upload_clean_build(tmp_path: pathlib.Path, mock_fetch, install_mockery):
+def test_cdash_upload_clean_build(
+    tmp_path: pathlib.Path, mock_fetch, install_mockery, installer_variant
+):
     with fs.working_dir(str(tmp_path)):
         install("--log-file=cdash_reports", "--log-format=cdash", "pkg-c")
         report_dir = tmp_path / "cdash_reports"
@@ -550,7 +561,9 @@ def test_cdash_upload_clean_build(tmp_path: pathlib.Path, mock_fetch, install_mo
 
 
 @pytest.mark.disable_clean_stage_check
-def test_cdash_upload_extra_params(tmp_path: pathlib.Path, mock_fetch, install_mockery):
+def test_cdash_upload_extra_params(
+    tmp_path: pathlib.Path, mock_fetch, install_mockery, installer_variant
+):
     with fs.working_dir(str(tmp_path)):
         install(
             "--log-file=cdash_reports",
@@ -571,7 +584,9 @@ def test_cdash_upload_extra_params(tmp_path: pathlib.Path, mock_fetch, install_m
 
 
 @pytest.mark.disable_clean_stage_check
-def test_cdash_buildstamp_param(tmp_path: pathlib.Path, mock_fetch, install_mockery):
+def test_cdash_buildstamp_param(
+    tmp_path: pathlib.Path, mock_fetch, install_mockery, installer_variant
+):
     with fs.working_dir(str(tmp_path)):
         cdash_track = "some_mocked_track"
         buildstamp_format = f"%Y%m%d-%H%M-{cdash_track}"
@@ -592,7 +607,12 @@ def test_cdash_buildstamp_param(tmp_path: pathlib.Path, mock_fetch, install_mock
 
 @pytest.mark.disable_clean_stage_check
 def test_cdash_install_from_spec_json(
-    tmp_path: pathlib.Path, mock_fetch, install_mockery, mock_packages, mock_archive
+    tmp_path: pathlib.Path,
+    mock_fetch,
+    install_mockery,
+    mock_packages,
+    mock_archive,
+    installer_variant,
 ):
     with fs.working_dir(str(tmp_path)):
         spec_json_path = str(tmp_path / "spec.json")

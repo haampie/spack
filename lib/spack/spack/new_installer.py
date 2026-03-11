@@ -71,6 +71,7 @@ import spack.report
 import spack.spec
 import spack.stage
 import spack.store
+import spack.subprocess_context
 import spack.traverse
 import spack.url_buildcache
 import spack.util.environment
@@ -358,6 +359,7 @@ def worker_function(
     store: spack.store.Store,
     config: spack.config.Configuration,
     log_path: str,
+    test_patches: Optional[spack.subprocess_context.TestPatches] = None,
 ):
     """
     Function run in the build child process. Installs the specified spec, sending state updates
@@ -388,6 +390,9 @@ def worker_function(
     # TODO: don't start a build for external packages
     if spec.external:
         return
+
+    if test_patches:
+        test_patches.restore()
 
     # Start a new session, so our SIGTERM handler can kill all child processes.
     os.setsid()
@@ -604,6 +609,7 @@ def _install(
 
         for phase in spack.builder.create(pkg):
             send_state(phase.name, state_stream)
+            print(f"==> {pkg.name}: Executing phase: '{phase.name}'")
             phase.execute()
 
         _archive_build_metadata(pkg)
@@ -764,6 +770,7 @@ def start_build(
             spack.store.STORE,
             spack.config.CONFIG,
             log_path,
+            spack.subprocess_context.TestPatches.create(),
         ),
     )
     proc.start()
@@ -1611,6 +1618,22 @@ class PackageInstaller:
         else:
             self.capacity = concurrent_packages
         self.reports: Dict[str, spack.report.RequestRecord] = {}
+        for spec in specs:
+            self.reports[spec.dag_hash()] = spack.report.RequestRecord(spec)
+
+        # Map each spec dag_hash -> set of root dag_hashes that (transitively) depend on it
+        self.spec_to_roots: Dict[str, Set[str]] = {}
+        for root_spec in specs:
+            root_hash = root_spec.dag_hash()
+            for dep in spack.traverse.traverse_nodes([root_spec]):
+                self.spec_to_roots.setdefault(dep.dag_hash(), set()).add(root_hash)
+
+        # Per-spec install records, created in _start(), finalized in _finalize_reports()
+        self.build_records: Dict[str, spack.report.InstallRecord] = {}
+
+        # Exit codes and process end times of finished builds, collected in the event loop
+        self.finished_results: Dict[str, int] = {}  # dag_hash -> exit code
+        self.build_end_times: Dict[str, float] = {}  # dag_hash -> time.time() when sentinel fires
 
     def install(self) -> None:
         self._installer()
@@ -1690,6 +1713,8 @@ class PackageInstaller:
                     build = self.running_builds.pop(pid)
                     self.capacity += 1
                     jobserver.release()
+                    self.finished_results[build.spec.dag_hash()] = build.proc.exitcode or 0
+                    self.build_end_times[build.spec.dag_hash()] = time.time()
                     build.cleanup(selector)
                     if build.proc.exitcode == 0:
                         # Add successful builds for database insertion (after a short delay)
@@ -1826,10 +1851,17 @@ class PackageInstaller:
             if db_exc is not None:
                 raise db_exc
 
+        try:
+            self._finalize_reports()
+        except Exception:
+            pass
+
         if failures:
             for s in failures:
                 log_path = self.log_paths.get(s.dag_hash())
                 if log_path and os.path.exists(log_path):
+                    with open(log_path, "r") as f:
+                        shutil.copyfileobj(f, sys.stderr)
                     out = io.StringIO()
                     spack.build_environment.write_log_summary(out, f"{s} build", log_path)
                     summary = out.getvalue()
@@ -1869,6 +1901,31 @@ class PackageInstaller:
                     build.prefix_lock = None
 
         return True
+
+    def _finalize_reports(self) -> None:
+        """Finalize InstallRecords and append them to RequestRecords after all builds finish."""
+        for dag_hash, exitcode in self.finished_results.items():
+            record = self.build_records.get(dag_hash)
+            if record is None:
+                continue
+            # Elapsed time is measured at succeed()/fail() as time.time() - _start_time.
+            # Adjust _start_time so the elapsed time reflects the actual build duration,
+            # not the time from spawn to end of all builds.
+            end_time = self.build_end_times.get(dag_hash)
+            if end_time is not None:
+                actual_duration = end_time - record._start_time
+                record._start_time = time.time() - actual_duration
+            if exitcode == 0:
+                record.succeed()
+            else:
+                record.fail(
+                    spack.error.InstallError(
+                        f"Installation of {record._spec.name} failed; see log for details"
+                    )
+                )
+            for root_hash in self.spec_to_roots.get(dag_hash, {dag_hash}):
+                if root_hash in self.reports:
+                    self.reports[root_hash].append_record(record)
 
     def _schedule_builds(
         self,
@@ -1953,6 +2010,10 @@ class PackageInstaller:
         self.build_status.add_build(
             child_info.spec, explicit=explicit, control_w_conn=child_info.control_w_conn
         )
+        if not spec.external:
+            record = spack.report.InstallRecord(spec)
+            record.start()
+            self.build_records[dag_hash] = record
 
     def _handle_child_logs(
         self, r_fd: int, child_info: ChildInfo, selector: selectors.BaseSelector
