@@ -437,6 +437,7 @@ def worker_function(
         log_path: Path to the log file to write build output to
         global_state: Global state to restore
     """
+    os.write(state.fileno(), b"1")  # signal to the parent that the child is ready
 
     # TODO: don't start a build for external packages
     if spec.external:
@@ -837,7 +838,10 @@ def start_build(
         )
         os.close(log_fd)  # child will open it
 
-    proc = Process(
+    os.environ["PYTHONPROFILEIMPORTTIME"] = "1"
+
+    before = time.perf_counter()
+    proc = multiprocessing.Process(
         target=worker_function,
         args=(
             spec,
@@ -863,6 +867,15 @@ def start_build(
         ),
     )
     proc.start()
+    after = time.perf_counter()
+    with open("/tmp/timing", "a", encoding="utf-8") as f:
+        f.write(f"{spec.dag_hash()} {after - before} start\n")
+
+    before = time.perf_counter()
+    os.read(state_r_conn.fileno(), 1)  # wait for the child to signal that it's ready
+    after = time.perf_counter()
+    with open("/tmp/timing", "a", encoding="utf-8") as f:
+        f.write(f"{spec.dag_hash()} {after - before} child_ready\n")
 
     # The parent process does not need the write ends of the main pipes or the read end of control.
     state_w_conn.close()

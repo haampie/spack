@@ -46,4 +46,8 @@ from spack.main import main  # noqa: E402
 
 # Once we've set up the system path, run the spack main method
 if __name__ == "__main__":
+    import multiprocessing
+
+    multiprocessing.set_start_method("forkserver")
+    multiprocessing.set_forkserver_preload(["spack.main", "spack.package", "spack.new_installer"])
     sys.exit(main())
