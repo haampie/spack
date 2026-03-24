@@ -2,169 +2,285 @@
 
 ## Context
 
-Commit `ea96bb6885884b19d18e4517b9bd76d7eef75d13` ("spec_parser.py: rewrite for speed") is a
-squashed rewrite that reduces parse time from ~1783 μs to ~896 μs (~2×). Your job is to decompose
-it into logical steps, benchmark each one, and commit them individually so we understand exactly
-which category of change drives how much of the speedup.
+Commit `ea96bb6885884b19d18e4517b9bd76d7eef75d13` reduces parse time from ~1783 μs to ~896 μs.
+Your job: apply it in 4 steps, benchmark each, so we know which category of change drives which
+portion of the speedup.
 
-**Reference commit** (the target end state):
+**Reference** — the target end state for any file:
 ```bash
-git show ea96bb6885884b19d18e4517b9bd76d7eef75d13 -- <file>
+git show ea96bb6885884b19d18e4517b9bd76d7eef75d13 -- <path>
 ```
-Use this to see the exact diff for any file.
 
 ## Workflow per step
 
-1. Apply the changes for the current step (described below).
-2. Run tests — they MUST pass: `source .venv/bin/activate && python3 -m pytest lib/spack/spack/test/spec_syntax.py -x -q 2>/dev/null | tail -3`
-3. Run benchmark ONCE: `source .venv/bin/activate && experiment/run.sh 2>/dev/null | grep Total`
-4. ALWAYS commit, even if no perf improvement (we are documenting, not gating on speedup): `git add -A && git commit --signoff`
+1. Apply the changes for the current step.
+2. Run tests — they MUST pass:
+   `source .venv/bin/activate && python3 -m pytest lib/spack/spack/test/spec_syntax.py -x -q 2>/dev/null | tail -3`
+3. Run benchmark ONCE:
+   `source .venv/bin/activate && experiment/run.sh 2>/dev/null | grep Total`
+4. ALWAYS commit (even if no perf improvement — we are documenting):
+   `git add -A && git commit --signoff -m "spec_parser.py: <desc>\n\ntotal time: X μs (prev: Y μs)"`
 5. Append a row to `experiment/scratchpad.md`.
 6. Move to the next step.
 
-### Commit message format
+---
 
+## Step 3 — Named capture groups + use `_from_version_list_string` (Categories 4, 5)
+
+**What and why:** Add named subgroups to token patterns so the parser extracts data during
+matching instead of re-slicing `token.value`. The existing `Tokenizer` infrastructure in
+`spack/tokenize.py` already supports this: named groups are renamed with a token-type prefix and
+stored in `token.subvalues`. Use this to replace all `token.value` slicing in the parser with
+`token.subvalues[...]` access. Crucially, use `_from_version_list_string()` (from step 2) for
+`VERSION` tokens — this is the biggest single speedup available on the old architecture since
+version parsing was 44% of total parse time.
+
+**Changes to `lib/spack/spack/spec_parser.py` only:**
+
+### 3a. Add subgroups to SpecTokens patterns
+
+```python
+# BEFORE:
+VERSION_HASH_PAIR = rf"(?:@(?:{GIT_VERSION_PATTERN})=(?:{VERSION}))"
+GIT_VERSION = rf"@(?:{GIT_VERSION_PATTERN})"
+VERSION = rf"(?:@\s*(?:{VERSION_LIST}))"
+PROPAGATED_BOOL_VARIANT = rf"(?:(?:\+\+|~~|--)\s*{NAME})"
+BOOL_VARIANT = rf"(?:[~+-]\s*{NAME})"
+PROPAGATED_KEY_VALUE_PAIR = rf"(?:{NAME}:?==(?:{VALUE}|{QUOTED_VALUE}))"
+KEY_VALUE_PAIR = rf"(?:{NAME}:?=(?:{VALUE}|{QUOTED_VALUE}))"
+
+# AFTER:
+VERSION_HASH_PAIR = rf"(?:@(?P<git_version>{GIT_VERSION_PATTERN})=(?P<version_pair>{VERSION}))"
+GIT_VERSION = rf"@(?P<git_version>{GIT_VERSION_PATTERN})"
+VERSION = rf"(?:@\s*(?P<version_list>{VERSION_LIST}))"
+PROPAGATED_BOOL_VARIANT = rf"(?:(?P<bv_prefix>\+\+|~~|--)\s*(?P<bv_name>{NAME}))"
+BOOL_VARIANT = rf"(?:(?P<bv_prefix>[~+-])\s*(?P<bv_name>{NAME}))"
+PROPAGATED_KEY_VALUE_PAIR = rf"(?:(?P<kv_name>{NAME})(?P<kv_sep>:?==)(?P<kv_value>{VALUE}|{QUOTED_VALUE}))"
+KEY_VALUE_PAIR = rf"(?:(?P<kv_name>{NAME})(?P<kv_sep>:?=)(?P<kv_value>{VALUE}|{QUOTED_VALUE}))"
 ```
-spec_parser.py: <category> — <one-line description>
 
-total time: X.XX μs (prev: Y.YY μs)
+### 3b. Update `SpecNodeParser.parse()` to use subvalues
+
+Replace the version/variant/kv parsing block. The `token.subvalues` dict is populated
+automatically by `Tokenizer` for tokens with named groups.
+
+**Versions** (the key speedup — replaces `VersionList([from_string(...)])` with fast path):
+```python
+# BEFORE (one block for all three version tokens):
+initial_spec.versions = spack.version.VersionList(
+    [spack.version.from_string(self.ctx.current_token.value[1:])]
+)
+initial_spec.attach_git_version_lookup()
+
+# AFTER (three separate blocks based on which token was accepted):
+if self.ctx.accept(SpecTokens.VERSION_HASH_PAIR) or self.ctx.accept(SpecTokens.GIT_VERSION):
+    initial_spec.versions = spack.version.VersionList(
+        [spack.version.GitVersion(self.ctx.current_token.subvalues["git_version"])]
+    )
+    initial_spec.attach_git_version_lookup()
+elif self.ctx.accept(SpecTokens.VERSION):
+    initial_spec.versions = spack.version.VersionList._from_version_list_string(
+        self.ctx.current_token.subvalues["version_list"]
+    )
 ```
 
-### Scratchpad row format
+**Bool variants:**
+```python
+# BEFORE (BOOL_VARIANT):
+name = self.ctx.current_token.value[1:].strip()
+variant_value = self.ctx.current_token.value[0] == "+"
+# AFTER:
+name = self.ctx.current_token.subvalues["bv_name"]
+variant_value = self.ctx.current_token.subvalues["bv_prefix"] == "+"
 
-| # | Step | Category | Total (μs) | Δ vs prev | Notes |
-|---|------|----------|------------|-----------|-------|
+# BEFORE (PROPAGATED_BOOL_VARIANT):
+name = self.ctx.current_token.value[2:].strip()
+variant_value = self.ctx.current_token.value[0:2] == "++"
+# AFTER:
+name = self.ctx.current_token.subvalues["bv_name"]
+variant_value = self.ctx.current_token.subvalues["bv_prefix"] == "++"
+```
 
-## Ordered steps
+**Key-value pairs:**
+```python
+# BEFORE (KEY_VALUE_PAIR):
+name, value = self.ctx.current_token.value.split("=", maxsplit=1)
+concrete = name.endswith(":")
+if concrete:
+    name = name[:-1]
+add_flag(name, strip_quotes_and_unescape(value), propagate=False, concrete=concrete)
 
-### Step 1 — `spec.py` micro-optimizations (independent of parser)
+# AFTER:
+name = self.ctx.current_token.subvalues["kv_name"]
+sep = self.ctx.current_token.subvalues["kv_sep"]
+value = self.ctx.current_token.subvalues["kv_value"]
+concrete = sep.startswith(":")
+add_flag(name, strip_quotes_and_unescape(value), propagate=False, concrete=concrete)
 
-Apply all five changes from `git show ea96bb688... -- lib/spack/spack/spec.py`:
+# BEFORE (PROPAGATED_KEY_VALUE_PAIR):
+name, value = self.ctx.current_token.value.split("==", maxsplit=1)
+concrete = name.endswith(":")
+if concrete:
+    name = name[:-1]
+add_flag(name, strip_quotes_and_unescape(value), propagate=True, concrete=concrete)
 
-1. `_valid_compiler_flags`: change list `[...]` → tuple `(...)`
-2. `SpecAnnotations`: add `__slots__ = ("original_spec_format", "compiler_node_attribute")`
-3. `Spec.__init__`: replace `for h in ht.HASHES: setattr(self, h.attr, None)` with four explicit
-   assignments: `self._hash = None`, `self._package_hash = None`, `self._full_hash = None`,
-   `self._build_hash = None`
-4. `Spec.__init__`: replace `self.external_modules = Spec._format_module_list(external_modules)`
-   with `if external_modules: self.external_modules = list(external_modules) else: self.external_modules = None`;
-   remove the `_format_module_list` static method
-5. `_add_flag`: remove `valid_flags = FlagMap.valid_compiler_flags()` local variable; use
-   `_valid_compiler_flags` directly in the `elif name in ...` check
+# AFTER:
+name = self.ctx.current_token.subvalues["kv_name"]
+sep = self.ctx.current_token.subvalues["kv_sep"]
+value = self.ctx.current_token.subvalues["kv_value"]
+concrete = sep.startswith(":")
+add_flag(name, strip_quotes_and_unescape(value), propagate=True, concrete=concrete)
+```
 
-Files: `lib/spack/spack/spec.py` only.
+Also update `EdgeAttributeParser.parse()` which also uses `KEY_VALUE_PAIR`:
+```python
+# BEFORE:
+name, value = self.ctx.current_token.value.split("=", maxsplit=1)
+if name.endswith(":"):
+    name = name[:-1]
+value = value.strip("'\" ").split(",")
+# AFTER:
+name = self.ctx.current_token.subvalues["kv_name"]
+value = strip_quotes_and_unescape(self.ctx.current_token.subvalues["kv_value"]).split(",")
+```
 
----
-
-### Step 2 — `version_types.py`: add `_from_version_list_string()` (prereq, no speedup yet)
-
-Apply `git show ea96bb688... -- lib/spack/spack/version/version_types.py`.
-Adds a 24-line static method after `from_dict()`. No callers yet — no perf change expected.
-
-Files: `lib/spack/spack/version/version_types.py` only.
-
----
-
-### Step 3 — **Sub-string parsing**: named capture groups (Category 5)
-
-*Avoids double-parsing token values and eliminates the per-token subgroup dict allocation that the
-old code created when named groups were used.*
-
-The old `SpecTokens` patterns have no subgroups — the parser slices `token.value` manually.
-Add named subgroups to the following patterns in `SpecTokens` and update the `Token` class (from
-`spack.tokenize`) to expose `.group(name)` forwarding to the underlying match object:
-
-| Token | Subgroups to add |
-|-------|-----------------|
-| `BOOL_VARIANT` | `(?P<bv_prefix>[~+-])`, `(?P<bv_name>{NAME})` |
-| `PROPAGATED_BOOL_VARIANT` | `(?P<bv_prefix>\+\+\|~~\|--)`, `(?P<bv_name>{NAME})` |
-| `KEY_VALUE_PAIR` | `(?P<kv_name>{NAME})`, `(?P<kv_sep>:?=)`, `(?P<kv_value>...)` |
-| `PROPAGATED_KEY_VALUE_PAIR` | same with `kv_sep` matching `:?==` |
-| `VERSION` | `(?P<version_list>{VERSION_LIST})` |
-| `GIT_VERSION` / `VERSION_HASH_PAIR` | `(?P<git_version>...)` |
-
-Update the parser (SpecNodeParser / SpecParser) to use `token.group("bv_name")` etc. instead of
-slicing `token.value`.
-
-Reference: subgroup names in the new `SpecTokens` string constants in ea96bb688..., and usage in
-`_parse_node`.
-
-Files: `lib/spack/spack/spec_parser.py` (and possibly `lib/spack/spack/tokenize.py`).
-
----
-
-### Step 4 — **Reduced branching**: consolidate paired token types (Category 4)
-
-*Fewer token types → fewer enum comparisons and fewer branches in the parser loop.*
-
-Using the subgroups from Step 3, merge paired tokens into single tokens:
-
-| Before | After | Distinguishing subgroup |
-|--------|-------|------------------------|
-| `BOOL_VARIANT` + `PROPAGATED_BOOL_VARIANT` | `BOOL_VARIANT` | `bv_prefix` length (1 vs 2 chars) |
-| `KEY_VALUE_PAIR` + `PROPAGATED_KEY_VALUE_PAIR` | `KEY_VALUE_PAIR` | `kv_sep` contains `==` |
-| `VERSION` + `GIT_VERSION` + `VERSION_HASH_PAIR` | `VERSION` | `git_version` subgroup present |
-| `DEPENDENCY` + `START_EDGE_PROPERTIES` | `DEPENDENCY` | `edge_bracket` subgroup present |
-
-Update all parser call sites to check the subgroup instead of the token type.
-
-Reference: new `SpecTokens` string constants and the `next_spec()` / `_parse_node()` dispatch in
-ea96bb688...
-
-Files: `lib/spack/spack/spec_parser.py` only.
+Expected perf impact: **large** — version parsing was 44% of total time; `_from_version_list_string`
+replaces the expensive `VersionList` construction path.
 
 ---
 
-### Step 5 — **Reduced iterations**: remove WS token (Category 3)
+## Step 4 — Token consolidation (Category 4)
 
-*Whitespace is consumed implicitly by the regex engine at C level instead of producing Python
-Token objects that the parser loop must skip.*
+**What and why:** Merge the three version token types into one, the two bool-variant types into
+one, the two KVP types into one, and `DEPENDENCY` + `START_EDGE_PROPERTIES` into one. Each merged
+token uses the subgroups from step 3 to distinguish cases. Fewer token types = fewer branches in
+the parser loop and fewer enum comparisons.
 
-- Add `\s*` prefix to each pattern in `SpecTokens` (so whitespace is absorbed before each token)
-  OR pass it as a prefix to `Tokenizer` compilation
-- Remove `WS = r"(?:\s+)"` from `SpecTokens`
-- Remove (or simplify) `parseable_tokens()` — no longer needs to filter WS
+**Changes to `lib/spack/spack/spec_parser.py` only:**
 
-Reference: the `\s*(?:...)` structure of `FAST_SPEC_REGEX` and the absence of a WS pattern in
-ea96bb688...
+### 4a. Remove separate token types from SpecTokens, replace with consolidated ones
 
-Files: `lib/spack/spack/spec_parser.py` only.
+```python
+# REMOVE these from SpecTokens:
+#   START_EDGE_PROPERTIES
+#   VERSION_HASH_PAIR
+#   GIT_VERSION
+#   PROPAGATED_BOOL_VARIANT
+#   PROPAGATED_KEY_VALUE_PAIR
+
+# REPLACE/UPDATE remaining tokens to cover both cases:
+
+# DEPENDENCY now covers START_EDGE_PROPERTIES too:
+DEPENDENCY = rf"(?:(?:\^|\%\%|\%)(?:(?P<edge_bracket>\[)|(?:\s*{VIRTUAL_ASSIGNMENT})?))"
+
+# VERSION now covers all three version token types:
+VERSION = (
+    rf"@(?:(?P<git_version>{GIT_VERSION_PATTERN}(?:={VERSION})?)"
+    rf"|\s*(?P<version_list>{VERSION_LIST}))"
+)
+
+# BOOL_VARIANT now covers propagated variants too (bv_prefix is 1 or 2 chars):
+BOOL_VARIANT = rf"(?P<bv_prefix>\+\+|~~|--|[~+-])\s*(?P<bv_name>{NAME})"
+
+# KEY_VALUE_PAIR now covers propagated KVP too (kv_sep is :?==? — matches = or == or := or :==):
+KEY_VALUE_PAIR = rf"(?P<kv_name>{NAME})(?P<kv_sep>:?==?)(?P<kv_value>{VALUE}|{QUOTED_VALUE})"
+```
+
+### 4b. Update parser dispatch to use single branches
+
+In `next_spec()`, replace:
+```python
+if self.ctx.accept(SpecTokens.START_EDGE_PROPERTIES):
+    has_edge_attrs = True
+elif self.ctx.accept(SpecTokens.DEPENDENCY):
+    has_edge_attrs = False
+```
+with:
+```python
+if not self.ctx.accept(SpecTokens.DEPENDENCY):
+    break
+has_edge_attrs = bool(self.ctx.current_token.subvalues and
+                      self.ctx.current_token.subvalues.get("edge_bracket"))
+```
+
+In `SpecNodeParser.parse()`, replace the three-way version accept:
+```python
+if (self.ctx.accept(SpecTokens.VERSION_HASH_PAIR)
+        or self.ctx.accept(SpecTokens.GIT_VERSION)
+        or self.ctx.accept(SpecTokens.VERSION)):
+    if self.ctx.current_token.subvalues and self.ctx.current_token.subvalues.get("git_version"):
+        initial_spec.versions = spack.version.VersionList(
+            [spack.version.GitVersion(self.ctx.current_token.subvalues["git_version"])]
+        )
+        initial_spec.attach_git_version_lookup()
+    else:
+        initial_spec.versions = spack.version.VersionList._from_version_list_string(
+            self.ctx.current_token.subvalues["version_list"]
+        )
+```
+
+Replace the two bool-variant branches with one:
+```python
+elif self.ctx.accept(SpecTokens.BOOL_VARIANT):
+    prefix = self.ctx.current_token.subvalues["bv_prefix"]
+    name = self.ctx.current_token.subvalues["bv_name"]
+    propagate = len(prefix) == 2
+    variant_value = prefix[0] == "+"
+    add_flag(name, variant_value, propagate=propagate, concrete=True)
+```
+
+Replace the two KVP branches with one:
+```python
+elif self.ctx.accept(SpecTokens.KEY_VALUE_PAIR):
+    name = self.ctx.current_token.subvalues["kv_name"]
+    sep = self.ctx.current_token.subvalues["kv_sep"]
+    value = self.ctx.current_token.subvalues["kv_value"]
+    propagate = "==" in sep
+    concrete = sep.startswith(":")
+    add_flag(name, strip_quotes_and_unescape(value), propagate=propagate, concrete=concrete)
+```
+
+Expected perf impact: **small-moderate** — fewer token types and branches.
 
 ---
 
-### Step 6 — **Fewer allocations + reduced function calls**: architectural shift (Categories 1+2)
+## Step 5 — Full architectural shift: scanner + no Token/TokenContext + flat parser (Categories 1, 2, 3)
 
-*Replace Token wrapper objects with direct re.Match usage; eliminate TokenContext, SpecNodeParser,
-EdgeAttributeParser, FileParser; inline accept/expect; use `_from_version_list_string` (Step 2).*
+**What and why:** Replace the `Tokenizer` + `TokenContext` + `Token` objects with a single
+compiled `FAST_SPEC_REGEX` and a direct scanner. This eliminates:
+- **Category 1 (fewer allocations):** no `Token` object per match — use `re.Match` directly
+- **Category 2 (reduced fn calls):** no `SpecNodeParser` / `EdgeAttributeParser` / `FileParser`
+  classes; no `accept()` / `expect()` on TokenContext
+- **Category 3 (reduced iterations):** `\s*` prefix in `FAST_SPEC_REGEX` means whitespace is
+  consumed at C level, never producing a Python object
 
-By now patterns are consolidated with subgroups and WS is gone. The shift:
+By now (after steps 3–4), the token types are already consolidated and use subgroups — so this
+step is purely an architectural swap with no logic changes needed.
 
-- Build `FAST_SPEC_REGEX` from `RAW_PATTERNS` (alternated patterns with group name mangling)
-- `SpecParser.__init__`: `scanner = FAST_SPEC_REGEX.scanner(text)`; `self.curr = scanner.match()`;
-  `self.next = scanner.match()`
-- Replace `TokenContext.advance()` with `curr, next = next, scanner.match()`
-- Inline `SpecNodeParser._parse_node()` → `SpecParser._parse_node()`
-- Inline `EdgeAttributeParser` → bracket block in `next_spec()`
-- Inline `FileParser` → FILENAME branch in `_parse_node()`
-- Remove `TokenContext`, `accept()`, `expect()` — dispatch on `curr.lastgroup == "BOOL_VARIANT"`
-  etc.
-- Call `VersionList._from_version_list_string()` for non-git versions (first real benefit of Step 2)
-
-This step must also land the three adapter files that reference the old `SpecTokens` API:
+Apply the full diff for these files from `ea96bb688...`:
+- `lib/spack/spack/spec_parser.py`
 - `lib/spack/docs/conf.py`
 - `lib/spack/spack/cmd/style.py`
 - `lib/spack/spack/test/spec_syntax.py`
 
-Reference: the full new `spec_parser.py` and adapter diffs in ea96bb688...
+The key structural changes (verify your implementation matches):
+- `SpecTokens` becomes a plain string namespace (not `TokenBase` enum)
+- `RAW_PATTERNS` list + group name mangling builds `FAST_SPEC_REGEX`
+- `SpecParser.__init__`: `scanner = FAST_SPEC_REGEX.scanner(text)`, `curr = scanner.match()`, `next = scanner.match()`
+- All dispatch: `curr.lastgroup == "BOOL_VARIANT"` instead of `ctx.accept(SpecTokens.BOOL_VARIANT)`
+- All subgroup access: `curr.group("BOOL_VARIANT_bv_prefix")` (note: mangled names) instead of `token.subvalues["bv_prefix"]`
+- No `from spack.tokenize import ...`
+- No `Token`, `TokenContext`, `SpecNodeParser`, `EdgeAttributeParser`, `FileParser`
 
-Files: all of the above.
+Expected perf impact: **large** — eliminates per-match Python object allocation and removes
+the class-call overhead from `accept()` / `SpecNodeParser.parse()` etc.
 
 ---
 
 ## Notes
 
-- Do NOT try to split Step 6 further — the Token-object removal and class flattening are
+- Do NOT try to split step 5 further — the Token-object removal and class flattening are
   deeply interleaved in the diff and cannot produce a passing intermediate state alone.
-- Steps 3–5 each leave the parser fully functional on the old `Tokenizer` architecture.
-- The benchmark runs 10,000 iterations per spec; one run is sufficient per step.
+- Steps 3 and 4 each leave the parser fully functional on the old `Tokenizer` architecture.
+- The benchmark runs 10,000 iterations per spec; run it ONCE per step.
 - Do NOT add module-level caches keyed on input strings.
