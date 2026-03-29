@@ -27,6 +27,7 @@ import json
 import multiprocessing
 import os
 import re
+import resource
 import selectors
 import shlex
 import shutil
@@ -109,6 +110,25 @@ OVERWRITE_GARBAGE_SUFFIX = ".garbage"
 
 #: Exit code used by the child process to signal that the build was stopped at a phase boundary
 EXIT_STOPPED_AT_PHASE = 3
+
+
+def print_cpu_overhead():
+    self_usage = resource.getrusage(resource.RUSAGE_SELF)
+    python_cpu_time = self_usage.ru_utime + self_usage.ru_stime
+    child_usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+    build_cpu_time = child_usage.ru_utime + child_usage.ru_stime
+    total_cpu_time = python_cpu_time + build_cpu_time
+
+    if total_cpu_time > 0:
+        python_pct = (python_cpu_time / total_cpu_time) * 100
+        build_pct = (build_cpu_time / total_cpu_time) * 100
+    else:
+        python_pct = build_pct = 0.0
+
+    with open("/tmp/log", "a") as f:
+        print(f"Python: {python_cpu_time:.2f} seconds ({python_pct:.1f}%)", file=f)
+        print(f"Build : {build_cpu_time:.2f} seconds ({build_pct:.1f}%)", file=f)
+        print(f"Total : {total_cpu_time:.2f} seconds", file=f)
 
 
 class DatabaseAction:
@@ -567,6 +587,8 @@ def worker_function(
                 os.unlink(log_path)
             except OSError:
                 pass
+
+    print_cpu_overhead()
 
     sys.exit(exit_code)
 
