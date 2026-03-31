@@ -1154,6 +1154,18 @@ class BuildStatus:
             self.color = color
         else:
             self.color = spack.llnl.util.tty.color.get_color_when(stdout)
+
+        if self.color:
+            self.c_red = "\033[31m"
+            self.c_green = "\033[32m"
+            self.c_reset = "\033[0m"
+            self.c_gray = "\033[0;90m"
+            self.c_bold_white = "\033[1;37m"
+            self.c_cyan = "\033[0;36m"
+            self.c_bold = "\033[1m"
+        else:
+            self.c_red = self.c_green = self.c_reset = self.c_gray = ""
+            self.c_bold_white = self.c_cyan = self.c_bold = ""
         #: Verbose mode only applies to non-TTY where we want to track a single build log.
         self.verbose = verbose and not self.is_tty
         self.filter_padding = filter_padding
@@ -1273,9 +1285,7 @@ class BuildStatus:
 
         self.tracked_build_id = new_build_id
 
-        version_str = (
-            f"\033[0;36m@{new_build.version}\033[0m" if self.color else f"@{new_build.version}"
-        )
+        version_str = f"{self.c_cyan}@{new_build.version}{self.c_reset}"
         prefix = "" if self.log_ends_with_newline else "\n"
 
         if new_build.state == "failed":
@@ -1416,12 +1426,9 @@ class BuildStatus:
         # Then a header followed by the active builds. This is the "mutable" part of the display.
 
         if not finalize:
-            if self.color:
-                bold = "\033[1m"
-                reset = "\033[0m"
-                cyan = "\033[36m"
-            else:
-                bold = reset = cyan = ""
+            bold = self.c_bold
+            reset = self.c_reset
+            cyan = self.c_cyan
 
             if self.actual_jobs != self.target_jobs:
                 jobs_str = f"{self.actual_jobs}=>{self.target_jobs}"
@@ -1483,9 +1490,11 @@ class BuildStatus:
         if line:
             buffer.write(line)
         if self.total_lines > self.active_area_rows:
-            buffer.write("\033[0m\033[K\n")  # reset, clear to EOL, newline
+            buffer.write(f"{self.c_reset}\033[K\n")  # reset, clear to EOL, newline
         else:
-            buffer.write("\033[0m\033[K\033[1B\r")  # reset, clear to EOL, move to next line
+            buffer.write(
+                f"{self.c_reset}\033[K\033[1B\r"
+            )  # reset, clear to EOL, move to next line
 
     def print_logs(self, build_id: str, data: bytes) -> None:
         if self.headless:
@@ -1531,38 +1540,30 @@ class BuildStatus:
         else:
             indicator = f"[{self.spinner_chars[self.spinner_index]}]"
 
-        if self.color:
-            if build_info.state == "failed":
-                yield "\033[31m"  # red
-            elif build_info.state == "finished":
-                yield "\033[32m"  # green
+        if build_info.state == "failed":
+            yield self.c_red
+        elif build_info.state == "finished":
+            yield self.c_green
 
         yield indicator
-        if self.color:
-            yield "\033[0m"  # reset
+        yield self.c_reset
         yield " "
-        if self.color:
-            yield "\033[0;90m"  # dark gray
+        yield self.c_gray
         yield build_info.hash
-        if self.color:
-            yield "\033[0m"  # reset
+        yield self.c_reset
         yield " "
 
         # Package name in bold white if explicit, default otherwise
         if build_info.explicit:
-            if self.color:
-                yield "\033[1;37m"  # bold white
+            yield self.c_bold_white
             yield build_info.name
-            if self.color:
-                yield "\033[0m"  # reset
+            yield self.c_reset
         else:
             yield build_info.name
 
-        if self.color:
-            yield "\033[0;36m"  # cyan
+        yield self.c_cyan
         yield f"@{build_info.version}"
-        if self.color:
-            yield "\033[0m"  # reset
+        yield self.c_reset
 
         # progress or state
         if build_info.progress_percent is not None:
@@ -1585,11 +1586,9 @@ class BuildStatus:
             else (now - build_info.start_time)
         )
         if elapsed > 0:
-            if self.color:
-                yield "\033[0;90m"  # dark gray
+            yield self.c_gray
             yield f" ({pretty_duration(elapsed)})"
-            if self.color:
-                yield "\033[0m"
+            yield self.c_reset
 
 
 Nodes = Dict[str, spack.spec.Spec]
