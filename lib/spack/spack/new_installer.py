@@ -91,10 +91,17 @@ from spack.util.log_parse import make_log_context, parse_log_events
 from spack.util.path import padding_filter, padding_filter_bytes
 
 if sys.platform == "win32":
+    from spack.new_installer_windows import WindowsChildInfo as ConcreteChildInfo
+    from spack.new_installer_windows import WindowsJobServer as ConcreteJobServer
+    from spack.new_installer_windows import WindowsTee as ConcreteTee
     from spack.new_installer_windows import WindowsTerminalState as TerminalState
 else:
     from spack.new_installer_posix import PosixChildInfo, PosixJobServer, PosixTee
     from spack.new_installer_posix import PosixTerminalState as TerminalState
+
+    ConcreteChildInfo = PosixChildInfo
+    ConcreteJobServer = PosixJobServer
+    ConcreteTee = PosixTee
 
 if TYPE_CHECKING:
     import spack.package_base
@@ -310,9 +317,9 @@ def worker_function(
     fake: bool,
     install_source: bool,
     run_tests: bool,
-    state: Connection,
-    parent: Connection,
-    echo_control: Connection,
+    state: StateChannel,
+    parent: StateChannel,
+    echo_control: StateChannel,
     makeflags: str,
     js1: Optional[Connection],
     js2: Optional[Connection],
@@ -353,12 +360,13 @@ def worker_function(
 
     global_state.restore()
 
-    # Isolate the process group to shield against Ctrl+C and enable safe killpg() cleanup. In
-    # constrast to setsid(), this keeps a neat process group hierarchy for utils like pstree.
-    os.setpgid(0, 0)
+    if sys.platform != "win32":
+        # Isolate the process group to shield against Ctrl+C and enable safe killpg() cleanup. In
+        # constrast to setsid(), this keeps a neat process group hierarchy for utils like pstree.
+        os.setpgid(0, 0)
 
-    # Reset SIGTSTP to default in case the parent had a custom handler.
-    signal.signal(signal.SIGTSTP, signal.SIG_DFL)
+        # Reset SIGTSTP to default in case the parent had a custom handler.
+        signal.signal(signal.SIGTSTP, signal.SIG_DFL)
 
     def handle_sigterm(signum, frame):
         # This SIGTERM handler forwards the signal to child processes (cmake, make, etc). We wait
@@ -367,13 +375,13 @@ def worker_function(
         # get to clean up the prefix without risking that the child process writes to it
         # afterwards.
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
-        os.killpg(0, signal.SIGTERM)
-
-        try:
-            while True:
-                os.waitpid(-1, 0)
-        except ChildProcessError:
-            pass
+        if sys.platform != "win32":
+            os.killpg(0, signal.SIGTERM)
+            try:
+                while True:
+                    os.waitpid(-1, 0)
+            except ChildProcessError:
+                pass
 
         raise KeyboardInterrupt("Installation interrupted")
 
@@ -381,15 +389,10 @@ def worker_function(
 
     os.environ["MAKEFLAGS"] = makeflags
 
-    # Force line buffering for Python's textio wrappers of stdout/stderr. We're not going to print
-    # much ourselves, but what we print should appear before output from `make` and other build
-    # tools.
-    sys.stdout = os.fdopen(
-        sys.stdout.fileno(), "w", buffering=1, encoding=sys.stdout.encoding, closefd=False
-    )
-    sys.stderr = os.fdopen(
-        sys.stderr.fileno(), "w", buffering=1, encoding=sys.stderr.encoding, closefd=False
-    )
+    # Save encodings before the Tee redirects fds 1/2 to the pipe. We need them to create the
+    # line-buffered wrappers after the Tee starts.
+    _stdout_enc = sys.stdout.encoding or "utf-8"
+    _stderr_enc = sys.stderr.encoding or "utf-8"
 
     # Detach stdin from the terminal like `./build < /dev/null`. This would not be necessary if we
     # used os.setsid() instead of os.setpgid(), but that would "break" pstree output.
@@ -399,7 +402,17 @@ def worker_function(
     sys.stdin = open(os.devnull, "r", encoding=sys.stdin.encoding)
 
     # Start the tee thread to forward output to the log file and parent process.
-    tee = PosixTee(echo_control, parent, log_path)
+    tee = ConcreteTee(echo_control, parent, log_path)
+    # Replace sys.stdout/stderr AFTER Tee.dup2() so Python creates FileIO (WriteFile) rather
+    # than ConsoleIO (WriteConsoleW). On Windows, if fds 1/2 are still console handles when
+    # os.fdopen() is called, Python picks ConsoleIO; WriteConsoleW on a pipe handle returns
+    # ERROR_INVALID_FUNCTION. Post-dup2 the fds are pipe handles, so FileIO is chosen.
+    sys.stdout = os.fdopen(
+        sys.stdout.fileno(), "w", buffering=1, encoding=_stdout_enc, closefd=False
+    )
+    sys.stderr = os.fdopen(
+        sys.stderr.fileno(), "w", buffering=1, encoding=_stderr_enc, closefd=False
+    )
 
     # Use closedfd=false because of the connection objects. Use line buffering.
     state_stream = _make_state_stream(state)
@@ -729,10 +742,24 @@ def start_build(
     stop_at: Optional[str] = None,
 ) -> ChildInfo:
     """Start a new build."""
-    # Create pipes for the child's output, state reporting, and control.
-    state_r_conn, state_w_conn = Pipe(duplex=False)
-    output_r_conn, output_w_conn = Pipe(duplex=False)
-    control_r_conn, control_w_conn = Pipe(duplex=False)
+    # Create IPC channels. On POSIX use Pipe() (anonymous pipe/fd); on Windows use socketpair()
+    # because anonymous pipes cannot be registered with the Windows selector.
+    state_r_conn: StateChannel
+    state_w_conn: StateChannel
+    output_r_conn: StateChannel
+    output_w_conn: StateChannel
+    # On Windows, use socketpair() for the control channel; anonymous pipes don't support the
+    # non-blocking I/O the Windows tee thread needs. On POSIX, use Pipe() like other channels.
+    control_r_conn: StateChannel
+    control_w_conn: StateChannel
+    if sys.platform == "win32":
+        state_r_conn, state_w_conn = socket.socketpair()
+        output_r_conn, output_w_conn = socket.socketpair()
+        control_r_conn, control_w_conn = socket.socketpair()
+    else:
+        state_r_conn, state_w_conn = Pipe(duplex=False)
+        output_r_conn, output_w_conn = Pipe(duplex=False)
+        control_r_conn, control_w_conn = Pipe(duplex=False)
 
     # Obtain the MAKEFLAGS to be set in the child process, and determine whether it's necessary
     # for the child process to inherit our jobserver fds.
@@ -777,11 +804,11 @@ def start_build(
     output_w_conn.close()
     control_r_conn.close()
 
-    # Set the read ends to non-blocking: in principle redundant with epoll/kqueue, but safer.
-    os.set_blocking(output_r_conn.fileno(), False)
-    os.set_blocking(state_r_conn.fileno(), False)
-
-    return PosixChildInfo(
+    # On POSIX, set read ends non-blocking here; on Windows deferred to register_with_selector().
+    if sys.platform != "win32":
+        os.set_blocking(output_r_conn.fileno(), False)  # type: ignore[union-attr]
+        os.set_blocking(state_r_conn.fileno(), False)  # type: ignore[union-attr]
+    return ConcreteChildInfo(
         proc, spec, output_r_conn, state_r_conn, control_w_conn, log_path, explicit
     )
 
@@ -2037,7 +2064,7 @@ class PackageInstaller:
 
     def _installer(self) -> None:
         spack.store.STORE.install_sbang()
-        jobserver = PosixJobServer(self.jobs)
+        jobserver = ConcreteJobServer(self.jobs)
         selector = selectors.DefaultSelector()
 
         # Set up terminal handling (cbreak, signals, stdin registration)

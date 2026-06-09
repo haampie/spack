@@ -2,22 +2,34 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-"""Windows-specific terminal state and stdin reader for the new_installer TUI."""
+"""Windows-specific terminal state, stdin reader, IPC channels, and job scheduling."""
 
 import ctypes
+import io
 import msvcrt
+import os
 import selectors
 import shutil
 import socket
 import threading
 import time
 from ctypes import wintypes
-from typing import TYPE_CHECKING, Callable, Optional
+from multiprocessing import Process
+from typing import TYPE_CHECKING, Callable, List, Optional, cast
 
-from spack.new_installer_base import BaseTerminalState, StdinReaderBase
+from spack.new_installer_base import (
+    OUTPUT_BUFFER_SIZE,
+    BaseTerminalState,
+    ChildInfo,
+    FdInfo,
+    JobServer,
+    StdinReaderBase,
+    Tee,
+)
 
 if TYPE_CHECKING:
     from spack.new_installer import BuildStatus
+    from spack.spec import Spec
 
 # Windows console mode flags
 ENABLE_LINE_INPUT = 0x0002
@@ -178,3 +190,152 @@ class WindowsTerminalState(BaseTerminalState):
                     self.sigwinch_w.sendall(b"\x00")
                 except OSError:
                     pass
+
+
+class WindowsSentinelBridge:
+    """Waits for a process to exit and sends a byte to a socket to wake the selector."""
+
+    def __init__(self, proc: Process) -> None:
+        self.rsock, self.wsock = socket.socketpair()
+        self.rsock.setblocking(False)
+        self.proc = proc
+        self.thread = threading.Thread(target=self._wait, daemon=True)
+        self.thread.start()
+
+    def _wait(self) -> None:
+        self.proc.join()
+        try:
+            self.wsock.sendall(b"x")
+        except OSError:
+            pass
+        self.wsock.close()
+
+    def fileno(self) -> int:
+        return self.rsock.fileno()
+
+    def recv(self, size: int) -> bytes:
+        try:
+            return self.rsock.recv(size)
+        except BlockingIOError:
+            return b""
+
+    def close(self) -> None:
+        self.rsock.close()
+
+
+class WindowsChildInfo(ChildInfo):
+    """ChildInfo for Windows: output and state use socket.socketpair(); sentinel via bridge."""
+
+    __slots__ = ("bridge",)
+
+    def __init__(
+        self,
+        proc: Process,
+        spec: "Spec",
+        output_r_conn: socket.socket,
+        state_r_conn: socket.socket,
+        control_w_conn: socket.socket,
+        log_path: str,
+        explicit: bool = False,
+    ) -> None:
+        super().__init__(
+            proc, spec, output_r_conn, state_r_conn, control_w_conn, log_path, explicit
+        )
+        self.bridge: Optional[WindowsSentinelBridge] = None
+
+    def register_with_selector(self, selector: selectors.BaseSelector, pid: int) -> None:
+        cast(socket.socket, self.output_r_conn).setblocking(False)
+        cast(socket.socket, self.state_r_conn).setblocking(False)
+        self.bridge = WindowsSentinelBridge(self.proc)
+        selector.register(self.output_r_conn, selectors.EVENT_READ, FdInfo(pid, "output"))
+        selector.register(self.state_r_conn, selectors.EVENT_READ, FdInfo(pid, "state"))
+        selector.register(self.bridge, selectors.EVENT_READ, FdInfo(pid, "sentinel"))
+
+    def close(self, selector: selectors.BaseSelector) -> int:
+        for obj in (self.output_r_conn, self.state_r_conn):
+            try:
+                selector.unregister(obj)
+            except (KeyError, ValueError, OSError):
+                pass
+        if self.bridge is not None:
+            try:
+                selector.unregister(self.bridge)
+            except (KeyError, ValueError):
+                pass
+            self.bridge.close()
+        self.output_r_conn.close()
+        self.state_r_conn.close()
+        return self._join_and_return()
+
+
+def _tee_windows(
+    control_r: socket.socket, log_r: int, log_file: io.BufferedWriter, parent_w: socket.socket
+) -> None:
+    _echo: List[bool] = [False]
+
+    def _control_reader() -> None:
+        while True:
+            try:
+                data = control_r.recv(1)
+                if not data:
+                    break
+                _echo[0] = data == b"1"
+            except OSError:
+                break
+
+    threading.Thread(target=_control_reader, daemon=True).start()
+    try:
+        with log_file:
+            while True:
+                try:
+                    data = os.read(log_r, OUTPUT_BUFFER_SIZE)
+                except OSError:
+                    break
+                if not data:
+                    break
+                log_file.write(data)
+                log_file.flush()
+                if _echo[0]:
+                    try:
+                        parent_w.sendall(data)
+                    except OSError:
+                        pass
+    finally:
+        os.close(log_r)
+
+
+class WindowsTee(Tee):
+    """Tee for Windows: control and parent channels are sockets; stdout/stderr handles are
+    redirected via SetStdHandle so the child process inherits the write end of the pipe."""
+
+    def run(self, log_r: int, log_file: "io.BufferedWriter") -> None:
+        _tee_windows(
+            cast(socket.socket, self.control), log_r, log_file, cast(socket.socket, self.parent)
+        )
+
+    def _setup_handles(self) -> None:
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        self._saved_win32_stdout = kernel32.GetStdHandle(-11)
+        self._saved_win32_stderr = kernel32.GetStdHandle(-12)
+        h_write = msvcrt.get_osfhandle(1)  # type: ignore[attr-defined]
+        os.set_handle_inheritable(h_write, True)  # type: ignore[attr-defined]
+        kernel32.SetStdHandle(-11, h_write)
+        kernel32.SetStdHandle(-12, h_write)
+
+    def _restore_handles(self) -> None:
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        kernel32.SetStdHandle(-11, self._saved_win32_stdout)
+        kernel32.SetStdHandle(-12, self._saved_win32_stderr)
+
+
+class WindowsJobServer(JobServer):
+    """Windows stub: no jobserver support. Parallelism is controlled by capacity only."""
+
+    def _init_channels(self) -> None:
+        self.r = -1
+        self.w = -1
+        self.r_conn = None
+        self.w_conn = None
+
+    def makeflags(self, gmake: Optional["Spec"]) -> str:
+        return ""
