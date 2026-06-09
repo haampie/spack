@@ -841,6 +841,9 @@ class PosixJobServer:
         self.target_jobs = num_jobs
         self.fifo_path: Optional[str] = None
         self.created = False
+        self._init_channels()
+
+    def _init_channels(self) -> None:
         self._setup()
         # Ensure that Executable()(...) in build processes ultimately inherit jobserver fds.
         os.set_inheritable(self.r, True)
