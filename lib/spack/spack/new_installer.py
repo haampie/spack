@@ -28,6 +28,7 @@ import selectors
 import shlex
 import shutil
 import signal
+import socket
 import sys
 import tempfile
 import time
@@ -77,8 +78,10 @@ from spack.llnl.util.lang import pretty_duration
 from spack.new_installer_base import (
     OUTPUT_BUFFER_SIZE,
     BaseTerminalState,
+    ChildInfo,
     DatabaseAction,
     FdInfo,
+    JobServer,
     StateChannel,
     StdinReaderBase,
 )
@@ -159,6 +162,29 @@ def send_installed_from_binary_cache(state_pipe: io.TextIOWrapper) -> None:
     """Send a notification that the package was installed from binary cache."""
     json.dump({"installed_from_binary_cache": True}, state_pipe, separators=(",", ":"))
     state_pipe.write("\n")
+
+
+def _read_from_key(key: selectors.SelectorKey, max_size: int) -> bytes:
+    """Read from a selector key's fileobj, dispatching to os.read for fds or recv for sockets."""
+    if isinstance(key.fileobj, int):
+        return os.read(key.fd, max_size)
+    assert isinstance(key.fileobj, socket.socket)
+    return key.fileobj.recv(max_size)
+
+
+def _ctrl_write(conn: StateChannel, data: bytes) -> None:
+    """Write echo-control data to a channel (Connection fd or socket)."""
+    if hasattr(conn, "sendall"):
+        conn.sendall(data)  # type: ignore[union-attr]
+    else:
+        os.write(conn.fileno(), data)
+
+
+def _make_state_stream(state: StateChannel) -> io.TextIOWrapper:
+    """Open a line-buffered text stream over a state channel for sending JSON state messages."""
+    if isinstance(state, Connection):
+        return os.fdopen(state.fileno(), "w", buffering=1, closefd=False)
+    return state.makefile("w", buffering=1)
 
 
 def install_from_buildcache(
@@ -376,7 +402,7 @@ def worker_function(
     tee = PosixTee(echo_control, parent, log_path)
 
     # Use closedfd=false because of the connection objects. Use line buffering.
-    state_stream = os.fdopen(state.fileno(), "w", buffering=1, closefd=False)
+    state_stream = _make_state_stream(state)
     exit_code = ExitCode.SUCCESS
 
     try:
@@ -697,11 +723,11 @@ def start_build(
     fake: bool,
     install_source: bool,
     run_tests: bool,
-    jobserver: PosixJobServer,
+    jobserver: JobServer,
     log_path: str,
     stop_before: Optional[str] = None,
     stop_at: Optional[str] = None,
-) -> PosixChildInfo:
+) -> ChildInfo:
     """Start a new build."""
     # Create pipes for the child's output, state reporting, and control.
     state_r_conn, state_w_conn = Pipe(duplex=False)
@@ -878,7 +904,7 @@ class BuildStatus:
         if self.verbose and not self.tracked_build_id and control_w_conn is not None:
             self.tracked_build_id = spec.dag_hash()
             try:
-                os.write(control_w_conn.fileno(), b"1")
+                _ctrl_write(control_w_conn, b"1")
             except OSError:
                 pass
 
@@ -907,7 +933,7 @@ class BuildStatus:
             try:
                 conn = self.builds[self.tracked_build_id].control_w_conn
                 if conn is not None:
-                    os.write(conn.fileno(), b"0")
+                    _ctrl_write(conn, b"0")
             except (KeyError, OSError):
                 pass
             self.tracked_build_id = ""
@@ -972,7 +998,7 @@ class BuildStatus:
             try:
                 conn = self.builds[self.tracked_build_id].control_w_conn
                 if conn is not None:
-                    os.write(conn.fileno(), b"0")
+                    _ctrl_write(conn, b"0")
             except (KeyError, OSError):
                 pass
 
@@ -1004,7 +1030,7 @@ class BuildStatus:
             try:
                 conn = new_build.control_w_conn
                 if conn is not None:
-                    os.write(conn.fileno(), b"1")
+                    _ctrl_write(conn, b"1")
             except (KeyError, OSError):
                 pass
 
@@ -1607,7 +1633,7 @@ def schedule_builds(
     overwrite_time: float,
     capacity: int,
     needs_jobserver_token: bool,
-    jobserver: PosixJobServer,
+    jobserver: JobServer,
     explicit: Set[str],
 ) -> ScheduleResult:
     """Try to schedule as many pending builds as possible.
@@ -1859,7 +1885,7 @@ class NullReportData(ReportData):
         pass
 
 
-def _signal_children(running_builds: Dict[int, PosixChildInfo], sig: signal.Signals) -> None:
+def _signal_children(running_builds: Dict[int, ChildInfo], sig: signal.Signals) -> None:
     """Send a signal to the process group of each running build."""
     for child in running_builds.values():
         try:
@@ -1975,7 +2001,7 @@ class PackageInstaller:
         self.pending_expansions: List[str] = []
 
         self.verbose = verbose
-        self.running_builds: Dict[int, PosixChildInfo] = {}
+        self.running_builds: Dict[int, ChildInfo] = {}
         self.log_paths: Dict[str, str] = {}
         self.build_status = BuildStatus(
             len(self.build_graph.nodes),
@@ -2058,10 +2084,7 @@ class PackageInstaller:
                     and not blocked
                     or not jobserver.has_target_parallelism()
                 )
-                if wake_on_jobserver and jobserver.r not in selector.get_map():
-                    selector.register(jobserver.r, selectors.EVENT_READ, "jobserver")
-                elif not wake_on_jobserver and jobserver.r in selector.get_map():
-                    selector.unregister(jobserver.r)
+                jobserver.update_selector(selector, wake_on_jobserver)
 
                 stdin_ready = False
 
@@ -2090,9 +2113,9 @@ class PackageInstaller:
                         # Child output (logs and state updates)
                         child_info = self.running_builds[data.pid]
                         if data.name == "output":
-                            self._handle_child_logs(key.fd, child_info, selector)
+                            self._handle_child_logs(key, child_info, selector)
                         elif data.name == "state":
-                            self._handle_child_state(key.fd, child_info, selector)
+                            self._handle_child_state(key, child_info, selector)
                         elif data.name == "sentinel":
                             finished_pids.append(data.pid)
                     elif data == "stdin":
@@ -2263,7 +2286,7 @@ class PackageInstaller:
         self,
         pid: int,
         current_time: float,
-        jobserver: PosixJobServer,
+        jobserver: JobServer,
         selector: selectors.BaseSelector,
         failures: List[spack.spec.Spec],
         database_actions: List[DatabaseAction],
@@ -2370,7 +2393,7 @@ class PackageInstaller:
     def _schedule_builds(
         self,
         selector: selectors.BaseSelector,
-        jobserver: PosixJobServer,
+        jobserver: JobServer,
         retained_read_locks: List[spack.util.lock.Lock],
         database_actions: List[DatabaseAction],
     ) -> bool:
@@ -2430,7 +2453,7 @@ class PackageInstaller:
     def _start(
         self,
         selector: selectors.BaseSelector,
-        jobserver: PosixJobServer,
+        jobserver: JobServer,
         dag_hash: str,
         prefix_lock: spack.util.lock.Lock,
     ) -> None:
@@ -2488,13 +2511,13 @@ class PackageInstaller:
         self.report_data.start_record(spec)
 
     def _handle_child_logs(
-        self, r_fd: int, child_info: PosixChildInfo, selector: selectors.BaseSelector
+        self, key: selectors.SelectorKey, child_info: ChildInfo, selector: selectors.BaseSelector
     ) -> None:
         """Handle reading output logs from a child process pipe."""
         try:
             # There might be more data than OUTPUT_BUFFER_SIZE, but we will read that in the next
             # iteration of the event loop to keep things responsive.
-            data = os.read(r_fd, OUTPUT_BUFFER_SIZE)
+            data = _read_from_key(key, OUTPUT_BUFFER_SIZE)
         except BlockingIOError:
             return
         except OSError:
@@ -2502,37 +2525,34 @@ class PackageInstaller:
 
         if not data:  # EOF or error
             try:
-                selector.unregister(r_fd)
+                selector.unregister(key.fileobj)
             except KeyError:
                 pass
             return
 
         self.build_status.print_logs(child_info.spec.dag_hash(), data)
 
-    def _drain_child_output(
-        self, child_info: PosixChildInfo, selector: selectors.BaseSelector
-    ) -> None:
+    def _drain_child_output(self, child_info: ChildInfo, selector: selectors.BaseSelector) -> None:
         """Read and print any remaining output from a finished child's pipe."""
         r_fd = child_info.output_r_conn.fileno()
         while r_fd in selector.get_map():
-            self._handle_child_logs(r_fd, child_info, selector)
+            self._handle_child_logs(selector.get_map()[r_fd], child_info, selector)
 
-    def _drain_child_state(
-        self, child_info: PosixChildInfo, selector: selectors.BaseSelector
-    ) -> None:
+    def _drain_child_state(self, child_info: ChildInfo, selector: selectors.BaseSelector) -> None:
         """Read and process any remaining state messages from a finished child's pipe."""
         r_fd = child_info.state_r_conn.fileno()
         while r_fd in selector.get_map():
-            self._handle_child_state(r_fd, child_info, selector)
+            self._handle_child_state(selector.get_map()[r_fd], child_info, selector)
 
     def _handle_child_state(
-        self, r_fd: int, child_info: PosixChildInfo, selector: selectors.BaseSelector
+        self, key: selectors.SelectorKey, child_info: ChildInfo, selector: selectors.BaseSelector
     ) -> None:
         """Handle reading state updates from a child process pipe."""
+        r_fd = key.fd
         try:
             # There might be more data than OUTPUT_BUFFER_SIZE, but we will read that in the next
             # iteration of the event loop to keep things responsive.
-            data = os.read(r_fd, OUTPUT_BUFFER_SIZE)
+            data = _read_from_key(key, OUTPUT_BUFFER_SIZE)
         except BlockingIOError:
             return
         except OSError:
@@ -2540,7 +2560,7 @@ class PackageInstaller:
 
         if not data:  # EOF or error
             try:
-                selector.unregister(r_fd)
+                selector.unregister(key.fileobj)
             except KeyError:
                 pass
             self.state_buffers.pop(r_fd, None)
