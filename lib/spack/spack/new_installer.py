@@ -79,6 +79,7 @@ from spack.new_installer_base import (
     BaseTerminalState,
     DatabaseAction,
     FdInfo,
+    StateChannel,
     StdinReaderBase,
 )
 from spack.subprocess_context import GlobalStateMarshaler
@@ -783,7 +784,7 @@ class BuildInfo:
         self,
         spec: spack.spec.Spec,
         explicit: bool,
-        control_w_conn: Optional[Connection],
+        control_w_conn: Optional[StateChannel],
         log_path: Optional[str] = None,
         start_time: float = 0.0,
     ) -> None:
@@ -865,7 +866,7 @@ class BuildStatus:
         self,
         spec: spack.spec.Spec,
         explicit: bool,
-        control_w_conn: Optional[Connection] = None,
+        control_w_conn: Optional[StateChannel] = None,
         log_path: Optional[str] = None,
     ) -> None:
         """Add a new build to the display and mark the display as dirty."""
