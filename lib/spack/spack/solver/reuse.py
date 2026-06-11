@@ -118,7 +118,11 @@ def _is_reusable(spec: spack.spec.Spec, packages_with_externals, local: bool) ->
 
 
 def _specs_from_store(configuration):
-    store = spack.store.create(configuration)
+    # Use the global store if possible, since its database may already be in memory
+    if configuration is spack.config.CONFIG:
+        store = spack.store.STORE
+    else:
+        store = spack.store.create(configuration)
     with store.db.read_transaction():
         return store.db.query(installed=True)
 
