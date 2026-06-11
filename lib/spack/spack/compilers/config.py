@@ -9,6 +9,7 @@ import os
 import re
 import sys
 import warnings
+import weakref
 from typing import Any, Dict, List, Optional, Tuple
 
 import spack.config
@@ -255,11 +256,30 @@ def name_os_target(spec: spack.spec.Spec) -> Tuple[str, str, str]:
 class CompilerFactory:
     """Class aggregating all ways of constructing a list of compiler specs from config entries."""
 
+    #: Cache for ``from_packages_yaml``, keyed by configuration object. Each value holds the
+    #: configuration generation it was computed for, and the compiler specs by scope.
+    _packages_yaml_cache: "weakref.WeakKeyDictionary[Any, Tuple[int, Dict[Optional[str], List]]]" = weakref.WeakKeyDictionary()  # noqa: E501
+
     @staticmethod
     def from_packages_yaml(
         configuration: spack.config.Configuration, *, scope: Optional[str] = None
     ) -> List[spack.spec.Spec]:
         """Returns the compiler specs defined in the "packages" section of the configuration"""
+        configuration = configuration.ensure_unwrapped()
+        cached = CompilerFactory._packages_yaml_cache.get(configuration)
+        if cached is None or cached[0] != configuration.generation:
+            cached = (configuration.generation, {})
+            CompilerFactory._packages_yaml_cache[configuration] = cached
+        by_scope = cached[1]
+        if scope not in by_scope:
+            by_scope[scope] = CompilerFactory._from_packages_yaml(configuration, scope=scope)
+        # copy, so that callers cannot alter the cached specs
+        return [s.copy() for s in by_scope[scope]]
+
+    @staticmethod
+    def _from_packages_yaml(
+        configuration: spack.config.Configuration, *, scope: Optional[str] = None
+    ) -> List[spack.spec.Spec]:
         compiler_package_names = supported_compilers()
         packages_yaml = configuration.deepcopy_as_builtin("packages", scope=scope)
 

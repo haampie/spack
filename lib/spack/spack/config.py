@@ -507,6 +507,7 @@ def _config_mutator(method):
     @functools.wraps(method)
     def _method(self, *args, **kwargs):
         self._get_config_memoized.cache_clear()
+        self.generation += 1
         return method(self, *args, **kwargs)
 
     return _method
@@ -525,6 +526,9 @@ class Configuration:
     def __init__(self) -> None:
         self.scopes = lang.PriorityOrderedMapping()
         self.updated_scopes_by_section: Dict[str, List[ConfigScope]] = defaultdict(list)
+        #: Incremented whenever the configuration is mutated. Can be used as (part of) a key
+        #: to cache derived data, see ``_config_mutator``.
+        self.generation = 0
 
     def ensure_unwrapped(self) -> "Configuration":
         """Ensure we unwrap this object from any dynamic wrapper (like Singleton)"""
