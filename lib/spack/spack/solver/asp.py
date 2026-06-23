@@ -2516,7 +2516,9 @@ class SpackSolverSetup:
         self.gen.h2("Possible operating systems")
         platform = spack.platforms.host()
 
-        # create set of OS's to consider
+        # create set of OS's to consider. Every OS the platform knows about can
+        # be built for (e.g. an older macOS deployment target), so this stays
+        # the full set -- it only feeds the ``buildable_os`` capability facts.
         buildable = set(platform.operating_sys.keys())
 
         # Consider any OS's mentioned on the command line. We need this to
@@ -2537,8 +2539,19 @@ class SpackSolverSetup:
                 os,  # then sort by name
             )
 
-        all_oses = buildable.union(self.possible_oses)
-        ordered_oses = sorted(all_oses, key=keyfun, reverse=True)
+        # The candidate domain offered to each node's `node_os` choice must stay
+        # small: rules that pair two nodes' OS's (e.g. the os compatibility
+        # check) ground a cross-product over this domain, so including every
+        # historical OS the platform knows about blows up grounding. Only the
+        # host default, OS's of reusable specs, and OS's explicitly requested on
+        # the command line can actually be selected, so restrict it to those.
+        # `buildable_os` (the capability set above) is intentionally broader.
+        candidate_oses = {platform.default_os} | set(self.possible_oses)
+        for spec in specs:
+            if spec.architecture and spec.architecture.os:
+                candidate_oses.add(spec.architecture.os)
+
+        ordered_oses = sorted(candidate_oses, key=keyfun, reverse=True)
 
         # output the preference order of OS's for the concretizer to choose
         for i, os_name in enumerate(ordered_oses):
