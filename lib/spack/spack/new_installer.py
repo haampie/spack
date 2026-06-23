@@ -923,6 +923,19 @@ class BuildInfo:
         self.log_summary: Optional[str] = None
 
 
+class InstallEventSink:
+    """Observer for build lifecycle events, for alternative front-ends such as CI.
+
+    Methods are called synchronously from the installer event loop, so they must not block
+    (no inline network or disk IO): enqueue the event and return. The base class is a no-op
+    default; subclasses override only the events they care about.
+    """
+
+    def on_build_added(self, build_id: str, info: BuildInfo) -> None: ...
+
+    def on_state_change(self, build_id: str, info: BuildInfo) -> None: ...
+
+
 class BuildStatus:
     """Tracks the build status display for terminal output."""
 
@@ -936,9 +949,12 @@ class BuildStatus:
         color: Optional[bool] = None,
         verbose: bool = False,
         filter_padding: bool = False,
+        event_sink: Optional[InstallEventSink] = None,
     ) -> None:
         if stdout is None:
             stdout = cast(io.TextIOWrapper, sys.stdout)
+        #: Observer for build lifecycle events (CI front-end etc.); no-op by default.
+        self.event_sink = event_sink if event_sink is not None else InstallEventSink()
         #: Ordered dict of build ID -> info
         self.total = total
         self.completed = 0
@@ -994,6 +1010,7 @@ class BuildStatus:
         build_info = BuildInfo(spec, explicit, control_w_conn, log_path, int(self.get_time()))
         self.builds[spec.dag_hash()] = build_info
         self.dirty = True
+        self.event_sink.on_build_added(spec.dag_hash(), build_info)
         # Track the new build's logs when we're not already following another build. This applies
         # only in non-TTY verbose mode.
         if self.verbose and not self.tracked_build_id and control_w_conn is not None:
@@ -1178,6 +1195,7 @@ class BuildStatus:
 
         self.dirty = True
         self._update_terminal_title()
+        self.event_sink.on_state_change(build_id, build_info)
 
         # For non-TTY output, print state changes immediately
         if not self.is_tty and not self.headless:
@@ -2015,6 +2033,7 @@ class PackageInstaller:
         root_policy: InstallPolicy = "auto",
         dependencies_policy: InstallPolicy = "auto",
         create_reports: bool = False,
+        event_sink: Optional[InstallEventSink] = None,
     ) -> None:
         assert install_package or install_deps, "Must install package, dependencies or both"
 
@@ -2101,6 +2120,7 @@ class PackageInstaller:
             verbose=verbose,
             filter_padding=spack.store.STORE.has_padding(),
             is_tty=TerminalState.stdout_is_interactive(),
+            event_sink=event_sink,
         )
         self.jobs = spack.config.determine_number_of_jobs(parallel=True)
         self.build_status.actual_jobs = self.jobs

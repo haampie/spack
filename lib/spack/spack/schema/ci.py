@@ -137,6 +137,16 @@ properties: Dict[str, Any] = {
             "broken-specs-url": {"type": "string"},
             "broken-tests-packages": {"type": "array", "items": {"type": "string"}},
             "target": {"type": "string", "default": "gitlab"},
+            # Settings for the single-node installer CI backend (`spack ci run`/`server`).
+            "dashboard": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "url": {"type": "string"},
+                    "archive-dir": {"type": "string"},
+                    "archive-url": {"type": "string"},
+                },
+            },
         },
     }
 }

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from typing import TYPE_CHECKING, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union
 
 from spack.vendor.typing_extensions import Literal
 
@@ -40,9 +40,12 @@ def create_installer(
     root_policy: Literal["auto", "cache_only", "source_only"] = "auto",
     dependencies_policy: Literal["auto", "cache_only", "source_only"] = "auto",
     create_reports: bool = False,
+    event_sink: Optional["spack.new_installer.InstallEventSink"] = None,
 ) -> Union["spack.installer.PackageInstaller", "spack.new_installer.PackageInstaller"]:
     """Create an installer based on the current configuration and feature support."""
     use_old_installer = spack.config.get("config:installer", "new") == "old"
+    if event_sink is not None and use_old_installer:
+        raise ValueError("event_sink requires config:installer:new")
 
     if spack.config.get("config:sandbox:enable", False):
         if use_old_installer:
@@ -52,13 +55,7 @@ def create_installer(
         # Probe sandbox support now so builds don't fail later inside a subprocess.
         spack.sandbox.get_sandbox()
 
-    if use_old_installer:
-        from spack.installer import PackageInstaller  # type: ignore
-    else:
-        from spack.new_installer import PackageInstaller  # type: ignore
-
-    return PackageInstaller(
-        packages,
+    kwargs: Dict[str, Any] = dict(
         dirty=dirty,
         explicit=explicit,
         overwrite=overwrite,
@@ -82,3 +79,12 @@ def create_installer(
         dependencies_policy=dependencies_policy,
         create_reports=create_reports,
     )
+
+    if use_old_installer:
+        from spack.installer import PackageInstaller  # type: ignore
+    else:
+        from spack.new_installer import PackageInstaller  # type: ignore
+
+        kwargs["event_sink"] = event_sink
+
+    return PackageInstaller(packages, **kwargs)

@@ -243,6 +243,36 @@ def setup_parser(subparser: argparse.ArgumentParser) -> None:
     verify_versions.add_argument("to_ref", help="git ref to end looking at changes")
     verify_versions.set_defaults(func=ci_verify_versions, subparser=verify_versions)
 
+    # Install the active environment's DAG on one machine, reporting to a dashboard server
+    run = subparsers.add_parser(
+        "run", description=doc_dedented(ci_run), help=doc_first_line(ci_run)
+    )
+    run.add_argument(
+        "--server", default=None, help="dashboard server URL (default: config ci:dashboard:url)"
+    )
+    run.add_argument("--commit", default="", help="commit being built (for the dashboard)")
+    run.add_argument("--ref", default="", help="git ref being built (for the dashboard)")
+    run.add_argument(
+        "--log-host", default=None, help="hostname/IP browsers use to reach this machine's logs"
+    )
+    run.add_argument("--log-port", type=int, default=0, help="port for the local log endpoint")
+    run.add_argument(
+        "--archive-dir", default=None, help="directory to copy finished logs into for archival"
+    )
+    run.add_argument(
+        "--archive-url", default=None, help="base URL serving --archive-dir to browsers"
+    )
+    run.set_defaults(func=ci_run, subparser=run)
+
+    # Serve the CI dashboard (DAG view + live logs + sqlite history)
+    server = subparsers.add_parser(
+        "server", description=doc_dedented(ci_server), help=doc_first_line(ci_server)
+    )
+    server.add_argument("--db", default="spack-ci.db", help="sqlite history file")
+    server.add_argument("--host", default="127.0.0.1", help="address to bind")
+    server.add_argument("--port", type=int, default=8080, help="port to bind")
+    server.set_defaults(func=ci_server, subparser=server)
+
 
 def ci_generate(args):
     """\
@@ -881,6 +911,61 @@ def ci_verify_versions(args):
 
     if not success:
         sys.exit(1)
+
+
+def ci_run(args):
+    """\
+    install the active environment's DAG on one machine, reporting to a dashboard
+
+    concretize the environment and install the whole DAG under the new installer's jobserver on a
+    single machine, streaming small build-state events to the dashboard server (`spack ci server`)
+    and serving live logs straight from local log files. this avoids the per-build-job tarball
+    round-tripping of `spack ci generate`.
+    """
+    import spack.ci.run as ci_run_mod
+
+    env = spack.cmd.require_active_env(args.subparser)
+    server_url = args.server or cfg.get("ci:dashboard:url")
+    if not server_url:
+        args.subparser.error("no dashboard server: pass --server or set config ci:dashboard:url")
+
+    archive = None
+    if args.archive_dir:
+        if not args.archive_url:
+            args.subparser.error("--archive-dir requires --archive-url")
+        archive = ci_run_mod.make_directory_archiver(args.archive_dir, args.archive_url)
+
+    with env:
+        failed = ci_run_mod.run(
+            env,
+            server_url,
+            commit=args.commit,
+            ref=args.ref,
+            log_host=args.log_host,
+            log_port=args.log_port,
+            archive=archive,
+        )
+    return 1 if failed else 0
+
+
+def ci_server(args):
+    """\
+    serve the CI dashboard: DAG view, live logs, and sqlite history
+
+    runs a tiny single-threaded, non-blocking server (stdlib selectors) suitable for a small VPS.
+    it only handles the control plane (pipeline DAGs and build-state events); log bytes are served
+    by the build machines or an object store, never through this process.
+    """
+    import spack.ci.server as ci_server_mod
+
+    hub = ci_server_mod.Hub(ci_server_mod.Db(args.db))
+    server = ci_server_mod.Server(hub, host=args.host, port=args.port)
+    tty.msg(f"spack ci dashboard on http://{server.host}:{server.port} (db: {args.db})")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        tty.msg("shutting down")
+    return 0
 
 
 def ci(parser, args):
