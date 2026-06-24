@@ -3019,7 +3019,7 @@ complete -c spack -n '__fish_spack_using_command restage' -s h -l help -f -a hel
 complete -c spack -n '__fish_spack_using_command restage' -s h -l help -d 'show this help message and exit'
 
 # spack solve
-set -g __fish_spack_optspecs_spack_solve h/help l/long L/very-long N/namespaces I/install-status no-install-status y/yaml j/json format= non-defaults c/cover= t/types f/force U/fresh reuse fresh-roots deprecated show= timers stats
+set -g __fish_spack_optspecs_spack_solve h/help l/long L/very-long N/namespaces I/install-status no-install-status y/yaml j/json format= non-defaults c/cover= t/types f/force U/fresh reuse fresh-roots deprecated show= timers stats ground-stats
 complete -c spack -n '__fish_spack_using_command_pos_remainder 0 solve' -f -k -a '(__fish_spack_specs_or_id)'
 complete -c spack -n '__fish_spack_using_command solve' -s h -l help -f -a help
 complete -c spack -n '__fish_spack_using_command solve' -s h -l help -d 'show this help message and exit'
@@ -3061,9 +3061,11 @@ complete -c spack -n '__fish_spack_using_command solve' -l timers -f -a timers
 complete -c spack -n '__fish_spack_using_command solve' -l timers -d 'print out timers for different solve phases'
 complete -c spack -n '__fish_spack_using_command solve' -l stats -f -a stats
 complete -c spack -n '__fish_spack_using_command solve' -l stats -d 'print out statistics from clingo'
+complete -c spack -n '__fish_spack_using_command solve' -l ground-stats -f -a ground_stats
+complete -c spack -n '__fish_spack_using_command solve' -l ground-stats -d 'attribute the grounded program'"'"'s size to its predicates (to find grounding blow-ups)'
 
 # spack spec
-set -g __fish_spack_optspecs_spack_spec h/help l/long L/very-long N/namespaces I/install-status no-install-status y/yaml j/json format= non-defaults c/cover= t/types f/force U/fresh reuse fresh-roots deprecated show= timers stats
+set -g __fish_spack_optspecs_spack_spec h/help l/long L/very-long N/namespaces I/install-status no-install-status y/yaml j/json format= non-defaults c/cover= t/types f/force U/fresh reuse fresh-roots deprecated show= timers stats ground-stats
 complete -c spack -n '__fish_spack_using_command_pos_remainder 0 spec' -f -k -a '(__fish_spack_specs_or_id)'
 complete -c spack -n '__fish_spack_using_command spec' -s h -l help -f -a help
 complete -c spack -n '__fish_spack_using_command spec' -s h -l help -d 'show this help message and exit'
@@ -3105,6 +3107,8 @@ complete -c spack -n '__fish_spack_using_command spec' -l timers -f -a timers
 complete -c spack -n '__fish_spack_using_command spec' -l timers -d 'print out timers for different solve phases'
 complete -c spack -n '__fish_spack_using_command spec' -l stats -f -a stats
 complete -c spack -n '__fish_spack_using_command spec' -l stats -d 'print out statistics from clingo'
+complete -c spack -n '__fish_spack_using_command spec' -l ground-stats -f -a ground_stats
+complete -c spack -n '__fish_spack_using_command spec' -l ground-stats -d 'attribute the grounded program'"'"'s size to its predicates (to find grounding blow-ups)'
 
 # spack stage
 set -g __fish_spack_optspecs_spack_stage h/help n/no-checksum p/path= e/exclude= s/skip-installed f/force U/fresh reuse fresh-roots deprecated

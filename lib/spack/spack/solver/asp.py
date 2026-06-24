@@ -95,12 +95,80 @@ class OutputConfiguration(NamedTuple):
     out: Optional[io.IOBase]
     #: If True, stop after setup and don't solve
     setup_only: bool
+    #: If True, attribute the size of the grounded program to its predicates
+    ground_stats: bool = False
 
 
 #: Default output configuration for a solve
 DEFAULT_OUTPUT_CONFIGURATION = OutputConfiguration(
-    timers=False, stats=False, out=None, setup_only=False
+    timers=False, stats=False, out=None, setup_only=False, ground_stats=False
 )
+
+
+def print_ground_stats(control, out=None, top: int = 15) -> None:
+    """Attribute the size of the *grounded* program to the predicates that produce it.
+
+    Grounding -- turning first-order rules and facts into propositional logic -- is
+    frequently the dominant cost of a Spack solve, and the blow-ups are lopsided: a
+    single rule that pairs two independently multi-valued attributes grounds a
+    quadratic cross-product and can emit the large majority of all ground atoms. This
+    walks the grounded program and prints, per predicate signature, how many ground
+    atoms it contributes, with a finer breakdown for the two usual offenders: the
+    ``attr`` meta-predicate (by attribute name) and ``error`` (by message template,
+    which pins the exact rule). Wired to ``spack solve --ground-stats``.
+    """
+    stream = out or sys.stdout
+
+    by_sig: collections.Counter = collections.Counter()
+    by_attr: collections.Counter = collections.Counter()
+    by_error: collections.Counter = collections.Counter()
+    by_pkg_fact: collections.Counter = collections.Counter()
+
+    total = 0
+    for sa in control.symbolic_atoms:
+        sym = sa.symbol
+        name, args = sym.name, sym.arguments
+        total += 1
+        by_sig[(name, len(args))] += 1
+        if name == "attr" and args:
+            by_attr[str(args[0])] += 1
+        elif name == "error" and len(args) >= 2:
+            by_error[str(args[1])] += 1
+        elif name == "pkg_fact" and len(args) == 2:
+            inner = args[1]
+            key = inner.name if inner.arguments else str(inner)
+            by_pkg_fact[key] += 1
+
+    if not total:
+        stream.write("Ground program is empty (did grounding run?).\n")
+        return
+
+    def pct(n: int) -> str:
+        return f"{100.0 * n / total:5.1f}%"
+
+    stream.write(f"\nGround atom attribution ({total:,} named atoms total):\n")
+    stream.write(f"  {'count':>12}  {'share':>6}  predicate\n")
+    for (name, arity), n in by_sig.most_common(top):
+        stream.write(f"  {n:>12,}  {pct(n)}  {name}/{arity}\n")
+
+    if by_attr:
+        stream.write("\n  attr/* by attribute name:\n")
+        for attr_name, n in by_attr.most_common(top):
+            stream.write(f"  {n:>12,}  {pct(n)}  attr({attr_name}, ...)\n")
+
+    if by_pkg_fact:
+        stream.write("\n  pkg_fact/2 by inner functor:\n")
+        for functor, n in by_pkg_fact.most_common(top):
+            stream.write(f"  {n:>12,}  {pct(n)}  pkg_fact(_, {functor}(...))\n")
+
+    if by_error:
+        stream.write("\n  error/* by message template:\n")
+        for msg, n in by_error.most_common(top):
+            template = msg.strip('"')
+            if len(template) > 70:
+                template = template[:67] + "..."
+            stream.write(f"  {n:>12,}  {pct(n)}  {template}\n")
+    stream.write("\n")
 
 
 # Below numbers are used to map names of criteria to the order
@@ -908,6 +976,7 @@ class PyclingoDriver:
         problem_str: str,
         control_file_paths: List[str],
         timer: spack.util.timer.Timer,
+        output: OutputConfiguration,
     ) -> Result:
         """Actually run clingo and generate a result.
 
@@ -928,6 +997,11 @@ class PyclingoDriver:
         # and first-order logic rules into propositional logic.
         with timer.measure("ground"):
             self.control.ground([("base", [])])
+
+        # Attribute the grounded program's size to its predicates, so grounding
+        # blow-ups (e.g. a quadratic cross-product rule) are easy to spot.
+        if output.ground_stats:
+            print_ground_stats(self.control)
 
         # With a grounded program, we can run the solve.
         models = []  # stable models if things go well
@@ -1094,7 +1168,9 @@ class PyclingoDriver:
         # run the solver
         if not result:
             tty.debug("Starting concretizer")
-            result = self._run_clingo(specs, setup, "\n".join(problem), control_file_paths, timer)
+            result = self._run_clingo(
+                specs, setup, "\n".join(problem), control_file_paths, timer, output
+            )
             result.raise_if_unsat()
             concretization_stats = self.control.statistics
 
@@ -3963,6 +4039,7 @@ class Solver:
         tests: spack.concretize.TestsType = False,
         setup_only: bool = False,
         allow_deprecated: bool = False,
+        ground_stats: bool = False,
     ) -> Tuple[Result, Optional[spack.util.timer.Timer], Optional[Dict]]:
         """
         Concretize a set of specs and track the timing and statistics for the solve
@@ -3977,12 +4054,19 @@ class Solver:
             packages (defaults to False: do not concretize test dependencies).
           setup_only: if True, stop after setup and don't solve (default False).
           allow_deprecated: allow deprecated version in the solve
+          ground_stats: attribute the grounded program's size to its predicates.
         """
         specs = [spack.hash_lookup.lookup_hash(s) for s in specs]
         reusable_specs = self._extract_concrete_specs(specs)
         reusable_specs.extend(self.selector.reusable_specs(specs))
         setup = SpackSolverSetup(tests=tests)
-        output = OutputConfiguration(timers=timers, stats=stats, out=out, setup_only=setup_only)
+        output = OutputConfiguration(
+            timers=timers,
+            stats=stats,
+            out=out,
+            setup_only=setup_only,
+            ground_stats=ground_stats,
+        )
 
         result = self.driver.solve(
             setup,
@@ -4012,6 +4096,7 @@ class Solver:
         stats: bool = False,
         tests: spack.concretize.TestsType = False,
         allow_deprecated: bool = False,
+        ground_stats: bool = False,
     ) -> Generator[Result, None, None]:
         """Solve for a stable model of specs in multiple rounds.
 
@@ -4038,7 +4123,9 @@ class Solver:
         setup.concretize_everything = False
 
         input_specs = specs
-        output = OutputConfiguration(timers=timers, stats=stats, out=out, setup_only=False)
+        output = OutputConfiguration(
+            timers=timers, stats=stats, out=out, setup_only=False, ground_stats=ground_stats
+        )
         while True:
             result, _, _ = self.driver.solve(
                 setup,

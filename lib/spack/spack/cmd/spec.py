@@ -101,6 +101,13 @@ for further documentation regarding the spec syntax, see:
     subparser.add_argument(
         "--stats", action="store_true", default=False, help="print out statistics from clingo"
     )
+    subparser.add_argument(
+        "--ground-stats",
+        action="store_true",
+        default=False,
+        help="attribute the grounded program's size to its predicates "
+        "(to find grounding blow-ups)",
+    )
 
 
 def _process_result(result, show, required_format, kwargs):
@@ -221,6 +228,7 @@ def spec(parser, args):
                 out=output,
                 timers=args.timers,
                 stats=args.stats,
+                ground_stats=args.ground_stats,
                 allow_deprecated=allow_deprecated,
             )
         ):
@@ -240,6 +248,7 @@ def spec(parser, args):
             timers=args.timers,
             stats=args.stats,
             setup_only=setup_only,
+            ground_stats=args.ground_stats,
             allow_deprecated=allow_deprecated,
         )
         if not setup_only:
@@ -252,6 +261,7 @@ def spec(parser, args):
                 timers=args.timers,
                 stats=args.stats,
                 setup_only=setup_only,
+                ground_stats=args.ground_stats,
                 allow_deprecated=allow_deprecated,
             )
             if not setup_only:
