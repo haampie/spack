@@ -2397,16 +2397,18 @@ opt_criterion(2, "providers on edges").
       depends_on(ParentNode, ProviderNode)
 }.
 
-% Try to use latest versions of nodes as much as possible
+% Try to use latest versions of nodes as much as possible. Counted per node
+% (not per incoming edge): the per-edge form grounded version_weight x edges,
+% which dominated grounding, while the optimum is unchanged for the duplicable
+% (multiple unification set) packages this targets.
 opt_criterion(1, "version badness on edges").
 #minimize{ 0@201: #true }.
 #minimize{ 0@1: #true }.
 #minimize{
-    Weight@1,ParentNode,node(X, Package)
+    Weight@1,node(X, Package)
     : version_weight(node(X, Package), Weight),
       multiple_unification_sets(Package),
-      not attr("root", node(X, Package)),
-      depends_on(ParentNode, node(X, Package))
+      not attr("root", node(X, Package))
 }.
 
 % Reduce symmetry on duplicates
