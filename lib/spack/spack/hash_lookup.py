@@ -8,7 +8,7 @@ searching the active environment, the installed store, the binary cache, and
 configured externals (via spack.externals_config).
 """
 
-from typing import List
+from typing import Collection, List, Optional
 
 import spack.binary_distribution
 import spack.config
@@ -36,12 +36,20 @@ def _matching_external_specs(spec: "spack.spec.Spec") -> List["spack.spec.Spec"]
     return parser.query(spec)
 
 
-def _lookup_one(spec: "spack.spec.Spec") -> "spack.spec.Spec":
+def _lookup_one(
+    spec: "spack.spec.Spec", known_specs: Optional[Collection["spack.spec.Spec"]] = None
+) -> "spack.spec.Spec":
     """Return the single concrete spec matching an abstract-hash spec.
 
-    Searches in order: active environment, configured externals, installed store, binary cache.
-    Raises InvalidHashError if nothing matches, AmbiguousHashError if more than one matches.
+    Searches in order: known_specs (if given), active environment, configured externals,
+    installed store, binary cache. Raises InvalidHashError if nothing matches,
+    AmbiguousHashError if more than one matches.
     """
+    if known_specs is not None:
+        matches = [s for s in known_specs if s.satisfies(spec)]
+        if len(matches) == 1:
+            return matches[0]
+
     active_env = spack.environment.active_environment()
 
     matches = (
@@ -62,22 +70,31 @@ def _lookup_one(spec: "spack.spec.Spec") -> "spack.spec.Spec":
     return matches[0]
 
 
-def lookup_hash(spec: "spack.spec.Spec") -> "spack.spec.Spec":
+def lookup_hash(
+    spec: "spack.spec.Spec", known_specs: Optional[Collection["spack.spec.Spec"]] = None
+) -> "spack.spec.Spec":
     """Return a copy of spec with all abstract-hash nodes replaced by their concrete counterparts.
 
     Non-destructive: always returns a new Spec object. If spec is already concrete or has no
     abstract-hash nodes, returns spec unchanged.
+
+    Args:
+        spec: spec with abstract-hash nodes to resolve
+        known_specs: concrete specs to resolve hashes against before searching the environment,
+            configured externals, installed store, and binary cache
     """
     if spec.concrete or not any(node.abstract_hash for node in spec.traverse()):
         return spec
 
     result = spec.copy(deps=False)
     if result.abstract_hash:
-        result._dup(_lookup_one(spec))
+        result._dup(_lookup_one(spec, known_specs))
         return result
 
     node_lookup = {
-        id(node): _lookup_one(node) for node in spec.traverse(root=False) if node.abstract_hash
+        id(node): _lookup_one(node, known_specs)
+        for node in spec.traverse(root=False)
+        if node.abstract_hash
     }
 
     for edge in spec.traverse_edges(root=False):

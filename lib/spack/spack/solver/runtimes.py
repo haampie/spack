@@ -1,7 +1,7 @@
 # Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
-from typing import Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 import spack.compilers.config
 import spack.compilers.libraries
@@ -166,7 +166,11 @@ class RuntimePropertyRecorder:
 
         imposed_spec = spack.spec.Spec(f"{self.current_package}{impose}")
         when_spec = spack.spec.Spec(f"{self.current_package}{when}")
-        when_spec = spack.hash_lookup.lookup_hash(when_spec)
+        # Hashes in "when" are minted from the possible compilers, so resolve them from
+        # there before falling back to a global search
+        when_spec = spack.hash_lookup.lookup_hash(
+            when_spec, known_specs=self._setup.possible_compilers
+        )
 
         assert imposed_spec.versions.concrete, f"{impose} must have a concrete version"
 
@@ -258,11 +262,19 @@ class RuntimePropertyRecorder:
         self._setup.effect_rules()
 
 
-def all_libcs() -> Set[spack.spec.Spec]:
+def all_libcs(compilers: Optional[List[spack.spec.Spec]] = None) -> Set[spack.spec.Spec]:
     """Return a set of all libc specs targeted by any configured compiler. If none, fall back to
-    libc determined from the current Python process if dynamically linked."""
+    libc determined from the current Python process if dynamically linked.
+
+    Args:
+        compilers: precomputed result of ``all_compilers_from(spack.config.CONFIG)``, to avoid
+            parsing the compilers from configuration again
+    """
+    if compilers is None:
+        compilers = spack.compilers.config.all_compilers_from(spack.config.CONFIG)
+
     libcs = set()
-    for c in spack.compilers.config.all_compilers_from(spack.config.CONFIG):
+    for c in compilers:
         candidate = spack.compilers.libraries.CompilerPropertyDetector(c).default_libc()
         if candidate is not None:
             libcs.add(candidate)

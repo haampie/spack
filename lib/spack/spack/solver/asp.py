@@ -1004,6 +1004,7 @@ class PyclingoDriver:
         specs: List[spack.spec.Spec],
         reuse: Optional[List[spack.spec.Spec]] = None,
         packages_with_externals=None,
+        compilers: Optional[List[spack.spec.Spec]] = None,
         output: Optional[OutputConfiguration] = None,
         control: Optional[Any] = None,  # TODO: figure out how to annotate clingo.Control
         allow_deprecated: bool = False,
@@ -1014,6 +1015,7 @@ class PyclingoDriver:
             setup: An object to set up the ASP problem.
             specs: List of ``Spec`` objects to solve for.
             reuse: list of concrete specs that can be reused
+            compilers: precomputed compilers from configuration
             output: configuration object to set the output of this solve.
             control: configuration for the solver. If None, default values will be used
             allow_deprecated: if True, allow deprecated versions in the solve
@@ -1053,6 +1055,7 @@ class PyclingoDriver:
             specs,
             reuse=reuse,
             packages_with_externals=packages_with_externals,
+            compilers=compilers,
             allow_deprecated=allow_deprecated,
         )
         timer.stop("setup")
@@ -2894,6 +2897,7 @@ class SpackSolverSetup:
         *,
         reuse: Optional[List[spack.spec.Spec]] = None,
         packages_with_externals=None,
+        compilers: Optional[List[spack.spec.Spec]] = None,
         allow_deprecated: bool = False,
     ) -> "ProblemInstanceBuilder":
         """Generate an ASP program with relevant constraints for specs.
@@ -2906,6 +2910,7 @@ class SpackSolverSetup:
             specs: list of Specs to solve
             reuse: list of concrete specs that can be reused
             packages_with_externals: precomputed packages config with implicit externals
+            compilers: precomputed compilers from configuration
             allow_deprecated: if True adds deprecated versions into the solve
 
         Return:
@@ -2915,9 +2920,11 @@ class SpackSolverSetup:
         import spack.environment as ev
 
         reuse = reuse or []
+        if compilers is None:
+            compilers = spack.compilers.config.all_compilers_from(spack.config.CONFIG)
         if packages_with_externals is None:
-            packages_with_externals = (
-                spack.externals_config.external_config_with_implicit_externals(spack.config.CONFIG)
+            packages_with_externals = spack.externals_config.external_config_with_implicit_externals(
+                spack.config.CONFIG, compilers=compilers
             )
         self._validate_input_specs(specs)
         self.gen = ProblemInstanceBuilder()
@@ -2927,9 +2934,7 @@ class SpackSolverSetup:
         compilers_from_reuse = {
             x for x in reuse if x.name in supported_compilers and not x.external
         }
-        candidate_compilers, self.rejected_compilers = possible_compilers(
-            configuration=spack.config.CONFIG
-        )
+        candidate_compilers, self.rejected_compilers = possible_compilers(compilers)
         reuse_from_compilers = traverse.traverse_nodes(
             [x for x in candidate_compilers if not x.external], deptype=("link", "run")
         )
@@ -2954,7 +2959,7 @@ class SpackSolverSetup:
         )
         self.possible_virtuals = node_counter.possible_virtuals()
         self.pkgs = node_counter.possible_dependencies()
-        self.libcs = sorted(all_libcs())  # type: ignore[type-var]
+        self.libcs = sorted(all_libcs(compilers))  # type: ignore[type-var]
 
         for node in traverse.traverse_nodes(specs):
             if node.namespace is not None:
@@ -3404,11 +3409,13 @@ class ProblemInstanceBuilder:
         self.asp_problem.append("")
 
 
-def possible_compilers(*, configuration) -> Tuple[Set["spack.spec.Spec"], Set["spack.spec.Spec"]]:
+def possible_compilers(
+    compilers: List["spack.spec.Spec"],
+) -> Tuple[Set["spack.spec.Spec"], Set["spack.spec.Spec"]]:
     result, rejected = set(), set()
 
     # Compilers defined in configuration
-    for c in spack.compilers.config.all_compilers_from(configuration):
+    for c in compilers:
         if spack.platforms.using_libc_compatibility() and not c_compiler_runs(c):
             rejected.add(c)
             try:
@@ -3440,9 +3447,10 @@ def possible_compilers(*, configuration) -> Tuple[Set["spack.spec.Spec"], Set["s
         result.add(c)
 
     # Compilers from the local store
-    supported_compilers = spack.compilers.config.supported_compilers()
-    for pkg_name in supported_compilers:
-        result.update(spack.store.STORE.db.query(pkg_name))
+    supported_compilers = set(spack.compilers.config.supported_compilers())
+    result.update(
+        spack.store.STORE.db.query(predicate_fn=lambda rec: rec.spec.name in supported_compilers)
+    )
 
     return result, rejected
 
@@ -3931,14 +3939,16 @@ class Solver:
 
     def __init__(self, *, specs_factory: Optional[SpecFiltersFactory] = None):
         # Compute possible compilers first, so we see them as externals
-        _ = spack.compilers.config.all_compilers(init_config=True)
+        self.compilers = spack.compilers.config.all_compilers(init_config=True)
 
         self._conc_cache = ConcretizationCache()
         self.driver = PyclingoDriver(conc_cache=self._conc_cache)
 
         # Compute packages configuration with implicit externals once and reuse it
         self.packages_with_externals = (
-            spack.externals_config.external_config_with_implicit_externals(spack.config.CONFIG)
+            spack.externals_config.external_config_with_implicit_externals(
+                spack.config.CONFIG, compilers=self.compilers
+            )
         )
         completion_mode = spack.config.CONFIG.get("concretizer:externals:completion")
         self.selector = ReusableSpecsSelector(
@@ -3989,6 +3999,7 @@ class Solver:
             specs,
             reuse=reusable_specs,
             packages_with_externals=self.packages_with_externals,
+            compilers=self.compilers,
             output=output,
             allow_deprecated=allow_deprecated,
         )
@@ -4045,6 +4056,7 @@ class Solver:
                 input_specs,
                 reuse=reusable_specs,
                 packages_with_externals=self.packages_with_externals,
+                compilers=self.compilers,
                 output=output,
                 allow_deprecated=allow_deprecated,
             )

@@ -4,7 +4,7 @@
 """Helpers to build an ExternalSpecsParser from Spack configuration."""
 
 import itertools
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 import spack.compilers.config
 import spack.compilers.libraries
@@ -46,12 +46,18 @@ def _normalize_packages_yaml(packages_yaml: Dict[str, Any]) -> None:
 
 def external_config_with_implicit_externals(
     configuration: spack.config.Configuration,
+    compilers: Optional[List[spack.spec.Spec]] = None,
 ) -> Dict[str, Any]:
     """Return packages.yaml augmented with implicit libc externals on Linux.
 
     Normalizes the configuration so that virtual-package keys are replaced by
     their concrete providers, then adds any libc specs detected from configured
     compilers when running on a libc-compatibility platform.
+
+    Args:
+        configuration: configuration to read packages.yaml from
+        compilers: precomputed result of ``all_compilers_from(configuration)``, to avoid
+            parsing the compilers from configuration again
     """
     packages_yaml = configuration.deepcopy_as_builtin("packages", line_info=True)
     _normalize_packages_yaml(packages_yaml)
@@ -60,8 +66,11 @@ def external_config_with_implicit_externals(
     if not spack.platforms.using_libc_compatibility():
         return packages_yaml
 
+    if compilers is None:
+        compilers = spack.compilers.config.all_compilers_from(configuration)
+
     seen = set()
-    for compiler in spack.compilers.config.all_compilers_from(configuration):
+    for compiler in compilers:
         libc = spack.compilers.libraries.CompilerPropertyDetector(compiler).default_libc()
         if libc and libc not in seen:
             seen.add(libc)
