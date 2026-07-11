@@ -1150,6 +1150,9 @@ class Repo:
         # The parent dir of spack_repo/ which should be added to sys.path for api v2.x
         self.python_path: Optional[str] = None
 
+        # Lazily resolved (remote origin url, git top level); None means "not yet computed".
+        self._git_info: Optional[Tuple[Optional[str], Optional[str]]] = None
+
         if self.package_api < (2, 0):
             check(
                 "namespace" in config,
@@ -1220,6 +1223,42 @@ class Repo:
     @property
     def package_api_str(self) -> str:
         return f"v{self.package_api[0]}.{self.package_api[1]}"
+
+    def git_info(self) -> Tuple[Optional[str], Optional[str]]:
+        """Returns ``(remote origin url, git top level)`` of this repo's checkout or
+        ``(None, None)`` if not a git repo."""
+        if self._git_info:
+            return self._git_info
+        git = spack.util.git.git()
+        if git and self.python_path:
+            with working_dir(self.python_path):
+                origin_url = git(
+                    "config",
+                    "--get",
+                    "remote.origin.url",
+                    output=str,
+                    error=os.devnull,
+                    fail_on_error=False,
+                )
+                toplevel = (
+                    git(
+                        "rev-parse",
+                        "--show-toplevel",
+                        output=str,
+                        error=os.devnull,
+                        fail_on_error=False,
+                    )
+                    if origin_url
+                    else None
+                )
+            self._git_info = (
+                (origin_url.strip(), toplevel.strip() if toplevel else None)
+                if origin_url
+                else (None, None)
+            )
+        else:
+            self._git_info = (None, None)
+        return self._git_info
 
     def real_name(self, import_name: str) -> Optional[str]:
         """Allow users to import Spack packages using Python identifiers.

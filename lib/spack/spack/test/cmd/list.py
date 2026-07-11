@@ -92,17 +92,21 @@ def test_list_format_html():
         "https://github.com/username/spack.git",
     ],
 )
-def test_list_url_schemes(mock_util_executable, url):
+def test_list_url_schemes(mutable_mock_repo: spack.repo.RepoPath, mock_util_executable, url):
     """Confirm the command handles supported repository URLs."""
     pkg_name = "hdf5"
+    repo = mutable_mock_repo.repo_for_pkg(pkg_name)
+    toplevel = repo.python_path
+    prefix = os.path.relpath(repo.filename_for_package_name(pkg_name), repo.python_path)
+    prefix = prefix.replace(os.sep, "/")
 
     _, _, registered_responses = mock_util_executable
     registered_responses["config"] = url
-    registered_responses["rev-parse"] = f"path/to/builtin/packages/{pkg_name}/"
+    registered_responses["rev-parse"] = toplevel  # mocked git top level
 
     output = list("--format", "version_json", pkg_name)
-    assert f"{registered_responses['rev-parse']}package.py" in output
-    assert os.path.basename(url).replace(".git", "") in output
+    repo_name = os.path.basename(url).replace(".git", "")
+    assert f"https://github.com/spack/{repo_name}/blob/develop/{prefix}" in output
 
 
 def test_list_format_local_repo(tmp_path: pathlib.Path):
