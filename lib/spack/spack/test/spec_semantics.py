@@ -2526,6 +2526,16 @@ def test_flag_order_survives_formatting(mock_packages):
     assert round_tripped.dag_hash() == spec.dag_hash()
 
 
+def test_concrete_patches_are_truncated_by_formatting(mock_packages):
+    """Patch checksums are abbreviated to seven characters when printed. A concrete patches value
+    takes exactly the values it lists, so the abbreviated spec is disjoint from the original."""
+    spec = Spec("pkg-a patches:=abcdef1234567890")
+    round_tripped = Spec(str(spec))
+
+    assert round_tripped.variants["patches"].value == ("abcdef1",)
+    assert not spec.intersects(round_tripped)
+
+
 def test_an_anonymous_spec_is_the_top_of_the_order_only(mock_packages):
     """A spec that leaves the name unset denotes every package, so everything is inside it and it
     is inside nothing that names one. Being the bottom too would break transitivity."""
