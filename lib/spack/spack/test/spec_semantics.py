@@ -2512,6 +2512,19 @@ def test_satisfies_and_subscript_with_compilers(config, mock_packages):
     assert s["pkg-a"].dependencies(name="gmake")[0] == s["pkg-a"]["gmake"]
 
 
+def test_flag_propagation_is_invisible_to_satisfies(mock_packages):
+    """A propagating flag is a condition on the whole DAG, so satisfies follows non-contradiction
+    here. The merge keeps the propagation, making the meet the narrower constraint."""
+    # CompilerFlag subclasses str, so == and hash ignore the propagation
+    propagating, plain = Spec("pkg-a cflags==-O2"), Spec("pkg-a cflags=-O2")
+    assert propagating.satisfies(plain)
+    assert plain.satisfies(propagating)
+
+    merged = plain.copy()
+    merged.constrain(propagating)
+    assert merged.compiler_flags["cflags"][0].propagate
+
+
 def test_flag_order_survives_formatting(mock_packages):
     """Compiler flags are printed in the order they are stored, grouped into runs that agree on
     whether they propagate. Flag order is significant to the build, so losing it changes the
