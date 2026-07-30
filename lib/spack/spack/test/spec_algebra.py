@@ -185,6 +185,7 @@ def test_constrain_is_associative(a_str, b_str, c_str, mock_packages):
         ("pkg-a@2", "pkg-a@1:3"),
         ("pkg-a foo=bar,baz", "pkg-a foo=bar"),
         ("pkg-a target=haswell", "pkg-a target=x86_64:"),
+        ("pkg-a target=:icelake", "pkg-a target=x86_64:"),
         ("pkg-a/abcdef", "pkg-a/abc"),
         ("pkg-a ^pkg-b@1", "pkg-a"),
     ],
@@ -288,6 +289,10 @@ def test_flag_order_is_significant_so_the_meet_is_not_commutative(mock_packages)
     assert forward.to_dict() != backward.to_dict()
 
 
+# Laws that hold only because of one decision in the merge, pinned on the state that stops
+# satisfying them the day it is lost.
+
+
 def test_a_virtual_edge_constraining_a_version_stays_unfused_but_still_satisfies(mock_packages):
     """A version on an edge naming a virtual bounds the virtual, not its provider, and a node has
     nowhere to record that, so the edge stays beside the provider edge. Satisfies still matches
@@ -341,6 +346,29 @@ def test_copy_keeps_a_redundant_parallel_edge_and_its_subtree(mock_packages):
     assert len(copy.edges_to_dependencies(name="pkg-b")) == 2
     assert any(s.name == "pkg-e" for s in copy.traverse())
     assert copy.to_dict() == original.to_dict()
+
+
+def test_one_target_range_is_one_canonical_state(mock_packages):
+    """':icelake' and 'x86_64:icelake' denote the same range, since x86_64 is the family root.
+    Ranges are stored canonicalized, so the two are one state with one hash."""
+    long, short = Spec("pkg-a target=x86_64:icelake"), Spec("pkg-a target=:icelake")
+    assert long.to_dict() == short.to_dict()
+    assert long.dag_hash() == short.dag_hash()
+
+    lhs, rhs = Spec("pkg-a target=:icelake"), Spec("pkg-a target=x86_64:")
+    forward = meet(lhs, rhs)
+    backward = meet(rhs, lhs)
+    assert forward.to_dict() == backward.to_dict()
+    assert str(forward.architecture.target) == ":icelake"
+
+
+def test_a_target_range_inside_another_one_is_dropped_from_the_list(mock_packages):
+    """A list of ranges denotes their union, so a range inside another adds nothing to it and is
+    dropped, leaving one canonical state for that union."""
+    assert (
+        Spec("pkg-a target=cannonlake:,icelake:").to_dict()
+        == Spec("pkg-a target=cannonlake:").to_dict()
+    )
 
 
 def test_a_conditional_edge_merges_the_same_from_either_edge_order(mock_packages):
