@@ -84,6 +84,7 @@ from spack.enums import Context
 from spack.error import InstallError, NoHeadersError, NoLibrariesError
 from spack.install_test import spack_install_test_log
 from spack.util import tty
+from spack.util.ctest_log_parser import Severity
 from spack.util.environment import (
     SYSTEM_DIR_CASE_ENTRY,
     EnvironmentModifications,
@@ -98,7 +99,7 @@ from spack.util.environment import (
 from spack.util.executable import Executable
 from spack.util.filesystem import join_path, symlink
 from spack.util.lang import dedupe, stable_partition
-from spack.util.log_parse import make_log_context, parse_log_events
+from spack.util.log_parse import scan_log, write_log_context
 from spack.util.string import plural
 from spack.util.tty.color import cescape, colorize
 
@@ -1660,26 +1661,24 @@ def _make_child_error(msg, module, name, traceback, log, log_type, context):
 
 
 def write_log_summary(out, log_type, log, last=None):
-    errors, warnings, _ = parse_log_events(log)
-    nerr = len(errors)
-    nwar = len(warnings)
+    # A first pass without context only collects the matched lines, so it stays cheap.
+    matches = [match for block in scan_log(log, context=0) for match in block.matches.values()]
+    errors = [m for m in matches if m.severity is Severity.ERROR]
+    warnings = [m for m in matches if m.severity is Severity.WARNING]
 
-    if nerr > 0:
-        if last and nerr > last:
-            errors = errors[-last:]
-            nerr = last
+    # If errors are found, only display errors, otherwise display warnings.
+    if errors:
+        severity, chosen, noun = Severity.ERROR, errors, "error"
+    elif warnings:
+        severity, chosen, noun = Severity.WARNING, warnings, "warning"
+    else:
+        return
 
-        # If errors are found, only display errors
-        out.write("\n%s found in %s log:\n" % (plural(nerr, "error"), log_type))
-        out.write(make_log_context(errors))
-    elif nwar > 0:
-        if last and nwar > last:
-            warnings = warnings[-last:]
-            nwar = last
+    if last and len(chosen) > last:
+        chosen = chosen[-last:]
 
-        # If no errors are found but warnings are, display warnings
-        out.write("\n%s found in %s log:\n" % (plural(nwar, "warning"), log_type))
-        out.write(make_log_context(warnings))
+    out.write("\n%s found in %s log:\n" % (plural(len(chosen), noun), log_type))
+    write_log_context(out, log, severities={severity}, min_line=chosen[0].line_no)
 
 
 class ModuleChangePropagator:

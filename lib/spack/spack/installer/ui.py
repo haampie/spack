@@ -12,12 +12,12 @@ import io
 import os
 import sys
 import time
-from typing import Callable, Dict, Generator, List, NamedTuple, Optional, Union, cast
+from typing import Callable, Dict, Generator, List, NamedTuple, Optional, TextIO, Union, cast
 
 import spack.config
 import spack.util.tty.color
 from spack.util.lang import pretty_duration
-from spack.util.log_parse import make_log_context, parse_log_events
+from spack.util.log_parse import write_log_context
 from spack.util.path import padding_filter, padding_filter_bytes
 
 if sys.platform == "win32":
@@ -174,6 +174,7 @@ class TerminalUI(InstallerUI):
         self,
         total: int,
         stdout: Optional[io.TextIOWrapper] = None,
+        stderr: Optional[TextIO] = None,
         get_terminal_size: Callable[[], os.terminal_size] = os.get_terminal_size,
         get_time: Callable[[], float] = time.monotonic,
         is_tty: Optional[bool] = None,
@@ -210,6 +211,7 @@ class TerminalUI(InstallerUI):
         self.blocked: bool = False
 
         self.stdout = stdout
+        self.stderr = stderr if stderr is not None else sys.stderr
         self.get_terminal_size = get_terminal_size
         self.terminal_size = os.terminal_size((0, 0))
         self.terminal_size_changed: bool = True
@@ -375,10 +377,10 @@ class TerminalUI(InstallerUI):
             if new_build.log_summary:
                 self.stdout.write(new_build.log_summary)
             if new_build.log_path:
-                if not new_build.log_summary:
-                    self.stdout.write("No errors parsed from log, see full log: ")
-                else:
+                if new_build.log_summary:
                     self.stdout.write("Full log: ")
+                else:
+                    self.stdout.write("No errors parsed from log, see full log: ")
                 self.stdout.write(f"{new_build.log_path}\n")
             self.stdout.flush()
         else:
@@ -449,22 +451,20 @@ class TerminalUI(InstallerUI):
             self.stdout.flush()
 
     def _parse_log_summary(self, build_info: BuildInfo) -> None:
-        """Parse the build log for errors/warnings and store the summary."""
+        """Store the interesting parts of a failed build's log."""
         if not build_info.log_path or not os.path.exists(build_info.log_path):
             return
-        errors, warnings, tail_event = parse_log_events(build_info.log_path, tail=20)
-        events = [*errors, *warnings]
-        if tail_event is not None:
-            events.append(tail_event)
-        if events:
-            build_info.log_summary = make_log_context(events)
+        out = io.StringIO()
+        with open(build_info.log_path, encoding="utf-8", errors="replace") as f:
+            write_log_context(out, f, tail=20)
+        build_info.log_summary = out.getvalue() or None
 
     def on_finished(self, failures: List[str]) -> None:
         """Write the stored log summaries of the failed builds to stderr."""
         for build_id in failures:
             build_info = self.builds.get(build_id)
             if build_info is not None and build_info.log_summary:
-                sys.stderr.write(build_info.log_summary)
+                self.stderr.write(build_info.log_summary)
 
     def on_total_increased(self, count: int) -> None:
         self.total += count
