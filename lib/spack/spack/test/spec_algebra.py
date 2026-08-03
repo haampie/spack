@@ -214,6 +214,7 @@ def test_self_meet_of_parallel_deptype_edges_is_idempotent(mock_packages):
         ("pkg-a@1:3", "pkg-a@2:5", "pkg-a@2:3"),
         ("pkg-a foo=bar,baz", "pkg-a foo=baz,fee", "pkg-a foo=bar,baz,fee"),
         ("pkg-a target=x86_64:", "pkg-a target=:icelake", "pkg-a target=haswell"),
+        ("pkg-a target=cascadelake:", "pkg-a target=cannonlake:", "pkg-a target=icelake"),
         ("pkg-a", "pkg-a ^pkg-b@1", "pkg-a ^pkg-b@1"),
     ],
 )
@@ -228,11 +229,27 @@ def test_constrain_is_the_greatest_lower_bound(a_str, b_str, c_str, mock_package
     assert c.satisfies(result)
 
 
+def test_incomparable_target_bounds_meet_as_a_union_of_ranges(mock_packages):
+    """Microarchitectures are ordered by a DAG, not a lattice, so two ranges can have more than one
+    minimal common bound. The meet is then a list of ranges."""
+    lhs, rhs = Spec("pkg-a target=cascadelake:"), Spec("pkg-a target=cannonlake:")
+    forward, backward = meet(lhs, rhs), meet(rhs, lhs)
+    assert str(forward.architecture.target) == "icelake:"
+    assert forward.to_dict() == backward.to_dict()
+
+    # armv8.6a and neoverse_n1 have two minimal common upper bounds, so the meet is a list
+    lhs, rhs = Spec("pkg-a target=armv8.6a:"), Spec("pkg-a target=neoverse_n1:")
+    forward, backward = meet(lhs, rhs), meet(rhs, lhs)
+    assert str(forward.architecture.target) == "ampere1:,ampere1a:"
+    assert forward.to_dict() == backward.to_dict()
+
+
 @pytest.mark.parametrize(
     "a_str,b_str,c_str",
     [
         ("pkg-a@2", "pkg-a@1:3", "pkg-a"),
         ("pkg-a foo=bar,baz", "pkg-a foo=bar", "pkg-a"),
+        ("pkg-a target=haswell", "pkg-a target=x86_64:", "pkg-a os=debian6"),
     ],
 )
 def test_constrain_is_monotonic(a_str, b_str, c_str, mock_packages):
