@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import itertools
 import pathlib
 import warnings
 
@@ -23,7 +24,14 @@ import spack.variant
 import spack.version as vn
 from spack.enums import PropagationPolicy
 from spack.error import SpecError, UnsatisfiableSpecError
-from spack.spec import ArchSpec, DependencySpec, Spec, SpecFormatSigilError, SpecFormatStringError
+from spack.spec import (
+    ArchSpec,
+    DependencySpec,
+    Spec,
+    SpecFormatSigilError,
+    SpecFormatStringError,
+    meet,
+)
 from spack.util.tty.color import colorize
 from spack.variant import (
     InvalidVariantValueError,
@@ -2688,6 +2696,30 @@ def test_flag_propagation_is_invisible_to_satisfies(mock_packages):
     assert merged.compiler_flags["cflags"][0].propagate
 
 
+def test_two_direct_providers_of_one_virtual_are_disjoint(mock_packages):
+    """A node takes each virtual from exactly one of its direct dependencies, so two direct
+    edges naming different providers of one virtual cannot both hold."""
+    with pytest.raises(spack.spec_parser.SpecParsingError, match="provide"):
+        Spec("mpileaks %[virtuals=c] llvm %[virtuals=c] gcc")
+
+    lhs, rhs = Spec("mpileaks %[virtuals=c] llvm"), Spec("mpileaks %[virtuals=c] gcc")
+    assert not lhs.intersects(rhs) and not rhs.intersects(lhs)
+    with pytest.raises(UnsatisfiableSpecError):
+        lhs.constrain(rhs)
+
+
+def test_conditional_direct_providers_conflict_only_where_conditions_must_hold(mock_packages):
+    """Two direct providers of one virtual contradict each other only where both conditions hold.
+    Adding an edge compares conditions with each other, never against the node, so the
+    contradiction surfaces in intersects and constrain."""
+    conditional = Spec("mpileaks %[when='+debug' virtuals=c] llvm %[virtuals=c] gcc")
+    assert len(conditional.edges_to_dependencies()) == 2
+
+    unconditional = Spec("mpileaks %[virtuals=c] gcc")
+    assert Spec("mpileaks %[when='+debug' virtuals=c] llvm").intersects(unconditional)
+    assert not Spec("mpileaks+debug %[when='+debug' virtuals=c] llvm").intersects(unconditional)
+
+
 def test_flag_order_survives_formatting(mock_packages):
     """Compiler flags are printed in the order they are stored, grouped into runs that agree on
     whether they propagate. Flag order is significant to the build, so losing it changes the
@@ -2839,7 +2871,8 @@ def test_long_spec():
         (["@2.0:", "@:5.1", "+bar"], "@2.0:5.1 +bar"),
         # Anonymous specs with dependencies
         (["^mpich@3.2", "^mpich@:4.0+foo"], "^mpich@3.2 ^mpich@:4.0+foo"),
-        # Mix a real package with a virtual one; virtuals are not resolved.
+        # Mix a real package with a virtual one. This test
+        # should fail if we start using the repository
         (["^mpich@3.2", "^mpi+foo"], "^mpich@3.2 ^mpi+foo"),
         # Non direct dependencies + direct dependencies
         (["^mpich", "%mpich"], "%mpich"),
@@ -2870,6 +2903,94 @@ def test_constrain_does_not_share_flags_or_architecture_with_the_rhs(mock_packag
     # -g extends the flag list, ==-O2 constrains the propagation of -O2, haswell the range
     lhs.constrain(Spec("pkg-a cflags==-O2 cflags=-g target=haswell"))
     assert rhs.to_dict() == before
+
+
+def test_a_failed_constrain_leaves_the_lhs_unchanged(mock_packages):
+    """constrain applies the whole intersection or nothing at all, so a constraint that turns out
+    to be disjoint leaves behind none of the dimensions merged before the one that rejected it."""
+    lhs = Spec("pkg-a@1")
+    before = lhs.to_dict()
+    with pytest.raises(UnsatisfiableSpecError):
+        lhs.constrain(Spec("pkg-a@2/abcdef"))
+    assert lhs.to_dict() == before
+
+
+def test_inactive_when_edge_is_left_out_of_the_merge(mock_packages):
+    """An edge whose when condition cannot hold for the lhs constrains nothing on it, so both
+    satisfies and the merge pass over it."""
+    lhs = Spec("pkg-a ~foo")
+    rhs = Spec("pkg-a ^[when='+foo'] pkg-b@1")
+    assert lhs.satisfies(rhs)
+    result = meet(lhs, rhs)
+    assert result is not None
+    assert result.to_dict() == lhs.to_dict()
+
+
+def test_a_virtual_edge_and_a_provider_edge_are_merged(mock_packages):
+    """An edge naming a virtual and nothing else is matched by an edge naming a provider for it,
+    so the two fuse into the provider edge whichever arrives first."""
+    for spec_str in ("mpileaks ^mpi ^[virtuals=mpi] mpich", "mpileaks ^[virtuals=mpi] mpich ^mpi"):
+        edges = Spec(spec_str).edges_to_dependencies()
+        assert len(edges) == 1
+        assert edges[0].spec.name == "mpich" and edges[0].virtuals == ("mpi",)
+
+    lhs = Spec("pkg-a ^[virtuals=mpi] mpich")
+    rhs = Spec("pkg-a ^mpi")
+    assert lhs.satisfies(rhs)
+
+    result = meet(lhs, rhs)
+    assert result is not None
+    assert result.to_dict() == lhs.to_dict()
+
+    # A virtual-named edge with a constraint of its own is a separate requirement: the +debug
+    # provider of mpi and the node named mpich may be two nodes, so neither implies the other.
+    backward = meet(Spec("pkg-a ^mpi+debug"), Spec("pkg-a ^[virtuals=mpi] mpich"))
+    forward = meet(Spec("pkg-a ^[virtuals=mpi] mpich"), Spec("pkg-a ^mpi+debug"))
+    assert backward is not None and forward is not None
+    assert backward.to_dict() == forward.to_dict()
+    assert len(backward.edges_to_dependencies()) == 2
+    assert backward.satisfies("pkg-a ^mpi+debug")
+    assert backward.satisfies("pkg-a ^[virtuals=mpi] mpich")
+    assert not backward.satisfies("pkg-a ^[virtuals=mpi] mpich+debug")
+
+
+def test_a_virtual_edge_disagreeing_with_its_provider_stays_beside_it(mock_packages):
+    """A constrained virtual-named edge and a provider edge disagreeing on the constraint are not
+    disjoint: the +debug provider of mpi and the ~debug mpich may be two nodes."""
+    lhs, rhs = Spec("pkg-a ^mpi+debug"), Spec("pkg-a ^[virtuals=mpi] mpich~debug")
+    assert lhs.intersects(rhs)
+    assert rhs.intersects(lhs)
+    result = meet(lhs, rhs)
+    assert result is not None
+    assert len(result.edges_to_dependencies()) == 2
+
+
+def test_a_virtual_its_provider_and_a_direct_edge_stay_three_requirements(mock_packages):
+    """'%mpi' requires a direct provider of mpi, '%mpich@3' a direct mpich, and
+    '^[virtuals=mpi] mpich' an mpich providing mpi somewhere. Nothing forces the three onto one
+    node, so they stay parallel."""
+    # '%mpich@3' does not list mpi among its virtuals, so nothing pairs it with the other two
+    expected = None
+    for order in itertools.permutations(["%mpich@3", "%mpi", "^[virtuals=mpi] mpich"]):
+        result = Spec("pkg-a")
+        for constraint in order:
+            result.constrain(Spec(f"pkg-a {constraint}"))
+        assert len(result.edges_to_dependencies()) == 3, order
+        for constraint in order:
+            assert result.satisfies(f"pkg-a {constraint}"), (order, constraint)
+        if expected is None:
+            expected = result.to_dict()
+        else:
+            assert result.to_dict() == expected, order
+
+
+def test_parallel_build_and_test_edges_stay_parallel(mock_packages):
+    """A build-only and a test-only edge to the same package are unrelated requirements: neither
+    implies the other, so their union is just the two of them, with no attempt to fuse them."""
+    result = meet(Spec("pkg-a ^[deptypes=build] pkg-b"), Spec("pkg-a ^[deptypes=test] pkg-b"))
+    assert result is not None
+    depflags = sorted(dt.flag_to_chars(e.depflag).strip() for e in result.edges_to_dependencies())
+    assert depflags == ["b", "t"]
 
 
 def test_copy_does_not_share_flag_instances(mock_packages):
