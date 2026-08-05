@@ -371,9 +371,10 @@ class SpecParser:
 
         self._attach_pending(root_spec, pending)
 
-        # The parser creates conditional edges on the root and on its ^ dependencies only, so
-        # the two levels are the whole canonicalization. Root first: merging its edges can
-        # narrow a dependency node, which can settle that node's own conditions.
+        # The parser creates conditional edges on the root and on its ^ dependencies only, and
+        # the sub-dags above settled every node they hang off, so the two levels are the whole
+        # canonicalization. Root first: merging its edges can narrow a dependency node, which
+        # can settle that node's own conditions.
         if saw_when:
             try:
                 root_spec._canonicalize_conditional_edges()
