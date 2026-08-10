@@ -370,6 +370,7 @@ nitpick_ignore = [
     ("py:class", "spack.spec.ArchSpec"),
     ("py:class", "spack.spec.DependencySpec"),
     ("py:class", "spack.spec.InstallStatus"),
+    ("py:class", "spack.spec.QueryState"),
     ("py:class", "spack.spec.SpecfileReaderBase"),
     ("py:class", "spack.traverse.EdgeAndDepth"),
     ("py:class", "spack.vendor.archspec.cpu.microarchitecture.Microarchitecture"),
