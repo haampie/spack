@@ -3787,7 +3787,7 @@ class Spec:
     #: See :meth:`Spec.__getitem__` for details on how this is used.
     last_query: Optional[QueryState] = None
 
-    def __getitem__(self, name: str):
+    def __getitem__(self, name: str) -> "Spec":
         """Get a (transitive) dependency by name. Optionally, query parameters can be passed after
         a colon symbol, e.g. ``spec["foo:bar,baz"]``. The name and query parameters are stored in
         the ``last_query`` attribute, so that a package can branch based on the query when
