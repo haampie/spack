@@ -1364,6 +1364,7 @@ class ForwardQueryToPackage:
 
 class QueryState(NamedTuple):
     """Last ``__getitem__`` query state of a spec"""
+
     name: str
     extra_parameters: List[str]
     isvirtual: bool
