@@ -3784,7 +3784,7 @@ class Spec:
             raise spack.error.SpecError("Spec version is not concrete: " + str(self))
         return self.versions[0]
 
-    #: See :meth:`__getitem__`
+    #: Used to store the last query parameters when this spec was accessed via ``__getitem__``.
     last_query: Optional[QueryState] = None
 
     def __getitem__(self, name: str) -> "Spec":
