@@ -1362,10 +1362,12 @@ class ForwardQueryToPackage:
         raise AttributeError(msg.format(cls_name, self.attribute_name))
 
 
-#: How a spec was queried with ``Spec.__getitem__``
-QueryState = collections.namedtuple(
-    "QueryState", ["name", "extra_parameters", "isvirtual", "parent"]
-)
+class QueryState(NamedTuple):
+    """Last ``__getitem__`` query state of a spec"""
+    name: str
+    extra_parameters: List[str]
+    isvirtual: bool
+    parent: Optional["Spec"]
 
 
 def tree(
