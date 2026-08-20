@@ -521,3 +521,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# Lean build artifacts
+/formal/.lake
