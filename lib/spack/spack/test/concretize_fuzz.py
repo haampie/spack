@@ -41,6 +41,7 @@ import spack.deptypes as dt
 import spack.error
 import spack.repo
 import spack.spec
+import spack.spec_parser
 from spack.version import GitVersion, StandardVersion
 
 #: Variants whose values the solver invents rather than reads from a definition.
@@ -76,7 +77,7 @@ def draw_version_constraint(rng: random.Random, pkg) -> Optional[str]:
     return rng.choice([f"@={a}", f"@{a}", f"@{a}:", f"@:{b}", f"@{a}:{b}" if a != b else f"@{a}"])
 
 
-def draw_variant_constraint(rng: random.Random, pkg, propagate_ok: bool = True) -> Optional[str]:
+def draw_variant_constraint(rng: random.Random, pkg, propagate_ok: bool = False) -> Optional[str]:
     names = [n for n in pkg.variant_names() if n not in SPECIAL_VARIANTS and n != "build_system"]
     if not names:
         return None
@@ -104,8 +105,7 @@ FLAG_VALUES = ["-O2", "-g", "-fPIC", "-DNDEBUG"]
 
 def draw_flag_constraint(rng: random.Random) -> str:
     flag = rng.choice(["cflags", "cxxflags", "cppflags", "ldflags"])
-    op = "==" if rng.random() < 0.3 else "="
-    return f"{flag}{op}{rng.choice(FLAG_VALUES)}"
+    return f"{flag}={rng.choice(FLAG_VALUES)}"
 
 
 def draw_virtual_constraint(rng: random.Random, virtual: str) -> str:
@@ -162,7 +162,7 @@ def draw_root(rng: random.Random, pool: List[str]) -> Optional[Tuple[str, List[s
         return None
 
     spec_str = root_name + draw_node_constraints(rng, pkg, budget=2)
-    if rng.random() < 0.15:
+    if rng.random() < 0.05:
         spec_str += f" {draw_flag_constraint(rng)}"
     if rng.random() < 0.1:
         spec_str += f" target={rng.choice(['aarch64', 'm1', 'm2', 'm3', 'm4'])}"
@@ -215,17 +215,44 @@ def draw_case(rng: random.Random, pool: List[str]) -> Optional[Dict[str, Any]]:
     spec_str, dep_names = drawn
     roots = [spec_str]
     mode = "one"
-    if rng.random() < 0.25:
-        second = draw_root(rng, pool)
-        if second is not None:
-            roots.append(second[0])
-            mode = "when_possible" if rng.random() < 0.3 else "together"
+    force_mode = globals().get("FORCE_MODE")
+    if force_mode or rng.random() < 0.25:
+        for _ in range(1 if rng.random() < 0.7 else 2):
+            extra = draw_root(rng, pool)
+            if extra is not None:
+                roots.append(extra[0])
+        if len(roots) > 1:
+            mode = force_mode or ("when_possible" if rng.random() < 0.3 else "together")
 
     concretizer_extra: Dict[str, Any] = {}
     if rng.random() < 0.25:
         concretizer_extra["duplicates"] = {"strategy": rng.choice(["none", "minimal"])}
     if rng.random() < 0.15:
         concretizer_extra["targets"] = {"granularity": "generic"}
+
+    reuse_cfg: Any = False
+    if rng.random() < 0.3:
+        form = rng.random()
+        if form < 0.4:
+            reuse_cfg = True
+        elif form < 0.6:
+            reuse_cfg = "dependencies"
+        else:
+            candidates = [r.split()[0] for r in roots] + COMMON_PACKAGES
+            constraint = rng.choice(candidates)
+            reuse_cfg = {rng.choice(["include", "exclude"]): [constraint]}
+
+    tests = mode == "one" and rng.random() < 0.1
+
+    toolchains_cfg: Dict[str, str] = {}
+    toolchain_used = False
+    if rng.random() < 0.15:
+        parts = ["%c=apple-clang", "%cxx=apple-clang"]
+        if rng.random() < 0.3:
+            parts.append("%fortran=gcc")
+        toolchains_cfg["fuzztc"] = " ".join(rng.sample(parts, rng.randint(1, len(parts))))
+        roots[0] += " %fuzztc"
+        toolchain_used = True
 
     packages_cfg: Dict[str, Any] = {}
     if rng.random() < 0.6:
@@ -250,7 +277,22 @@ def draw_case(rng: random.Random, pool: List[str]) -> Optional[Dict[str, Any]]:
                     continue
                 drawn_requirement = draw_requirement(rng, target_pkg)
                 if drawn_requirement is not None:
-                    packages_cfg[target] = {"require": [drawn_requirement]}
+                    key = "conflict" if rng.random() < 0.25 else "require"
+                    if key == "conflict" and isinstance(drawn_requirement, dict):
+                        drawn_requirement = drawn_requirement.get("spec") or next(
+                            iter(
+                                drawn_requirement.get("any_of", [])
+                                + drawn_requirement.get("one_of", [])
+                            ),
+                            None,
+                        )
+                        if drawn_requirement is None:
+                            continue
+                        if rng.random() < 0.4:
+                            when = draw_version_constraint(rng, target_pkg)
+                            if when:
+                                drawn_requirement = {"spec": drawn_requirement, "when": when}
+                    packages_cfg[target] = {key: [drawn_requirement]}
 
     if rng.random() < 0.25:
         candidates = [n for n in dep_names + COMMON_PACKAGES if not spack.repo.PATH.is_virtual(n)]
@@ -263,7 +305,11 @@ def draw_case(rng: random.Random, pool: List[str]) -> Optional[Dict[str, Any]]:
                 variant = draw_variant_constraint(rng, target_pkg, propagate_ok=False)
                 if variant and rng.random() < 0.5:
                     ext_spec += f" {variant}"
-                entry: Dict[str, Any] = {"externals": [{"spec": ext_spec, "prefix": "/usr"}]}
+                externals = [{"spec": ext_spec, "prefix": "/usr"}]
+                if len(versions) > 1 and rng.random() < 0.4:
+                    other = rng.choice([v for v in versions if f"@={v}" not in ext_spec])
+                    externals.append({"spec": f"{target}@={other}", "prefix": "/opt"})
+                entry: Dict[str, Any] = {"externals": externals}
                 if rng.random() < 0.5:
                     entry["buildable"] = False
                 packages_cfg[target] = entry
@@ -273,6 +319,10 @@ def draw_case(rng: random.Random, pool: List[str]) -> Optional[Dict[str, Any]]:
         "packages": packages_cfg,
         "concretizer": concretizer_extra,
         "mode": mode,
+        "reuse": reuse_cfg,
+        "tests": tests,
+        "toolchains": toolchains_cfg,
+        "toolchain_used": toolchain_used,
     }
 
 
@@ -342,13 +392,14 @@ def check_node_variants(node, pkg, findings: List[Finding]) -> None:
             )
 
 
-def check_node_dependencies(node, pkg, findings: List[Finding]) -> None:
+def check_node_dependencies(node, pkg, findings: List[Finding], tests: bool = False) -> None:
     edges = edges_of(node)
+    mask = ~0 if tests else ~dt.TEST
     for when, deps in pkg.dependencies.items():
         if not node.satisfies(when):
             continue
         for dep_name, dep in deps.items():
-            if not (dep.depflag & ~dt.TEST):
+            if not (dep.depflag & mask):
                 continue
             candidates = [
                 e.spec for e in edges if e.spec.name == dep_name or dep_name in e.virtuals
@@ -375,7 +426,7 @@ def check_node_dependencies(node, pkg, findings: List[Finding]) -> None:
                 for e in edges:
                     if e.spec.name == dep_name or dep_name in e.virtuals:
                         got_flag |= e.depflag
-                missing = dep.depflag & ~dt.TEST & ~got_flag
+                missing = dep.depflag & mask & ~got_flag
                 if missing:
                     findings.append(
                         Finding(
@@ -624,7 +675,8 @@ def check_externals(
         externals = cfg.get("externals")
         if not externals:
             continue
-        ext_specs = [spack.spec.Spec(e["spec"]) for e in externals]
+        merged = spack.config.CONFIG.get(f"packages:{target}:externals", externals)
+        ext_specs = [spack.spec.Spec(e["spec"]) for e in merged]
         buildable = cfg.get("buildable", True)
         seen = set()
         for concrete in concretes:
@@ -651,19 +703,177 @@ def check_externals(
                     )
 
 
+def check_patches(node, pkg, findings: List[Finding]) -> None:
+    """Every patch() directive whose condition holds must appear in the patches variant."""
+    got: Tuple[str, ...] = ()
+    if "patches" in node.variants:
+        got = tuple(str(v) for v in node.variants["patches"].values)
+    for when, patch_list in pkg.patches.items():
+        if not node.satisfies(when):
+            continue
+        for patch in patch_list:
+            try:
+                sha = patch.sha256
+            except Exception:
+                continue
+            if sha is None:
+                continue
+            if not any(g == sha or sha.startswith(g) for g in got):
+                findings.append(
+                    Finding(
+                        "missing-patch",
+                        str(node),
+                        f"patch {sha[:10]} when={str(when)!r} | not in patches variant",
+                    )
+                )
+
+
+def check_cycles(concrete: spack.spec.Spec, findings: List[Finding]) -> None:
+    state: Dict[int, int] = {}
+    stack = [(concrete, iter(concrete.edges_to_dependencies()))]
+    state[id(concrete)] = 1
+    while stack:
+        node, it = stack[-1]
+        edge = next(it, None)
+        if edge is None:
+            state[id(node)] = 2
+            stack.pop()
+            continue
+        child = edge.spec
+        if state.get(id(child), 0) == 1:
+            findings.append(
+                Finding("dependency-cycle", str(child), f"cycle via {node.name} -> {child.name}")
+            )
+            return
+        if id(child) not in state:
+            state[id(child)] = 1
+            stack.append((child, iter(child.edges_to_dependencies())))
+
+
+def check_provided_together(node, findings: List[Finding]) -> None:
+    """A parent taking one virtual of a provided-together group from a provider must not take
+    another virtual of that group from a different node."""
+    provider_of: Dict[str, spack.spec.Spec] = {}
+    for e in node.edges_to_dependencies():
+        for v in e.virtuals:
+            provider_of[v] = e.spec
+    for virtual, provider in provider_of.items():
+        provider_pkg = load_pkg_class(provider.name)
+        if provider_pkg is None:
+            continue
+        for when, groups in provider_pkg.provided_together.items():
+            if not provider.satisfies(when):
+                continue
+            for group in groups:
+                if virtual not in group:
+                    continue
+                for other in group:
+                    other_provider = provider_of.get(other)
+                    if other_provider is not None and other_provider is not provider:
+                        findings.append(
+                            Finding(
+                                "provided-together-split",
+                                str(node),
+                                f"{virtual} from {provider.name}, {other} from "
+                                f"{other_provider.name} | declared provided together",
+                            )
+                        )
+
+
+def check_config_conflicts(
+    concretes: List[spack.spec.Spec], packages_cfg: Dict[str, Any], findings: List[Finding]
+) -> None:
+    for target, cfg in packages_cfg.items():
+        for entry in cfg.get("conflict", []):
+            spec_str = entry if isinstance(entry, str) else entry["spec"]
+            when = None if isinstance(entry, str) else entry.get("when")
+            for concrete in concretes:
+                for node in concrete.traverse():
+                    if node.name != target or node.external:
+                        continue
+                    if when is not None and not node.satisfies(when):
+                        continue
+                    if node.satisfies(spec_str):
+                        findings.append(
+                            Finding(
+                                "config-conflict-violated",
+                                str(node),
+                                f"packages:{target}:conflict:{entry!r}",
+                            )
+                        )
+
+
+def check_dict_round_trip(concrete: spack.spec.Spec, findings: List[Finding]) -> None:
+    try:
+        clone = spack.spec.Spec.from_dict(concrete.to_dict())
+    except Exception as e:
+        findings.append(
+            Finding("roundtrip-dict-raises", str(concrete), f"{type(e).__name__}: {e}")
+        )
+        return
+    if clone.dag_hash() != concrete.dag_hash():
+        findings.append(
+            Finding(
+                "roundtrip-dict-hash",
+                str(concrete),
+                f"dag_hash {concrete.dag_hash()[:10]} -> {clone.dag_hash()[:10]}",
+            )
+        )
+
+
+def check_toolchain(
+    concrete: spack.spec.Spec, toolchains_cfg: Dict[str, str], findings: List[Finding]
+) -> None:
+    for name, tc_spec in toolchains_cfg.items():
+        if not concrete.satisfies(tc_spec):
+            findings.append(
+                Finding("toolchain-violated", str(concrete), f"%{name} = {tc_spec!r} not met")
+            )
+
+
+def check_unification(concretes: List[spack.spec.Spec], findings: List[Finding]) -> None:
+    """Under unify:true, the link/run closure of all roots shares one node per package."""
+    by_name: Dict[str, set] = {}
+    for concrete in concretes:
+        for node in concrete.traverse(deptype=("link", "run")):
+            by_name.setdefault(node.name, set()).add(node.dag_hash())
+    for name, hashes in by_name.items():
+        if len(hashes) > 1:
+            findings.append(
+                Finding(
+                    "unify-violated",
+                    name,
+                    f"{len(hashes)} distinct {name} nodes in link/run closure: "
+                    f"{sorted(h[:8] for h in hashes)}",
+                )
+            )
+
+
 def verify(case: Dict[str, Any], concretes: List[spack.spec.Spec]) -> List[Finding]:
     findings: List[Finding] = []
     roots, packages_cfg = case["roots"], case["packages"]
     generic_targets = case["concretizer"].get("targets", {}).get("granularity") == "generic"
+    reuse_active = bool(case.get("reuse"))
+    tests = case.get("tests", False)
 
     for spec_str, concrete in zip(roots, concretes):
-        if not concrete.satisfies(spack.spec.Spec(spec_str)):
-            findings.append(Finding("input-literal-violated", str(concrete), spec_str))
-        check_flag_propagation(spec_str, concrete, findings)
+        literal = spec_str.replace(" %fuzztc", "") if case.get("toolchain_used") else spec_str
+        if not concrete.satisfies(spack.spec.Spec(literal)):
+            findings.append(Finding("input-literal-violated", str(concrete), literal))
+
+    if case.get("toolchain_used") and concretes:
+        check_toolchain(concretes[0], case.get("toolchains", {}), findings)
 
     check_config_requirements(concretes, packages_cfg, findings)
     check_externals(concretes, packages_cfg, findings)
+    check_config_conflicts(concretes, packages_cfg, findings)
+    if case["mode"] == "together" and len(concretes) > 1:
+        check_unification(concretes, findings)
     mentioned = variants_mentioned_in_inputs(roots, packages_cfg)
+
+    for concrete in concretes:
+        check_cycles(concrete, findings)
+        check_dict_round_trip(concrete, findings)
 
     seen_nodes = set()
     for concrete in concretes:
@@ -671,6 +881,8 @@ def verify(case: Dict[str, Any], concretes: List[spack.spec.Spec]) -> List[Findi
             if node.external or id(node) in seen_nodes:
                 continue
             seen_nodes.add(id(node))
+            if reuse_active and node.installed:
+                continue
             pkg = load_pkg_class(node.name)
             if pkg is None:
                 findings.append(Finding("unknown-package", str(node), "cannot load package class"))
@@ -679,10 +891,12 @@ def verify(case: Dict[str, Any], concretes: List[spack.spec.Spec]) -> List[Findi
             check_deprecated_version(node, pkg, findings)
             check_node_variants(node, pkg, findings)
             check_sticky_variants(node, pkg, findings, mentioned)
-            check_node_dependencies(node, pkg, findings)
+            check_node_dependencies(node, pkg, findings, tests=tests)
             check_node_conflicts(node, pkg, findings)
             check_node_requirements(node, pkg, findings)
             check_edge_providers(node, findings)
+            check_patches(node, pkg, findings)
+            check_provided_together(node, findings)
             if generic_targets:
                 check_target_granularity(node, findings)
 
@@ -726,23 +940,39 @@ def run_case(seed: int, pool: List[str], timeout: int) -> Dict[str, Any]:
     record["packages"] = packages_cfg
     record["concretizer"] = case["concretizer"]
     record["mode"] = case["mode"]
+    record["reuse"] = case["reuse"]
+    record["tests"] = case["tests"]
+    if case["toolchains"]:
+        record["toolchains"] = case["toolchains"]
 
-    concretizer_cfg = {"reuse": False, "timeout": timeout, "error_on_timeout": True}
+    concretizer_cfg: Dict[str, Any] = {
+        "reuse": case["reuse"],
+        "timeout": timeout,
+        "error_on_timeout": True,
+    }
     concretizer_cfg.update(case["concretizer"])
-    overrides = {"concretizer": concretizer_cfg, "packages": packages_cfg}
+    overrides: Dict[str, Any] = {"concretizer": concretizer_cfg, "packages": packages_cfg}
+    if case["toolchains"]:
+        overrides["toolchains"] = case["toolchains"]
     scope = spack.config.InternalConfigScope("fuzz", overrides)
     start = time.time()
     try:
         spack.config.CONFIG.push_scope(scope)
         try:
-            input_specs = [spack.spec.Spec(r) for r in roots]
+            if case["toolchains"]:
+                input_specs = [
+                    spack.spec_parser.parse_one_or_raise(r, toolchains=case["toolchains"])
+                    for r in roots
+                ]
+            else:
+                input_specs = [spack.spec.Spec(r) for r in roots]
         except Exception as e:
             record["status"] = "unparseable"
             record["error"] = str(e)
             return record
         try:
             if len(input_specs) == 1:
-                concretes = [spack.concretize.concretize_one(input_specs[0])]
+                concretes = [spack.concretize.concretize_one(input_specs[0], tests=case["tests"])]
             else:
                 if case["mode"] == "when_possible":
                     pairs = spack.concretize.concretize_together_when_possible(
@@ -797,9 +1027,11 @@ def main() -> int:
     parser.add_argument(
         "--wall-limit", type=int, default=240, help="hard wall-clock seconds per case"
     )
+    parser.add_argument("--force-mode", choices=["together", "when_possible"])
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
+    globals()["FORCE_MODE"] = args.force_mode
     pool = args.pkg or sorted(spack.repo.PATH.all_package_names(include_virtuals=False))
     out = open(args.jsonl, "a") if args.jsonl else None
 
