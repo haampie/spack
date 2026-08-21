@@ -111,6 +111,16 @@ tree-sitter's runtime compiler and is vacuously satisfied by apple-clang's unver
 `provides("c")`. The same constraint shape is unsat or sat depending on whether some
 grandchild runs a compiler at runtime.
 
+**11. An activated conditional `depends_on` constrains the node but omits the edge.**
+sst-elements declares `depends_on("openmpi@4", when="^mpi=openmpi")`. In a fresh solve of
+`sst-elements +flashdimmsim` the chosen mpi provider is openmpi -- so the condition holds, and
+the solver visibly acted on it: it picked openmpi@4.1.8 although newer majors exist. But the
+DAG has no sst-elements -> openmpi edge; openmpi hangs only off sst-core. The version
+constraint of the directive was imposed on the unified node while the dependency edge the
+directive declares was not created, so `sst-elements^openmpi` holds transitively but the
+node's own dependency list does not record the relationship the package.py states. Found by
+the fuzzer (seed 40316).
+
 ## Perplexing concretizations
 
 A fresh `kallisto` (a sequence aligner; three direct dependencies) resolves mpi to
