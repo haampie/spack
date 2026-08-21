@@ -60,30 +60,47 @@ and the solver should say so instead of returning a doubly-matching answer. Vers
 overlap between plain version members is detected correctly; the `%`-edge variant of the same
 overlap is not.
 
-**5. A propagation marker in a plain requirement makes the solve non-terminating.** With
+**5. A requirement whose `when` condition is a compiler flag is silently not applied.** With
+
+```yaml
+packages:
+  zlib-ng:
+    require:
+    - spec: "~pic"
+      when: "cflags=-O2"
+```
+
+`spack solve --fresh "zlib-ng cflags=-O2"` returns `zlib-ng cflags=-O2 +pic`: the output
+satisfies the `when` condition exactly (its cflags are precisely `-O2`) but not the required
+spec. The same requirement gated on `when: "%apple-clang"` is applied correctly, so the gap is
+specific to flag-valued conditions -- the same condition-matching seam as bugs 2-4, here
+causing an unconditional violation of the configured requirement rather than a miscounted
+group.
+
+**6. A propagation marker in a plain requirement makes the solve non-terminating.** With
 `packages: {libxml2: {require: ["~~shared"]}}`, `spack solve --fresh gettext` did not return
 within 400 seconds; the same solve without the requirement takes about 10. There is no
 diagnostic, just clingo grinding, so from the user's perspective concretization hangs.
 
-**6. Internal error instead of a diagnosis for a forced non-provider.**
+**7. Internal error instead of a diagnosis for a forced non-provider.**
 `spack solve "hypre~fortran ^[virtuals=mpi] zlib-ng"` fails with "Spack concretizer internal
 error. Please submit a bug report ..." -- the error tree machinery finds no cause for the
 unsatisfiability, and by the message's own definition that state is a bug. A plain "zlib-ng
 does not provide mpi" is derivable from the input alone.
 
-**7. Internal error for unified roots with conflicting targets.** Concretizing
+**8. Internal error for unified roots with conflicting targets.** Concretizing
 `zlib-ng target=m1` and `zlib-ng target=m3` together (`unify: true`) fails with the same
 "internal error, please submit a bug report" instead of reporting that the two roots cannot
 unify. The when_possible mode handles the analogous version conflict fine by splitting.
 
-**8. Requirements that only match deprecated versions report "no known version".** With
+**9. Requirements that only match deprecated versions report "no known version".** With
 openssl 3.0.18 declared but `deprecated=True`, `packages:openssl:require: ["@3.0.18"]` raises
 `ConfigError: Version requirement 3.0.18 on openssl ... cannot match any known version from
 package.py or externals`. The version is known; the blocker is deprecation
 (`config:deprecated: true` makes the same input work), and the message sends the user hunting
 in the wrong place.
 
-**9. The `^c` rejection message contradicts the implemented rule.** `spack solve "zlib-ng ^c"`
+**10. The `^c` rejection message contradicts the implemented rule.** `spack solve "zlib-ng ^c"`
 fails with "c is not a direct 'build' or 'test' dependency, or transitive 'link' or 'run'
 dependency of any root" although c *is* a direct build dependency of the root; what the
 implementation actually requires is that the `^` spec resolve against transitive link/run
@@ -114,7 +131,9 @@ dependencies is impressive and correct -- and thoroughly surprising.
 
 ## What held
 
-Negative results worth recording: exactly-one and any-of over version and variant members,
+Negative results worth recording: exactly-one and any-of over version, variant, target-range
+and `^`-dependency members (for overlapping target members the solver even degrades the root
+to armv8.5a to keep the count at one), requirement `when` conditions gated on `%compiler`,
 disjoint-set variant groups (including two requirements whose union violates disjointness),
 requirements enforced against reuse candidates, `buildable: false` with non-matching
 externals, conflicts and requires directives including `%compiler` forms, conditional
