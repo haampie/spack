@@ -145,8 +145,10 @@ _RUST_STATE_ATTRS = (
 
 #: Methods of the Python ``Spec`` class implemented by the Rust base class as well. In Rust
 #: mode they are deleted from the class after its body runs, so lookups fall through the MRO
-#: to the Rust implementation. Must track ``rust/spack-spec-py/src/algebra.rs``: a method
-#: listed here without a Rust counterpart would fall through to the base ``object``.
+#: to the Rust implementation. Must track the ``Spec`` pymethods in
+#: ``rust/spack-spec-py/src/spec.rs`` (implemented in ``algebra.rs``, ``graph.rs``,
+#: ``cmp.rs`` and ``fmt.rs``): a method listed here without a Rust counterpart would fall
+#: through to the base ``object``.
 _RUST_PORTED_NAMES = (
     "constrain",
     "_constrain",
@@ -171,6 +173,34 @@ _RUST_PORTED_NAMES = (
     "_satisfies_variants",
     "_satisfies_variants_when_self_concrete",
     "_satisfies_variants_when_self_abstract",
+    # construction and mutation path
+    "_add_flag",
+    "_set_architecture",
+    "_add_dependency",
+    "add_dependency_edge",
+    "_add_or_merge_edge",
+    "_detach_edge",
+    "clear_dependencies",
+    "clear_edges",
+    "edges_from_dependents",
+    "edges_to_dependencies",
+    "dependencies",
+    "dependents",
+    "_get_dependency",
+    # copy path
+    "_dup",
+    "_dup_deps",
+    "copy",
+    # canonical comparison stream
+    "_cmp_node",
+    "_cmp_iter",
+    # default formatting fast paths
+    "_format_default",
+    "_format_edge_attributes",
+    "_format_dependencies",
+    "_long_spec",
+    "_str",
+    "__str__",
 )
 
 SPEC_FORMAT_RE = re.compile(
@@ -6708,6 +6738,18 @@ if not TYPE_CHECKING and USE_RUST_SPEC:
         UnsatisfiableVersionSpecError,
         UnsatisfiableDependencySpecError,
         InvalidHashError,
+    )
+    spack_spec.register_deptype_canonicalize(dt.canonicalize)
+    spack_spec.register_hash_descriptors(ht.HASHES)
+    spack_spec.register_parser_helpers(
+        vt.RESERVED_NAMES,
+        spack.compilers.flags.tokenize_flags,
+        FlagMap,
+        UnsupportedPropagationError,
+        DuplicateArchitectureError,
+    )
+    spack_spec.register_format_helpers(
+        DEFAULT_FORMAT, DISPLAY_FORMAT, spack.aliases.BUILTIN_TO_LEGACY_COMPILER
     )
 
     # Expose the Rust implementation of the ported algebra methods: deleting the Python

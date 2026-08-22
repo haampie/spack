@@ -20,18 +20,21 @@ use crate::registry;
 use crate::spec::Spec;
 
 /// `spack.deptypes` bit values, transcribed from `lib/spack/spack/deptypes.py`.
-const DT_LINK: u64 = 0b0001;
-const DT_RUN: u64 = 0b0010;
-const DT_BUILD: u64 = 0b0100;
+pub(crate) const DT_LINK: u64 = 0b0001;
+pub(crate) const DT_RUN: u64 = 0b0010;
+pub(crate) const DT_BUILD: u64 = 0b0100;
+pub(crate) const DT_TEST: u64 = 0b1000;
+pub(crate) const DT_ALL: u64 = DT_BUILD | DT_LINK | DT_RUN | DT_TEST;
 
-/// `spack.enums.PropagationPolicy.NONE`.
-const PROPAGATION_NONE: i64 = 1;
+/// `spack.enums.PropagationPolicy.NONE` / `.PREFERENCE`.
+pub(crate) const PROPAGATION_NONE: i64 = 1;
+pub(crate) const PROPAGATION_PREFERENCE: i64 = 2;
 
 // --------------------------------------------------------------------------------------
 // Registry access and error construction
 // --------------------------------------------------------------------------------------
 
-fn registered<'py>(
+pub(crate) fn registered<'py>(
     py: Python<'py>,
     cell: &'static PyOnceLock<Py<PyAny>>,
     what: &str,
@@ -45,7 +48,7 @@ fn registered<'py>(
 }
 
 /// Whether an exception raised from a nested call is a `spack.error.SpecError`.
-fn is_spec_error(py: Python<'_>, err: &PyErr) -> PyResult<bool> {
+pub(crate) fn is_spec_error(py: Python<'_>, err: &PyErr) -> PyResult<bool> {
     let cls = registered(py, &registry::SPEC_ERROR, "SpecError")?;
     Ok(err.matches(py, &cls)?)
 }
@@ -55,7 +58,7 @@ fn is_spec_error(py: Python<'_>, err: &PyErr) -> PyResult<bool> {
 // exhausting the native stack.
 // --------------------------------------------------------------------------------------
 
-struct RecursionGuard;
+pub(crate) struct RecursionGuard;
 
 impl Drop for RecursionGuard {
     fn drop(&mut self) {
@@ -63,7 +66,7 @@ impl Drop for RecursionGuard {
     }
 }
 
-fn enter_recursion(py: Python<'_>, what: &'static CStr) -> PyResult<RecursionGuard> {
+pub(crate) fn enter_recursion(py: Python<'_>, what: &'static CStr) -> PyResult<RecursionGuard> {
     if unsafe { pyo3::ffi::Py_EnterRecursiveCall(what.as_ptr()) } != 0 {
         Err(PyErr::take(py).unwrap_or_else(|| {
             pyo3::exceptions::PyRecursionError::new_err("maximum recursion depth exceeded")
@@ -77,46 +80,49 @@ fn enter_recursion(py: Python<'_>, what: &'static CStr) -> PyResult<RecursionGua
 // Short-borrow accessors for the Rust Spec and DependencySpec state
 // --------------------------------------------------------------------------------------
 
-fn is_empty_spec(obj: &Bound<'_, PyAny>) -> PyResult<bool> {
+pub(crate) fn is_empty_spec(obj: &Bound<'_, PyAny>) -> PyResult<bool> {
     let py = obj.py();
     Ok(registered(py, &registry::EMPTY_SPEC, "EMPTY_SPEC")?.is(obj))
 }
 
-fn empty_spec_obj(py: Python<'_>) -> PyResult<Bound<'_, PyAny>> {
+pub(crate) fn empty_spec_obj(py: Python<'_>) -> PyResult<Bound<'_, PyAny>> {
     registered(py, &registry::EMPTY_SPEC, "EMPTY_SPEC")
 }
 
-fn spec_name(s: &Bound<'_, PyAny>) -> PyResult<String> {
+pub(crate) fn spec_name(s: &Bound<'_, PyAny>) -> PyResult<String> {
     Ok(s.downcast::<Spec>()?.borrow().name.clone())
 }
 
-fn spec_namespace(s: &Bound<'_, PyAny>) -> PyResult<Option<String>> {
+pub(crate) fn spec_namespace(s: &Bound<'_, PyAny>) -> PyResult<Option<String>> {
     Ok(s.downcast::<Spec>()?.borrow().namespace.clone())
 }
 
-fn spec_abstract_hash(s: &Bound<'_, PyAny>) -> PyResult<Option<String>> {
+pub(crate) fn spec_abstract_hash(s: &Bound<'_, PyAny>) -> PyResult<Option<String>> {
     Ok(s.downcast::<Spec>()?.borrow().abstract_hash.clone())
 }
 
 /// `None` and the empty string are both falsy, as in the reference truthiness checks.
-fn truthy_str(value: &Option<String>) -> bool {
+pub(crate) fn truthy_str(value: &Option<String>) -> bool {
     value.as_deref().is_some_and(|v| !v.is_empty())
 }
 
-fn is_concrete(s: &Bound<'_, PyAny>) -> PyResult<bool> {
+pub(crate) fn is_concrete(s: &Bound<'_, PyAny>) -> PyResult<bool> {
     Ok(s.downcast::<Spec>()?.borrow()._concrete)
 }
 
 /// A stored component handle, or the Python `None` object when unset, so downstream
 /// method calls fail with the same `AttributeError` the reference would produce.
-fn handle_or_none<'py>(py: Python<'py>, handle: &Option<Py<PyAny>>) -> Bound<'py, PyAny> {
+pub(crate) fn handle_or_none<'py>(
+    py: Python<'py>,
+    handle: &Option<Py<PyAny>>,
+) -> Bound<'py, PyAny> {
     match handle {
         Some(h) => h.bind(py).clone(),
         None => py.None().into_bound(py),
     }
 }
 
-fn spec_versions<'py>(s: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+pub(crate) fn spec_versions<'py>(s: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     let cell = s.downcast::<Spec>()?;
     let handle = {
         let r = cell.borrow();
@@ -125,7 +131,7 @@ fn spec_versions<'py>(s: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     Ok(handle_or_none(s.py(), &handle))
 }
 
-fn spec_variants<'py>(s: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+pub(crate) fn spec_variants<'py>(s: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     let cell = s.downcast::<Spec>()?;
     let handle = {
         let r = cell.borrow();
@@ -134,7 +140,7 @@ fn spec_variants<'py>(s: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     Ok(handle_or_none(s.py(), &handle))
 }
 
-fn spec_compiler_flags<'py>(s: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+pub(crate) fn spec_compiler_flags<'py>(s: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     let cell = s.downcast::<Spec>()?;
     let handle = {
         let r = cell.borrow();
@@ -145,7 +151,7 @@ fn spec_compiler_flags<'py>(s: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>
 
 /// The stored architecture, mapped to `None` when unset or the Python `None` object, so
 /// callers mirror the reference `is not None` checks.
-fn spec_architecture<'py>(s: &Bound<'py, PyAny>) -> PyResult<Option<Bound<'py, PyAny>>> {
+pub(crate) fn spec_architecture<'py>(s: &Bound<'py, PyAny>) -> PyResult<Option<Bound<'py, PyAny>>> {
     let cell = s.downcast::<Spec>()?;
     let handle = {
         let r = cell.borrow();
@@ -167,7 +173,9 @@ fn spec_provided_virtuals<'py>(s: &Bound<'py, PyAny>) -> PyResult<Option<Bound<'
         .filter(|h| !h.is_none()))
 }
 
-fn spec_dependencies_map<'py>(s: &Bound<'py, PyAny>) -> PyResult<Option<Bound<'py, PyAny>>> {
+pub(crate) fn spec_dependencies_map<'py>(
+    s: &Bound<'py, PyAny>,
+) -> PyResult<Option<Bound<'py, PyAny>>> {
     let cell = s.downcast::<Spec>()?;
     let handle = {
         let r = cell.borrow();
@@ -178,7 +186,9 @@ fn spec_dependencies_map<'py>(s: &Bound<'py, PyAny>) -> PyResult<Option<Bound<'p
         .filter(|h| !h.is_none()))
 }
 
-fn spec_dependents_map<'py>(s: &Bound<'py, PyAny>) -> PyResult<Option<Bound<'py, PyAny>>> {
+pub(crate) fn spec_dependents_map<'py>(
+    s: &Bound<'py, PyAny>,
+) -> PyResult<Option<Bound<'py, PyAny>>> {
     let cell = s.downcast::<Spec>()?;
     let handle = {
         let r = cell.borrow();
@@ -190,7 +200,7 @@ fn spec_dependents_map<'py>(s: &Bound<'py, PyAny>) -> PyResult<Option<Bound<'py,
 }
 
 /// `bool(spec._dependencies)`: an unset or empty edge map is falsy.
-fn has_deps(s: &Bound<'_, PyAny>) -> PyResult<bool> {
+pub(crate) fn has_deps(s: &Bound<'_, PyAny>) -> PyResult<bool> {
     match spec_dependencies_map(s)? {
         Some(map) => map.is_truthy(),
         None => Ok(false),
@@ -199,12 +209,12 @@ fn has_deps(s: &Bound<'_, PyAny>) -> PyResult<bool> {
 
 /// A snapshot of the outgoing edges, flattened in edge-map order: what the reference
 /// `edges_to_dependencies()` returns when called without filters.
-fn out_edges<'py>(s: &Bound<'py, PyAny>) -> PyResult<Vec<Bound<'py, PyAny>>> {
+pub(crate) fn out_edges<'py>(s: &Bound<'py, PyAny>) -> PyResult<Vec<Bound<'py, PyAny>>> {
     edges_of(&spec_dependencies_map(s)?)
 }
 
 /// A snapshot of the incoming edges: `edges_from_dependents()` without filters.
-fn in_edges<'py>(s: &Bound<'py, PyAny>) -> PyResult<Vec<Bound<'py, PyAny>>> {
+pub(crate) fn in_edges<'py>(s: &Bound<'py, PyAny>) -> PyResult<Vec<Bound<'py, PyAny>>> {
     edges_of(&spec_dependents_map(s)?)
 }
 
@@ -220,7 +230,7 @@ fn edges_of<'py>(map: &Option<Bound<'py, PyAny>>) -> PyResult<Vec<Bound<'py, PyA
     Ok(result)
 }
 
-fn edge_parent<'py>(e: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+pub(crate) fn edge_parent<'py>(e: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     let cell = e.downcast::<DependencySpec>()?;
     let handle = {
         let r = cell.borrow();
@@ -229,7 +239,7 @@ fn edge_parent<'py>(e: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     Ok(handle_or_none(e.py(), &handle))
 }
 
-fn edge_child<'py>(e: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+pub(crate) fn edge_child<'py>(e: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     let cell = e.downcast::<DependencySpec>()?;
     let handle = {
         let r = cell.borrow();
@@ -238,7 +248,7 @@ fn edge_child<'py>(e: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     Ok(handle_or_none(e.py(), &handle))
 }
 
-fn edge_when<'py>(e: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+pub(crate) fn edge_when<'py>(e: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     let cell = e.downcast::<DependencySpec>()?;
     let handle = {
         let r = cell.borrow();
@@ -247,23 +257,23 @@ fn edge_when<'py>(e: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
     Ok(handle_or_none(e.py(), &handle))
 }
 
-fn edge_depflag(e: &Bound<'_, PyAny>) -> PyResult<u64> {
+pub(crate) fn edge_depflag(e: &Bound<'_, PyAny>) -> PyResult<u64> {
     Ok(e.downcast::<DependencySpec>()?.borrow().depflag)
 }
 
-fn edge_virtuals(e: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
+pub(crate) fn edge_virtuals(e: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
     Ok(e.downcast::<DependencySpec>()?.borrow().virtuals.clone())
 }
 
-fn edge_direct(e: &Bound<'_, PyAny>) -> PyResult<bool> {
+pub(crate) fn edge_direct(e: &Bound<'_, PyAny>) -> PyResult<bool> {
     Ok(e.downcast::<DependencySpec>()?.borrow().direct)
 }
 
-fn edge_propagation(e: &Bound<'_, PyAny>) -> PyResult<i64> {
+pub(crate) fn edge_propagation(e: &Bound<'_, PyAny>) -> PyResult<i64> {
     Ok(e.downcast::<DependencySpec>()?.borrow().propagation)
 }
 
-fn ptr(obj: &Bound<'_, PyAny>) -> usize {
+pub(crate) fn ptr(obj: &Bound<'_, PyAny>) -> usize {
     obj.as_ptr() as usize
 }
 
@@ -288,7 +298,7 @@ fn merged_when<'py>(
 }
 
 /// `_add_edge_to_map`: append the edge to the bucket for `key`, keeping it sorted.
-fn add_edge_to_map(
+pub(crate) fn add_edge_to_map(
     edge_map: &Bound<'_, PyAny>,
     key: &str,
     edge: &Bound<'_, PyAny>,
@@ -305,7 +315,7 @@ fn add_edge_to_map(
 }
 
 /// The bucket entries that are not `edge` itself, as a new list.
-fn siblings_of<'py>(
+pub(crate) fn siblings_of<'py>(
     bucket: &Bound<'py, PyAny>,
     edge: &Bound<'py, PyAny>,
 ) -> PyResult<Bound<'py, PyList>> {
@@ -364,7 +374,10 @@ fn constrains_only_name_and_versions(spec: &Bound<'_, PyAny>) -> PyResult<bool> 
 }
 
 /// `_condition_must_hold`: whether the node alone guarantees an edge's when condition.
-fn condition_must_hold(when: &Bound<'_, PyAny>, node: &Bound<'_, PyAny>) -> PyResult<bool> {
+pub(crate) fn condition_must_hold(
+    when: &Bound<'_, PyAny>,
+    node: &Bound<'_, PyAny>,
+) -> PyResult<bool> {
     if is_empty_spec(when)? {
         return Ok(true);
     }
@@ -404,7 +417,10 @@ impl<'py> MustHold<'py> {
 }
 
 /// `_satisfies_edge_attributes`: edge attributes and the target node, not the parent.
-fn satisfies_edge_attributes(lhs: &Bound<'_, PyAny>, rhs: &Bound<'_, PyAny>) -> PyResult<bool> {
+pub(crate) fn satisfies_edge_attributes(
+    lhs: &Bound<'_, PyAny>,
+    rhs: &Bound<'_, PyAny>,
+) -> PyResult<bool> {
     let py = lhs.py();
     let lhs_child = edge_child(lhs)?;
     let rhs_child = edge_child(rhs)?;

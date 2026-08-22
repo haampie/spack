@@ -4,7 +4,10 @@ use pyo3::prelude::*;
 
 mod algebra;
 mod arch;
+mod cmp;
 mod edge;
+mod fmt;
+mod graph;
 mod lazy;
 mod registry;
 mod spec;
@@ -45,5 +48,12 @@ fn spack_spec(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(registry::register_propagation_policy, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_edge_errors, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_variant_errors, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        registry::register_deptype_canonicalize,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(registry::register_hash_descriptors, m)?)?;
+    m.add_function(wrap_pyfunction!(registry::register_parser_helpers, m)?)?;
+    m.add_function(wrap_pyfunction!(registry::register_format_helpers, m)?)?;
     Ok(())
 }

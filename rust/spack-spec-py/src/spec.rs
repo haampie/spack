@@ -8,6 +8,7 @@ use pyo3::basic::CompareOp;
 use pyo3::gc::{PyTraverseError, PyVisit};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
+use pyo3::IntoPyObjectExt;
 
 use crate::lazy::{lazy_eq, lazy_lt};
 
@@ -77,6 +78,9 @@ impl Spec {
         if other.is_none() {
             return Ok(false);
         }
+        if other.is_instance_of::<Spec>() {
+            return crate::cmp::spec_lazy_eq(slf.as_any(), other);
+        }
         lazy_eq(&slf.getattr("_cmp_iter")?, &other.getattr("_cmp_iter")?)
     }
 
@@ -87,6 +91,9 @@ impl Spec {
         if other.is_none() {
             return Ok(false);
         }
+        if other.is_instance_of::<Spec>() {
+            return crate::cmp::spec_lazy_lt(slf.as_any(), other);
+        }
         lazy_lt(&slf.getattr("_cmp_iter")?, &other.getattr("_cmp_iter")?)
     }
 
@@ -96,6 +103,9 @@ impl Spec {
         }
         if other.is_none() {
             return Ok(true);
+        }
+        if other.is_instance_of::<Spec>() {
+            return crate::cmp::spec_lazy_lt(other, slf.as_any());
         }
         lazy_lt(&other.getattr("_cmp_iter")?, &slf.getattr("_cmp_iter")?)
     }
@@ -275,6 +285,338 @@ impl Spec {
         other: &Bound<'_, PyAny>,
     ) -> PyResult<bool> {
         crate::algebra::satisfies_variants_when_self_abstract(slf.as_any(), other)
+    }
+
+    // ----------------------------------------------------------------------------------
+    // Construction and mutation path, ported in `graph.rs`.
+    // ----------------------------------------------------------------------------------
+
+    /// Called by the parser to add a known flag.
+    fn _add_flag(
+        slf: &Bound<'_, Self>,
+        name: &str,
+        value: &Bound<'_, PyAny>,
+        propagate: bool,
+        concrete: bool,
+    ) -> PyResult<()> {
+        crate::graph::add_flag(slf.as_any(), name, value, propagate, concrete)
+    }
+
+    /// Called by the parser to set the architecture.
+    #[pyo3(signature = (**kwargs))]
+    fn _set_architecture(
+        slf: &Bound<'_, Self>,
+        kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<()> {
+        crate::graph::set_architecture(slf.as_any(), kwargs)
+    }
+
+    /// Called by the parser to add another spec as a dependency.
+    #[pyo3(signature = (spec, *, depflag, virtuals, direct=false, propagation=None, when=None))]
+    fn _add_dependency(
+        slf: &Bound<'_, Self>,
+        spec: &Bound<'_, PyAny>,
+        depflag: u64,
+        virtuals: &Bound<'_, PyAny>,
+        direct: bool,
+        propagation: Option<&Bound<'_, PyAny>>,
+        when: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<()> {
+        // Dispatch like the reference `self.add_dependency_edge(...)`: the
+        // `_ImmutableSpec` override guards mutation.
+        let py = slf.py();
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("depflag", depflag)?;
+        kwargs.set_item("virtuals", virtuals)?;
+        kwargs.set_item("direct", direct)?;
+        if let Some(propagation) = propagation {
+            kwargs.set_item("propagation", propagation)?;
+        }
+        kwargs.set_item("when", when)?;
+        slf.call_method("add_dependency_edge", (spec,), Some(&kwargs))?;
+        Ok(())
+    }
+
+    /// Add a dependency edge to this spec.
+    #[pyo3(signature = (dependency_spec, *, depflag, virtuals, direct=false, propagation=None, when=None))]
+    fn add_dependency_edge(
+        slf: &Bound<'_, Self>,
+        dependency_spec: &Bound<'_, PyAny>,
+        depflag: u64,
+        virtuals: &Bound<'_, PyAny>,
+        direct: bool,
+        propagation: Option<&Bound<'_, PyAny>>,
+        when: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<()> {
+        crate::graph::add_dependency_edge(
+            slf.as_any(),
+            dependency_spec,
+            depflag,
+            virtuals,
+            direct,
+            propagation,
+            when,
+        )
+    }
+
+    /// Add `candidate` as a dependency edge; returns whether self changed and the edge
+    /// that carries the candidate's constraint afterwards.
+    #[pyo3(signature = (candidate, owned=true))]
+    fn _add_or_merge_edge(
+        slf: &Bound<'_, Self>,
+        candidate: &Bound<'_, PyAny>,
+        owned: bool,
+    ) -> PyResult<(bool, Py<PyAny>)> {
+        let (changed, edge) = crate::graph::add_or_merge_edge(slf.as_any(), candidate, owned)?;
+        Ok((changed, edge.unbind()))
+    }
+
+    /// Remove an edge from this spec and from the dependents of the node it points at.
+    fn _detach_edge(slf: &Bound<'_, Self>, edge: &Bound<'_, PyAny>) -> PyResult<()> {
+        crate::graph::detach_edge(slf.as_any(), edge)
+    }
+
+    /// Trim the dependencies of this spec.
+    fn clear_dependencies(slf: &Bound<'_, Self>) -> PyResult<()> {
+        slf.getattr("_dependencies")?.call_method0("clear")?;
+        Ok(())
+    }
+
+    /// Trim the dependencies and dependents of this spec.
+    fn clear_edges(slf: &Bound<'_, Self>) -> PyResult<()> {
+        slf.getattr("_dependencies")?.call_method0("clear")?;
+        slf.getattr("_dependents")?.call_method0("clear")?;
+        Ok(())
+    }
+
+    /// Return a list of edges connecting this node in the DAG to parents.
+    #[pyo3(signature = (name=None, depflag=crate::algebra::DT_ALL, *, virtuals=None))]
+    fn edges_from_dependents(
+        slf: &Bound<'_, Self>,
+        name: Option<String>,
+        depflag: u64,
+        virtuals: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Vec<Py<PyAny>>> {
+        let edges = crate::graph::select_edges(
+            &slf.getattr("_dependents")?,
+            name.as_deref(),
+            None,
+            depflag,
+            virtuals,
+        )?;
+        Ok(edges.into_iter().map(Bound::unbind).collect())
+    }
+
+    /// Returns a list of edges connecting this node in the DAG to children.
+    #[pyo3(signature = (name=None, depflag=crate::algebra::DT_ALL, *, virtuals=None))]
+    fn edges_to_dependencies(
+        slf: &Bound<'_, Self>,
+        name: Option<String>,
+        depflag: u64,
+        virtuals: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Vec<Py<PyAny>>> {
+        let edges = crate::graph::select_edges(
+            &slf.getattr("_dependencies")?,
+            None,
+            name.as_deref(),
+            depflag,
+            virtuals,
+        )?;
+        Ok(edges.into_iter().map(Bound::unbind).collect())
+    }
+
+    /// Returns a list of direct dependencies (nodes in the DAG).
+    #[pyo3(signature = (name=None, deptype=None, *, virtuals=None))]
+    fn dependencies(
+        slf: &Bound<'_, Self>,
+        name: Option<String>,
+        deptype: Option<&Bound<'_, PyAny>>,
+        virtuals: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Vec<Py<PyAny>>> {
+        let depflag = match deptype {
+            Some(deptype) => crate::graph::canonical_depflag(deptype)?,
+            None => crate::algebra::DT_ALL,
+        };
+        let edges = crate::graph::select_edges(
+            &slf.getattr("_dependencies")?,
+            None,
+            name.as_deref(),
+            depflag,
+            virtuals,
+        )?;
+        edges
+            .into_iter()
+            .map(|e| Ok(e.getattr("spec")?.unbind()))
+            .collect()
+    }
+
+    /// Return a list of direct dependents (nodes in the DAG).
+    #[pyo3(signature = (name=None, deptype=None))]
+    fn dependents(
+        slf: &Bound<'_, Self>,
+        name: Option<String>,
+        deptype: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Vec<Py<PyAny>>> {
+        let depflag = match deptype {
+            Some(deptype) => crate::graph::canonical_depflag(deptype)?,
+            None => crate::algebra::DT_ALL,
+        };
+        let edges = crate::graph::select_edges(
+            &slf.getattr("_dependents")?,
+            name.as_deref(),
+            None,
+            depflag,
+            None,
+        )?;
+        edges
+            .into_iter()
+            .map(|e| Ok(e.getattr("parent")?.unbind()))
+            .collect()
+    }
+
+    /// The single edge to the dependency of the given name (original-concretizer detail).
+    fn _get_dependency(slf: &Bound<'_, Self>, name: &str) -> PyResult<Py<PyAny>> {
+        Ok(crate::graph::get_dependency(slf.as_any(), name)?.unbind())
+    }
+
+    // ----------------------------------------------------------------------------------
+    // Copy path, ported in `graph.rs`.
+    // ----------------------------------------------------------------------------------
+
+    /// Copies `other` into self, by overwriting all attributes; returns True if self
+    /// changed because of the copy operation.
+    #[pyo3(signature = (other, deps=None, *, propagation=None))]
+    fn _dup(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+        deps: Option<&Bound<'_, PyAny>>,
+        propagation: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<bool> {
+        let py = slf.py();
+        let deps: Bound<'_, PyAny> = match deps {
+            Some(deps) => deps.clone(),
+            None => true.into_bound_py_any(py)?,
+        };
+        crate::graph::spec_dup(slf.as_any(), other, &deps, propagation)
+    }
+
+    /// Copy the edges of `other` verbatim onto fresh node copies.
+    #[pyo3(signature = (other, depflag, propagation=None))]
+    fn _dup_deps(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+        depflag: u64,
+        propagation: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<()> {
+        crate::graph::spec_dup_deps(slf.as_any(), other, depflag, propagation)
+    }
+
+    /// Make a copy of this spec, optionally restricting the copied dependency types.
+    #[pyo3(signature = (deps=None, **kwargs))]
+    fn copy(
+        slf: &Bound<'_, Self>,
+        deps: Option<&Bound<'_, PyAny>>,
+        kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<Py<PyAny>> {
+        Ok(crate::graph::spec_copy(slf.as_any(), deps, kwargs)?.unbind())
+    }
+
+    // ----------------------------------------------------------------------------------
+    // Canonical comparison stream, ported in `cmp.rs`.
+    // ----------------------------------------------------------------------------------
+
+    /// Comparable elements of just this node and not its deps, in the reference order.
+    fn _cmp_node(slf: &Bound<'_, Self>) -> PyResult<Py<PyTuple>> {
+        let py = slf.py();
+        let mut items: Vec<Py<PyAny>> = {
+            let this = slf.borrow();
+            vec![
+                this.name.clone().into_py_any(py)?,
+                this.namespace.clone().into_py_any(py)?,
+                match &this.versions {
+                    Some(handle) => handle.clone_ref(py),
+                    None => py.None(),
+                },
+                match &this.variants {
+                    Some(handle) => handle.clone_ref(py),
+                    None => py.None(),
+                },
+                match &this.compiler_flags {
+                    Some(handle) => handle.clone_ref(py),
+                    None => py.None(),
+                },
+                match &this.architecture {
+                    Some(handle) => handle.clone_ref(py),
+                    None => py.None(),
+                },
+                this.abstract_hash.clone().into_py_any(py)?,
+            ]
+        };
+        // this is not present on older specs
+        items.push(crate::graph::getattr_or_none(slf.as_any(), "_package_hash")?.unbind());
+        Ok(PyTuple::new(py, items)?.unbind())
+    }
+
+    /// The lazily comparable `(nodes, edges)` streams of self.
+    fn _cmp_iter(slf: &Bound<'_, Self>) -> PyResult<Py<PyTuple>> {
+        crate::cmp::make_cmp_iter(slf.as_any())
+    }
+
+    // ----------------------------------------------------------------------------------
+    // Default formatting fast paths, ported in `fmt.rs`.
+    // ----------------------------------------------------------------------------------
+
+    /// Fast path for formatting with DEFAULT_FORMAT and no color.
+    fn _format_default(slf: &Bound<'_, Self>) -> PyResult<String> {
+        crate::fmt::format_default(slf.as_any())
+    }
+
+    /// Render the deptypes/when/virtuals attributes of an edge.
+    #[pyo3(signature = (dep, deptypes=true, virtuals=true))]
+    fn _format_edge_attributes(
+        slf: &Bound<'_, Self>,
+        dep: &Bound<'_, PyAny>,
+        deptypes: bool,
+        virtuals: bool,
+    ) -> PyResult<String> {
+        let _ = slf;
+        crate::fmt::format_edge_attributes(dep, deptypes, virtuals)
+    }
+
+    /// Helper for formatting dependencies on specs.
+    #[pyo3(signature = (format_string=None, include=None, deptypes=true, color=Some(false), _force_direct=false))]
+    fn _format_dependencies(
+        slf: &Bound<'_, Self>,
+        format_string: Option<&Bound<'_, PyAny>>,
+        include: Option<&Bound<'_, PyAny>>,
+        deptypes: bool,
+        color: Option<bool>,
+        _force_direct: bool,
+    ) -> PyResult<String> {
+        crate::fmt::format_dependencies(
+            slf.as_any(),
+            format_string,
+            include,
+            deptypes,
+            color,
+            _force_direct,
+        )
+    }
+
+    /// Helper for `long_spec` and `clong_spec`.
+    #[pyo3(signature = (color=Some(false)))]
+    fn _long_spec(slf: &Bound<'_, Self>, color: Option<bool>) -> PyResult<String> {
+        crate::fmt::long_spec(slf.as_any(), color)
+    }
+
+    /// String representation of this spec.
+    #[pyo3(signature = (color=Some(false)))]
+    fn _str(slf: &Bound<'_, Self>, color: Option<bool>) -> PyResult<String> {
+        crate::fmt::str_impl(slf.as_any(), color)
+    }
+
+    fn __str__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        crate::fmt::str_impl(slf.as_any(), Some(false))
     }
 
     /// State held by the Rust struct, merged into the Python `__getstate__` dict.

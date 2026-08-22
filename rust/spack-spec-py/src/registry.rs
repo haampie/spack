@@ -144,6 +144,67 @@ pub fn register_algebra_errors(
     let _ = INVALID_HASH_ERROR.set(py, invalid_hash_error);
 }
 
+pub static DEPTYPE_CANONICALIZE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The `spack.deptypes.canonicalize` function, used to turn high-level deptype input
+/// (strings and tuples) into a flag.
+#[pyfunction]
+pub fn register_deptype_canonicalize(py: Python<'_>, canonicalize: Py<PyAny>) {
+    let _ = DEPTYPE_CANONICALIZE.set(py, canonicalize);
+}
+
+pub static HASH_DESCRIPTORS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The `spack.hash_types.HASHES` sequence; `_dup` copies or clears the per-hash spec
+/// attributes named by the descriptors' `attr` fields.
+#[pyfunction]
+pub fn register_hash_descriptors(py: Python<'_>, hashes: Py<PyAny>) {
+    let _ = HASH_DESCRIPTORS.set(py, hashes);
+}
+
+pub static RESERVED_VARIANT_NAMES: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static TOKENIZE_FLAGS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static FLAG_MAP_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static UNSUPPORTED_PROPAGATION_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static DUPLICATE_ARCH_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The helpers `_add_flag` and `_set_architecture` need: `spack.variant.RESERVED_NAMES`,
+/// `spack.compilers.flags.tokenize_flags`, the `FlagMap` class, and the two parser-facing
+/// error classes.
+#[pyfunction]
+pub fn register_parser_helpers(
+    py: Python<'_>,
+    reserved_names: Py<PyAny>,
+    tokenize_flags: Py<PyAny>,
+    flag_map_class: Py<PyAny>,
+    unsupported_propagation_error: Py<PyAny>,
+    duplicate_architecture_error: Py<PyAny>,
+) {
+    let _ = RESERVED_VARIANT_NAMES.set(py, reserved_names);
+    let _ = TOKENIZE_FLAGS.set(py, tokenize_flags);
+    let _ = FLAG_MAP_CLASS.set(py, flag_map_class);
+    let _ = UNSUPPORTED_PROPAGATION_ERROR.set(py, unsupported_propagation_error);
+    let _ = DUPLICATE_ARCH_ERROR.set(py, duplicate_architecture_error);
+}
+
+pub static DEFAULT_FORMAT: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static DISPLAY_FORMAT: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static LEGACY_COMPILER_ALIASES: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The formatting inputs: the `spack.spec.DEFAULT_FORMAT` / `DISPLAY_FORMAT` strings and
+/// the `spack.aliases.BUILTIN_TO_LEGACY_COMPILER` mapping.
+#[pyfunction]
+pub fn register_format_helpers(
+    py: Python<'_>,
+    default_format: Py<PyAny>,
+    display_format: Py<PyAny>,
+    legacy_compiler_aliases: Py<PyAny>,
+) {
+    let _ = DEFAULT_FORMAT.set(py, default_format);
+    let _ = DISPLAY_FORMAT.set(py, display_format);
+    let _ = LEGACY_COMPILER_ALIASES.set(py, legacy_compiler_aliases);
+}
+
 pub static MULTIPLE_VALUES_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 pub static INVALID_VARIANT_VALUE_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 pub static UNSATISFIABLE_VARIANT_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
