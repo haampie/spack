@@ -11,6 +11,7 @@ import enum
 import functools
 import inspect
 import itertools
+import os
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -530,15 +531,6 @@ def BoolValuedVariant(name: str, value: bool, propagate: bool = False) -> Varian
     return VariantValue(VariantType.BOOL, name, (value,), propagate=propagate)
 
 
-class VariantValueRemoval(VariantValue):
-    """Indicator class for Spec.mutate to remove a variant"""
-
-    __slots__ = ()
-
-    def __init__(self, name):
-        super().__init__(VariantType.INDICATOR, name, (None,))
-
-
 # The class below inherit from Sequence to disguise as a tuple and comply
 # with the semantic expected by the 'values' argument of the variant directive
 class DisjointSetsOfValues(collections.abc.Sequence):
@@ -883,3 +875,39 @@ class UnsatisfiableVariantSpecError(spack.error.UnsatisfiableSpecError):
 
     def __init__(self, provided, required):
         super().__init__(provided, required, "variant")
+
+
+# Same toggle as spack.spec.USE_RUST_SPEC; read from the environment directly since importing
+# spack.spec here would be circular. The rebind happens after the exceptions above so they can
+# be registered, and before VariantValueRemoval so the subclass extends the active class.
+if not TYPE_CHECKING and os.environ.get("SPACK_SPEC_IMPL", "python").lower() == "rust":
+    import spack_spec
+
+    spack_spec.register_variant_type(VariantType)
+    spack_spec.register_variant_errors(
+        MultipleValuesInExclusiveVariantError,
+        InvalidVariantValueError,
+        UnsatisfiableVariantSpecError,
+    )
+
+    VariantValue = spack_spec.VariantValue
+
+    class VariantValueRemoval(VariantValue):
+        """Indicator class for Spec.mutate to remove a variant"""
+
+        def __new__(cls, name: str) -> "VariantValueRemoval":
+            # The Rust base class initializes in __new__, not __init__.
+            return super().__new__(cls, VariantType.INDICATOR, name, (None,))
+
+        def __init__(self, name):
+            pass
+
+else:
+
+    class VariantValueRemoval(VariantValue):
+        """Indicator class for Spec.mutate to remove a variant"""
+
+        __slots__ = ()
+
+        def __init__(self, name):
+            super().__init__(VariantType.INDICATOR, name, (None,))
