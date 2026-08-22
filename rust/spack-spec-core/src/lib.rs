@@ -5,6 +5,9 @@
 //! graph-level algebra over Python objects lives in the `spack-spec-py` binding crate.
 
 pub mod strutil;
+pub mod targets;
+#[cfg(test)]
+mod targets_tests;
 pub mod variant;
 #[cfg(test)]
 mod variant_tests;
