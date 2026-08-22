@@ -12,15 +12,15 @@ Run from the repo root with the venv active:
     python rust/spack-spec-core/examples/gen_tokenize_oracle.py /tmp/tokenize_oracle.jsonl
     cargo run -p spack-spec-core --example tokenize_differential /tmp/tokenize_oracle.jsonl
 """
+
 import json
 import random
 import sys
 
 sys.path.insert(0, "lib/spack")
 
-from spack.spec_parser import SPEC_TOKENIZER  # noqa: E402
-
 import spack.test.spec_syntax as syntax  # noqa: E402
+from spack.spec_parser import SPEC_TOKENIZER  # noqa: E402
 from spack.test.spec_algebra_corpus import CORPUS  # noqa: E402
 from spack.test.spec_algebra_properties import DIMENSIONS  # noqa: E402
 

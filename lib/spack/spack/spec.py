@@ -455,6 +455,50 @@ def _maximal_lower_bounds(
     return [t for t in below if not any(t < other for other in below)]
 
 
+class _ArchOracle:
+    """Late-bound access to ``spack.platforms`` and the archspec target table for the Rust
+    ``ArchSpec``. Everything is resolved per call, so ``use_platform`` and monkeypatched
+    modules are observed live."""
+
+    @property
+    def reserved_oss(self) -> List[str]:
+        return spack.platforms.Platform.reserved_oss
+
+    @property
+    def reserved_targets(self) -> List[str]:
+        return spack.platforms.Platform.reserved_targets
+
+    def host_name(self) -> str:
+        return str(spack.platforms.host())
+
+    def platform_os(self, platform: str, value: str) -> str:
+        return str(spack.platforms.by_name(platform).operating_system(value))
+
+    def platform_target(self, platform: str, value):
+        return spack.platforms.by_name(platform).target(value)
+
+    def target_or_none(self, t):
+        if isinstance(t, spack.vendor.archspec.cpu.Microarchitecture):
+            return t
+        if t and t != "None":
+            return _make_microarchitecture(t)
+        return None
+
+    def make_microarchitecture(self, name: str) -> spack.vendor.archspec.cpu.Microarchitecture:
+        return _make_microarchitecture(name)
+
+    def targets_dict(self):
+        return spack.vendor.archspec.cpu.TARGETS
+
+    def default_arch_tuple(self) -> Tuple[str, str, str]:
+        platform = spack.platforms.host()
+        return (
+            str(platform),
+            str(platform.default_operating_system()),
+            str(platform.default_target()),
+        )
+
+
 @lang.lazy_lexicographic_ordering
 class ArchSpec:
     """Aggregate the target platform, the operating system and the target microarchitecture."""
@@ -6565,3 +6609,7 @@ EMPTY_SPEC = _ImmutableSpec()
 if not TYPE_CHECKING and USE_RUST_SPEC:
     spack_spec.register_spec_class(Spec)
     spack_spec.register_empty_spec(EMPTY_SPEC)
+    spack_spec.register_arch_oracle(_ArchOracle())
+    spack_spec.register_arch_errors(UnsatisfiableArchitectureSpecError)
+
+    ArchSpec = spack_spec.ArchSpec

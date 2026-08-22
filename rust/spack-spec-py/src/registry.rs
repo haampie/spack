@@ -52,6 +52,24 @@ pub fn register_variant_type(py: Python<'_>, cls: Py<PyAny>) {
     let _ = VARIANT_TYPE.set(py, cls);
 }
 
+pub static ARCH_ORACLE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The `spack.spec._ArchOracle` instance: late-bound access to `spack.platforms` and the
+/// archspec target table, so `use_platform` and monkeypatched modules are observed live.
+#[pyfunction]
+pub fn register_arch_oracle(py: Python<'_>, oracle: Py<PyAny>) {
+    let _ = ARCH_ORACLE.set(py, oracle);
+}
+
+pub static UNSAT_ARCH_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The `spack.spec.UnsatisfiableArchitectureSpecError` class, raised by `ArchSpec.constrain`
+/// so that Python `except` clauses over `spack.error.SpackError` subclasses keep working.
+#[pyfunction]
+pub fn register_arch_errors(py: Python<'_>, unsatisfiable_arch_error: Py<PyAny>) {
+    let _ = UNSAT_ARCH_ERROR.set(py, unsatisfiable_arch_error);
+}
+
 pub static MULTIPLE_VALUES_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 pub static INVALID_VARIANT_VALUE_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 pub static UNSATISFIABLE_VARIANT_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
