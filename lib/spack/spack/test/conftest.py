@@ -2407,6 +2407,19 @@ def pytest_runtest_setup(item):
     if only_windows_marker and sys.platform != "win32":
         pytest.skip(*only_windows_marker.args)
 
+    # Inert unless the suite runs against the Rust spec implementation
+    if spack.spec.USE_RUST_SPEC and item.get_closest_marker(name="requires_python_spec"):
+        pytest.skip("outside the scope of the Rust spec implementation")
+
+
+@pytest.fixture(autouse=True, scope="session")
+def rust_spec_provenance():
+    """With SPACK_SPEC_IMPL=rust, fail fast unless the Rust extension actually backs Spec,
+    so a misconfigured run cannot silently test the Python implementation."""
+    if os.environ.get("SPACK_SPEC_IMPL", "python").lower() == "rust":
+        assert spack.spec.Spec.__mro__[1].__module__ == "spack_spec"
+    yield
+
 
 @pytest.fixture(autouse=True)
 def disable_parallelism(monkeypatch, request):

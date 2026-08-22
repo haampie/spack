@@ -112,6 +112,23 @@ from spack.util import lang, tty
 
 from .enums import PropagationPolicy
 
+#: Whether the experimental Rust implementation of the spec model backs the classes in this
+#: module. Strict opt-in: with SPACK_SPEC_IMPL=rust a missing extension is a hard error, never a
+#: silent fallback to the Python implementation, so a test run against Rust cannot fake green.
+USE_RUST_SPEC = os.environ.get("SPACK_SPEC_IMPL", "python").lower() == "rust"
+
+if TYPE_CHECKING:
+    _SpecBase = object
+elif USE_RUST_SPEC:
+    import spack_spec
+
+    _SpecBase = spack_spec.Spec
+else:
+    _SpecBase = object
+
+#: Node attributes stored on the Rust base class rather than in the instance ``__dict__``.
+_RUST_STATE_ATTRS = ("name", "namespace", "abstract_hash", "_concrete")
+
 SPEC_FORMAT_RE = re.compile(
     r"(?:"  # this is one big or, with matches ordered by priority
     # OPTION 1: escaped character (needs to be first to catch opening \{)
@@ -1986,8 +2003,7 @@ def _implies_edge(narrower: DependencySpec, wider: DependencySpec) -> bool:
     return not wider.spec._dependencies or narrower.spec.satisfies(wider.spec)
 
 
-@lang.lazy_lexicographic_ordering(set_hash=False)
-class Spec:
+class Spec(_SpecBase):
     compiler = DeprecatedCompilerSpec()
 
     if TYPE_CHECKING:
@@ -4122,9 +4138,11 @@ class Spec:
         Returns:
             True if ``self`` changed because of the copy operation, False otherwise.
         """
-        # We don't count dependencies as changes here
+        # We don't count dependencies as changes here. The probe distinguishes an initialized
+        # spec from a bare __new__ instance; it must test an attribute that lives in the
+        # instance __dict__, since the Rust base class makes `name` always present.
         changed = True
-        if hasattr(self, "name"):
+        if hasattr(self, "annotations"):
             changed = (
                 self.name != other.name
                 and self.versions != other.versions
@@ -4717,7 +4735,7 @@ class Spec:
                 raise SpecFormatStringError(f"Missing close brace: '{format_string}'")
 
             current_node = self if dep is None else self[dep]
-            current = current_node
+            current: Any = current_node
 
             # Hash attributes can return early.
             # NOTE: we currently treat abstract_hash like an attribute and ignore
@@ -5543,6 +5561,11 @@ class Spec:
 
     def __getstate__(self):
         state = self.__dict__.copy()
+        if USE_RUST_SPEC:
+            # Attributes held by the Rust base class; keeps the pickle format identical to
+            # the Python implementation's.
+            for attr in _RUST_STATE_ATTRS:
+                state[attr] = getattr(self, attr)
         # The package is lazily loaded upon demand.
         state.pop("_package", None)
         # As with to_dict, do not include dependents. This avoids serializing more than intended.
@@ -5565,6 +5588,12 @@ class Spec:
     def __setstate__(self, state):
         variants_data = state.pop("_variants_data", None)
         compiler_flags_data = state.pop("_compiler_flags_data", None)
+        if USE_RUST_SPEC:
+            # Data descriptors on the Rust base class shadow ``__dict__`` entries, so these
+            # must be assigned, not stuffed into the instance dict.
+            for attr in _RUST_STATE_ATTRS:
+                if attr in state:
+                    setattr(self, attr, state.pop(attr))
         self.__dict__.update(state)
         self._package = None
 
@@ -5696,6 +5725,11 @@ class VariantMap(lang.HashableMap[str, vt.VariantValue]):
             sorted(self.keys()), lambda x: self[x].type == vt.VariantType.BOOL
         )
         return bool_keys, kv_keys
+
+
+if not USE_RUST_SPEC:
+    # In Rust mode the base class implements the rich comparisons natively.
+    lang.lazy_lexicographic_ordering(set_hash=False)(Spec)
 
 
 def meet(a: Spec, b: Spec) -> Optional[Spec]:
@@ -6527,3 +6561,7 @@ class _ImmutableSpec(Spec):
 
 #: Immutable empty spec, for fast comparisons and reduced memory usage.
 EMPTY_SPEC = _ImmutableSpec()
+
+if not TYPE_CHECKING and USE_RUST_SPEC:
+    spack_spec.register_spec_class(Spec)
+    spack_spec.register_empty_spec(EMPTY_SPEC)

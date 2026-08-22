@@ -1,0 +1,12 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "spack-spec"
+version = "0.1.0"
+description = "Rust implementation of the Spack spec model (extension module spack_spec)"
+requires-python = ">=3.9"
+
+[tool.maturin]
+module-name = "spack_spec"
