@@ -127,7 +127,21 @@ else:
     _SpecBase = object
 
 #: Node attributes stored on the Rust base class rather than in the instance ``__dict__``.
-_RUST_STATE_ATTRS = ("name", "namespace", "abstract_hash", "_concrete")
+#: ``_dependents`` is Rust state too, but is deliberately absent: like the Python
+#: implementation, ``__getstate__`` does not serialize incoming edges, and ``__setstate__``
+#: rebuilds them from the outgoing ones.
+_RUST_STATE_ATTRS = (
+    "name",
+    "namespace",
+    "abstract_hash",
+    "_concrete",
+    "versions",
+    "variants",
+    "compiler_flags",
+    "architecture",
+    "_provided_virtuals",
+    "_dependencies",
+)
 
 SPEC_FORMAT_RE = re.compile(
     r"(?:"  # this is one big or, with matches ordered by priority
@@ -992,89 +1006,29 @@ def _merged_when(lhs: "Spec", rhs: "Spec") -> "Spec":
     return merged
 
 
-@lang.lazy_lexicographic_ordering(set_hash=False)
-class DependencySpec:
-    """DependencySpecs represent an edge in the DAG, and contain dependency types
-    and information on the virtuals being provided.
+class _EdgeAlgebra:
+    """Algebra methods shared by both ``DependencySpec`` implementations. The edge state and
+    the pure state methods live in the implementation class: the Python class below, or the
+    Rust base class."""
 
-    Dependencies can be one (or more) of several types:
-
-    - build: needs to be in the PATH at build time.
-    - link: is linked to and added to compiler flags.
-    - run: needs to be in the PATH for the package to run.
-
-    Args:
-        parent: starting node of the edge
-        spec: ending node of the edge.
-        depflag: represents dependency relationships.
-        virtuals: virtual packages provided from child to parent node.
-    """
-
-    __slots__ = "parent", "spec", "depflag", "virtuals", "direct", "when", "propagation"
+    if not TYPE_CHECKING:
+        # Hidden from mypy: the state attributes assigned by `_merge` live in the
+        # implementation class, which mypy cannot see through the empty slots here.
+        __slots__ = ()
 
     if TYPE_CHECKING:
-        # lazy_lexicographic_ordering installs these with setattr, unseen by type checkers
-        def __lt__(self, other: Any) -> bool: ...
-        def __le__(self, other: Any) -> bool: ...
-        def __gt__(self, other: Any) -> bool: ...
-        def __ge__(self, other: Any) -> bool: ...
+        # State and state methods provided by the implementation class. `parent` is None only
+        # on synthetic edges (e.g. traversal roots); typed non-optional as before the split.
+        parent: "Spec"
+        spec: "Spec"
+        depflag: dt.DepFlag
+        virtuals: Tuple[str, ...]
+        direct: bool
+        propagation: PropagationPolicy
+        when: "Spec"
 
-    def __init__(
-        self,
-        parent: "Spec",
-        spec: "Spec",
-        *,
-        depflag: dt.DepFlag,
-        virtuals: Tuple[str, ...],
-        direct: bool = False,
-        propagation: PropagationPolicy = PropagationPolicy.NONE,
-        when: Optional["Spec"] = None,
-    ):
-        if direct is False and propagation != PropagationPolicy.NONE:
-            raise InvalidEdgeError("only direct dependencies can be propagated")
-
-        self.parent = parent
-        self.spec = spec
-        self.depflag = depflag
-        self.virtuals = tuple(sorted(set(virtuals)))
-        self.direct = direct
-        self.propagation = propagation
-        self.when = when or EMPTY_SPEC
-
-    def update_deptypes(self, depflag: dt.DepFlag) -> bool:
-        """Update the current dependency types"""
-        old = self.depflag
-        new = depflag | old
-        if new == old:
-            return False
-        self.depflag = new
-        return True
-
-    def update_virtuals(self, virtuals: Union[str, Iterable[str]]) -> bool:
-        """Update the list of provided virtuals"""
-        old = self.virtuals
-        if isinstance(virtuals, str):
-            union = {virtuals, *self.virtuals}
-        else:
-            union = {*virtuals, *self.virtuals}
-        if len(union) == len(old):
-            return False
-        self.virtuals = tuple(sorted(union))
-        return True
-
-    def copy(self, *, keep_virtuals: bool = True, keep_parent: bool = True) -> "DependencySpec":
-        """Return a copy of this edge"""
-        parent = self.parent if keep_parent else Spec()
-        virtuals = self.virtuals if keep_virtuals else ()
-        return DependencySpec(
-            parent,
-            self.spec,
-            depflag=self.depflag,
-            virtuals=virtuals,
-            propagation=self.propagation,
-            direct=self.direct,
-            when=self.when,
-        )
+        def update_deptypes(self, depflag: dt.DepFlag) -> bool: ...
+        def update_virtuals(self, virtuals: Union[str, Iterable[str]]) -> bool: ...
 
     def _disjoint_reason(self, other: "DependencySpec") -> Optional[spack.error.SpecError]:
         """Why the children of two edges about to merge (one dependency per ``_same_direct_dep``,
@@ -1144,76 +1098,176 @@ class DependencySpec:
             self.propagation = other.propagation
         return changed
 
-    def _cmp_iter(self):
-        yield self.parent.name if self.parent else None
-        yield self.spec.name if self.spec else None
-        yield self.depflag
-        yield self.virtuals
-        yield self.direct
-        yield self.propagation
-        yield self.when
-        yield self.spec  # tie-breaker for parallel edges: `^foo@1 ^foo+bar`
 
-    def __hash__(self):
-        # Hash edge properties, do not include the node.
-        return hash(
-            (
-                self.parent.name if self.parent else None,
-                self.spec.name if self.spec else None,
-                self.depflag,
-                self.virtuals,
-                self.direct,
-                self.propagation,
-                self.when,
+_DEPENDENCY_SPEC_DOC = """DependencySpecs represent an edge in the DAG, and contain dependency
+    types and information on the virtuals being provided.
+
+    Dependencies can be one (or more) of several types:
+
+    - build: needs to be in the PATH at build time.
+    - link: is linked to and added to compiler flags.
+    - run: needs to be in the PATH for the package to run.
+
+    Args:
+        parent: starting node of the edge
+        spec: ending node of the edge.
+        depflag: represents dependency relationships.
+        virtuals: virtual packages provided from child to parent node.
+    """
+
+if not TYPE_CHECKING and USE_RUST_SPEC:
+
+    class DependencySpec(_EdgeAlgebra, spack_spec.DependencySpec):
+        __doc__ = _DEPENDENCY_SPEC_DOC
+
+        __slots__ = ()
+
+else:
+
+    @lang.lazy_lexicographic_ordering(set_hash=False)
+    class DependencySpec(_EdgeAlgebra):
+        __doc__ = _DEPENDENCY_SPEC_DOC
+
+        __slots__ = "parent", "spec", "depflag", "virtuals", "direct", "when", "propagation"
+
+        if TYPE_CHECKING:
+            # lazy_lexicographic_ordering installs these with setattr, unseen by type checkers
+            def __lt__(self, other: Any) -> bool: ...
+            def __le__(self, other: Any) -> bool: ...
+            def __gt__(self, other: Any) -> bool: ...
+            def __ge__(self, other: Any) -> bool: ...
+
+        def __init__(
+            self,
+            parent: "Spec",
+            spec: "Spec",
+            *,
+            depflag: dt.DepFlag,
+            virtuals: Tuple[str, ...],
+            direct: bool = False,
+            propagation: PropagationPolicy = PropagationPolicy.NONE,
+            when: Optional["Spec"] = None,
+        ):
+            if direct is False and propagation != PropagationPolicy.NONE:
+                raise InvalidEdgeError("only direct dependencies can be propagated")
+
+            self.parent = parent
+            self.spec = spec
+            self.depflag = depflag
+            self.virtuals = tuple(sorted(set(virtuals)))
+            self.direct = direct
+            self.propagation = propagation
+            self.when = when or EMPTY_SPEC
+
+        def update_deptypes(self, depflag: dt.DepFlag) -> bool:
+            """Update the current dependency types"""
+            old = self.depflag
+            new = depflag | old
+            if new == old:
+                return False
+            self.depflag = new
+            return True
+
+        def update_virtuals(self, virtuals: Union[str, Iterable[str]]) -> bool:
+            """Update the list of provided virtuals"""
+            old = self.virtuals
+            if isinstance(virtuals, str):
+                union = {virtuals, *self.virtuals}
+            else:
+                union = {*virtuals, *self.virtuals}
+            if len(union) == len(old):
+                return False
+            self.virtuals = tuple(sorted(union))
+            return True
+
+        def copy(
+            self, *, keep_virtuals: bool = True, keep_parent: bool = True
+        ) -> "DependencySpec":
+            """Return a copy of this edge"""
+            parent = self.parent if keep_parent else Spec()
+            virtuals = self.virtuals if keep_virtuals else ()
+            return DependencySpec(
+                parent,
+                self.spec,
+                depflag=self.depflag,
+                virtuals=virtuals,
+                propagation=self.propagation,
+                direct=self.direct,
+                when=self.when,
             )
-        )
 
-    def __str__(self) -> str:
-        return self.format()
+        def _cmp_iter(self):
+            yield self.parent.name if self.parent else None
+            yield self.spec.name if self.spec else None
+            yield self.depflag
+            yield self.virtuals
+            yield self.direct
+            yield self.propagation
+            yield self.when
+            yield self.spec  # tie-breaker for parallel edges: `^foo@1 ^foo+bar`
 
-    def __repr__(self) -> str:
-        keywords = [f"depflag={self.depflag}", f"virtuals={self.virtuals}"]
-        if self.direct:
-            keywords.append(f"direct={self.direct}")
+        def __hash__(self):
+            # Hash edge properties, do not include the node.
+            return hash(
+                (
+                    self.parent.name if self.parent else None,
+                    self.spec.name if self.spec else None,
+                    self.depflag,
+                    self.virtuals,
+                    self.direct,
+                    self.propagation,
+                    self.when,
+                )
+            )
 
-        if self.when != Spec():
-            keywords.append(f"when={self.when}")
+        def __str__(self) -> str:
+            return self.format()
 
-        if self.propagation != PropagationPolicy.NONE:
-            keywords.append(f"propagation=PropagationPolicy.{self.propagation.name}")
+        def __repr__(self) -> str:
+            keywords = [f"depflag={self.depflag}", f"virtuals={self.virtuals}"]
+            if self.direct:
+                keywords.append(f"direct={self.direct}")
 
-        keywords_str = ", ".join(keywords)
-        return f"DependencySpec({self.parent.format()!r}, {self.spec.format()!r}, {keywords_str})"
+            if self.when != Spec():
+                keywords.append(f"when={self.when}")
 
-    def format(self, *, unconditional: bool = False) -> str:
-        """Returns a string, using the spec syntax, representing this edge
+            if self.propagation != PropagationPolicy.NONE:
+                keywords.append(f"propagation=PropagationPolicy.{self.propagation.name}")
 
-        Args:
-            unconditional: if True, removes any condition statement from the representation
-        """
+            keywords_str = ", ".join(keywords)
+            return (
+                f"DependencySpec({self.parent.format()!r}, {self.spec.format()!r}, {keywords_str})"
+            )
 
-        parent_str, child_str = self.parent.format(), self.spec.format()
-        virtuals_str = f"virtuals={','.join(self.virtuals)}" if self.virtuals else ""
+        def format(self, *, unconditional: bool = False) -> str:
+            """Returns a string, using the spec syntax, representing this edge
 
-        when_str = ""
-        if not unconditional and self.when != Spec():
-            when_str = f"when='{self.when}'"
+            Args:
+                unconditional: if True, removes any condition statement from the representation
+            """
 
-        dep_sigil = "%" if self.direct else "^"
-        if self.propagation == PropagationPolicy.PREFERENCE:
-            dep_sigil = "%%"
+            parent_str, child_str = self.parent.format(), self.spec.format()
+            virtuals_str = f"virtuals={','.join(self.virtuals)}" if self.virtuals else ""
 
-        edge_attrs = [x for x in (virtuals_str, when_str) if x]
+            when_str = ""
+            if not unconditional and self.when != Spec():
+                when_str = f"when='{self.when}'"
 
-        if edge_attrs:
-            return f"{parent_str} {dep_sigil}[{' '.join(edge_attrs)}] {child_str}"
-        return f"{parent_str} {dep_sigil}{child_str}"
+            dep_sigil = "%" if self.direct else "^"
+            if self.propagation == PropagationPolicy.PREFERENCE:
+                dep_sigil = "%%"
 
-    def flip(self) -> "DependencySpec":
-        """Flips the dependency and keeps its type. Drops all other information."""
-        return DependencySpec(
-            parent=self.spec, spec=self.parent, depflag=self.depflag, virtuals=()
-        )
+            edge_attrs = [x for x in (virtuals_str, when_str) if x]
+
+            if edge_attrs:
+                return f"{parent_str} {dep_sigil}[{' '.join(edge_attrs)}] {child_str}"
+            return f"{parent_str} {dep_sigil}{child_str}"
+
+        def flip(self) -> "DependencySpec":
+            """Flips the dependency and keeps its type. Drops all other information."""
+            return DependencySpec(
+                parent=self.spec, spec=self.parent, depflag=self.depflag, virtuals=()
+            )
 
 
 class CompilerFlag(str):
@@ -5649,13 +5703,15 @@ class Spec(_SpecBase):
         if compiler_flags_data is not None:
             self.compiler_flags.dict = compiler_flags_data
 
-        # Reconstruct dependents map
-        if not hasattr(self, "_dependents"):
+        # Reconstruct dependents map. The probe must work in both modes: in Python mode an
+        # unpickled node has no ``_dependents`` attribute at all, in Rust mode the getset
+        # exists from birth and returns None until assigned.
+        if getattr(self, "_dependents", None) is None:
             self._dependents = {}
 
         for edges in self._dependencies.values():
             for edge in edges:
-                if not hasattr(edge.spec, "_dependents"):
+                if getattr(edge.spec, "_dependents", None) is None:
                     edge.spec._dependents = {}
                 _add_edge_to_map(edge.spec._dependents, edge.parent.name, edge)
 
@@ -6611,5 +6667,7 @@ if not TYPE_CHECKING and USE_RUST_SPEC:
     spack_spec.register_empty_spec(EMPTY_SPEC)
     spack_spec.register_arch_oracle(_ArchOracle())
     spack_spec.register_arch_errors(UnsatisfiableArchitectureSpecError)
+    spack_spec.register_propagation_policy(PropagationPolicy)
+    spack_spec.register_edge_errors(InvalidEdgeError)
 
     ArchSpec = spack_spec.ArchSpec

@@ -3,6 +3,7 @@
 use pyo3::prelude::*;
 
 mod arch;
+mod edge;
 mod lazy;
 mod registry;
 mod spec;
@@ -12,6 +13,7 @@ mod version;
 #[pymodule]
 fn spack_spec(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<spec::Spec>()?;
+    m.add_class::<edge::DependencySpec>()?;
     m.add_class::<version::VersionType>()?;
     m.add_class::<version::ConcreteVersion>()?;
     m.add_class::<version::StandardVersion>()?;
@@ -32,6 +34,8 @@ fn spack_spec(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(registry::register_arch_errors, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_version_errors, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_variant_type, m)?)?;
+    m.add_function(wrap_pyfunction!(registry::register_propagation_policy, m)?)?;
+    m.add_function(wrap_pyfunction!(registry::register_edge_errors, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_variant_errors, m)?)?;
     Ok(())
 }

@@ -4,6 +4,7 @@
 //! the rich-comparison protocol; the Python subclass adds everything not yet ported.
 
 use pyo3::basic::CompareOp;
+use pyo3::gc::{PyTraverseError, PyVisit};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
 
@@ -20,6 +21,30 @@ pub struct Spec {
     pub abstract_hash: Option<String>,
     #[pyo3(get, set)]
     pub _concrete: bool,
+    // Python-side containers, held as opaque handles until their algebra is ported:
+    // the Python subclass assigns and mutates them, the getters return them identically.
+    /// A `spack.version.VersionList`.
+    #[pyo3(get, set)]
+    pub versions: Option<Py<PyAny>>,
+    /// A `spack.spec.VariantMap`.
+    #[pyo3(get, set)]
+    pub variants: Option<Py<PyAny>>,
+    /// A `spack.spec.FlagMap`.
+    #[pyo3(get, set)]
+    pub compiler_flags: Option<Py<PyAny>>,
+    /// An `ArchSpec`, or None.
+    #[pyo3(get, set)]
+    pub architecture: Option<Py<PyAny>>,
+    /// Edge map `dict[str, list[DependencySpec]]` of outgoing edges, keyed by child name.
+    #[pyo3(get, set)]
+    pub _dependencies: Option<Py<PyAny>>,
+    /// Edge map `dict[str, list[DependencySpec]]` of incoming edges, keyed by parent name.
+    #[pyo3(get, set)]
+    pub _dependents: Option<Py<PyAny>>,
+    /// Virtual name -> `VersionList` provided, frozen at concretization; None on abstract
+    /// specs.
+    #[pyo3(get, set)]
+    pub _provided_virtuals: Option<Py<PyAny>>,
 }
 
 impl Spec {
@@ -29,6 +54,13 @@ impl Spec {
             namespace: None,
             abstract_hash: None,
             _concrete: false,
+            versions: None,
+            variants: None,
+            compiler_flags: None,
+            architecture: None,
+            _dependencies: None,
+            _dependents: None,
+            _provided_virtuals: None,
         }
     }
 
@@ -100,6 +132,40 @@ impl Spec {
         state.set_item("namespace", &self.namespace)?;
         state.set_item("abstract_hash", &self.abstract_hash)?;
         state.set_item("_concrete", self._concrete)?;
+        state.set_item("versions", &self.versions)?;
+        state.set_item("variants", &self.variants)?;
+        state.set_item("compiler_flags", &self.compiler_flags)?;
+        state.set_item("architecture", &self.architecture)?;
+        state.set_item("_dependencies", &self._dependencies)?;
+        state.set_item("_dependents", &self._dependents)?;
+        state.set_item("_provided_virtuals", &self._provided_virtuals)?;
         Ok(state.into())
+    }
+
+    fn __traverse__(&self, visit: PyVisit<'_>) -> Result<(), PyTraverseError> {
+        for handle in [
+            &self.versions,
+            &self.variants,
+            &self.compiler_flags,
+            &self.architecture,
+            &self._dependencies,
+            &self._dependents,
+            &self._provided_virtuals,
+        ] {
+            if let Some(handle) = handle {
+                visit.call(handle)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn __clear__(&mut self) {
+        self.versions = None;
+        self.variants = None;
+        self.compiler_flags = None;
+        self.architecture = None;
+        self._dependencies = None;
+        self._dependents = None;
+        self._provided_virtuals = None;
     }
 }

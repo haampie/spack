@@ -6,9 +6,7 @@
 use pyo3::prelude::*;
 use pyo3::sync::PyOnceLock;
 
-#[allow(dead_code)] // consumed from later milestones' node-construction paths
 pub static SPEC_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-#[allow(dead_code)] // consumed from later milestones' `when is EMPTY_SPEC` fast paths
 pub static EMPTY_SPEC: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 
 /// The Python `spack.spec.Spec` subclass; new nodes are constructed through it so
@@ -50,6 +48,36 @@ pub static VARIANT_TYPE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 #[pyfunction]
 pub fn register_variant_type(py: Python<'_>, cls: Py<PyAny>) {
     let _ = VARIANT_TYPE.set(py, cls);
+}
+
+pub static PROPAGATION_POLICY: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The `spack.enums.PropagationPolicy` IntEnum; the edge `propagation` getter returns its
+/// members so that Python-side enum identity comparisons keep working.
+#[pyfunction]
+pub fn register_propagation_policy(py: Python<'_>, cls: Py<PyAny>) {
+    let _ = PROPAGATION_POLICY.set(py, cls);
+}
+
+pub static INVALID_EDGE_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The `spack.spec.InvalidEdgeError` class, raised by the `DependencySpec` constructor so
+/// that Python `except` clauses over `spack.error.SpecError` subclasses keep working.
+#[pyfunction]
+pub fn register_edge_errors(py: Python<'_>, invalid_edge_error: Py<PyAny>) {
+    let _ = INVALID_EDGE_ERROR.set(py, invalid_edge_error);
+}
+
+/// An `InvalidEdgeError` with the given message, or `ValueError` when the Python side has
+/// not registered the class.
+pub fn invalid_edge_error(py: Python<'_>, message: &str) -> PyErr {
+    match INVALID_EDGE_ERROR.get(py) {
+        Some(cls) => match cls.bind(py).call1((message,)) {
+            Ok(exc) => PyErr::from_value(exc),
+            Err(e) => e,
+        },
+        None => pyo3::exceptions::PyValueError::new_err(message.to_string()),
+    }
 }
 
 pub static ARCH_ORACLE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
