@@ -24,7 +24,12 @@ pub struct Spec {
 
 impl Spec {
     fn empty() -> Self {
-        Spec { name: String::new(), namespace: None, abstract_hash: None, _concrete: false }
+        Spec {
+            name: String::new(),
+            namespace: None,
+            abstract_hash: None,
+            _concrete: false,
+        }
     }
 
     /// `_cmp_fast_eq` on the Python subclass: True/False short-circuit or None.

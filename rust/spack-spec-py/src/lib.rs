@@ -5,11 +5,25 @@ use pyo3::prelude::*;
 mod lazy;
 mod registry;
 mod spec;
+mod version;
 
 #[pymodule]
 fn spack_spec(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<spec::Spec>()?;
+    m.add_class::<version::VersionType>()?;
+    m.add_class::<version::ConcreteVersion>()?;
+    m.add_class::<version::StandardVersion>()?;
+    m.add_class::<version::GitVersion>()?;
+    m.add_class::<version::ClosedOpenRange>()?;
+    m.add_class::<version::VersionList>()?;
+    m.add_function(wrap_pyfunction!(version::version_factory, m)?)?;
+    m.add_function(wrap_pyfunction!(version::version_range_factory, m)?)?;
+    m.add_function(wrap_pyfunction!(version::from_string, m)?)?;
+    m.add_function(wrap_pyfunction!(version::ver, m)?)?;
+    m.add_function(wrap_pyfunction!(version::next_version_py, m)?)?;
+    m.add_function(wrap_pyfunction!(version::prev_version_py, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_spec_class, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_empty_spec, m)?)?;
+    m.add_function(wrap_pyfunction!(registry::register_version_errors, m)?)?;
     Ok(())
 }

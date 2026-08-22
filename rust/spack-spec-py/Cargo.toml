@@ -10,4 +10,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 spack-spec-core = { path = "../spack-spec-core" }
-pyo3 = { version = "0.26", features = ["extension-module"] }
+pyo3 = { version = "0.26", features = ["extension-module", "py-clone"] }

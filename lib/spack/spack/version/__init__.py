@@ -11,6 +11,9 @@ This module implements Version and version-ish objects. These are:
   elements.
 """
 
+import os
+from typing import TYPE_CHECKING
+
 from .common import (
     EmptyRangeError,
     VersionChecksumError,
@@ -34,6 +37,26 @@ from .version_types import (
     from_string,
     ver,
 )
+
+# Same toggle as spack.spec.USE_RUST_SPEC; read from the environment directly since importing
+# spack.spec here would be circular.
+if not TYPE_CHECKING and os.environ.get("SPACK_SPEC_IMPL", "python").lower() == "rust":
+    import spack_spec
+
+    spack_spec.register_version_errors(VersionError, EmptyRangeError, VersionLookupError)
+
+    VersionType = spack_spec.VersionType
+    ConcreteVersion = spack_spec.ConcreteVersion
+    StandardVersion = spack_spec.StandardVersion
+    GitVersion = spack_spec.GitVersion
+    ClosedOpenRange = spack_spec.ClosedOpenRange
+    VersionList = spack_spec.VersionList
+    Version = spack_spec.Version
+    VersionRange = spack_spec.VersionRange
+    ver = spack_spec.ver
+    from_string = spack_spec.from_string
+    _next_version = spack_spec._next_version
+    _prev_version = spack_spec._prev_version
 
 #: This version contains all possible versions.
 any_version: VersionList = VersionList([":"])
