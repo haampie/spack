@@ -366,6 +366,7 @@ nitpick_ignore = [
     ("py:class", "BuildStatus"),
     ("py:class", "GitOrStandardVersion"),
     ("py:class", "spack.bootstrap._common.ExecutableInfo"),
+    ("py:class", "spack.spec.QueryState"),
     ("py:class", "spack.vendor.archspec.cpu.microarchitecture.Microarchitecture"),
     ("py:class", "spack.vendor.jinja2.Environment"),
     ("py:class", "SpecFiltersFactory"),
