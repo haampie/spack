@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 //! The Rust base class of `spack.spec.DependencySpec`: an edge in the spec DAG. It owns
-//! the edge state and the pure state methods; the Python subclass adds the algebra
-//! (`_disjoint_reason`, `_conflict_reason`, `_merge`) until a later milestone ports it.
+//! the edge state, the pure state methods, and the edge algebra (`_disjoint_reason`,
+//! `_conflict_reason`, `_merge`), implemented in `algebra.rs`.
 
 use pyo3::basic::CompareOp;
 use pyo3::exceptions::PyRuntimeError;
@@ -176,6 +176,30 @@ impl DependencySpec {
     #[setter]
     fn set_propagation(&mut self, value: i64) {
         self.propagation = value;
+    }
+
+    /// Why the children of two edges about to merge cannot be a single node, or None when
+    /// they can. Ported in `algebra.rs`.
+    fn _disjoint_reason(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        crate::algebra::edge_disjoint_reason(slf.as_any(), other)
+    }
+
+    /// The `Spec._conflict_reason` counterpart of `_disjoint_reason`. Ported in
+    /// `algebra.rs`.
+    fn _conflict_reason(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        crate::algebra::edge_conflict_reason(slf.as_any(), other)
+    }
+
+    /// Merge another edge into this one; returns True if the current edge was changed.
+    /// Ported in `algebra.rs`.
+    fn _merge(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<bool> {
+        crate::algebra::edge_merge(slf.as_any(), other)
     }
 
     /// Update the current dependency types.

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-//! The Rust base class of `spack.spec.Spec`. It owns node-local identity state and
-//! the rich-comparison protocol; the Python subclass adds everything not yet ported.
+//! The Rust base class of `spack.spec.Spec`. It owns node-local identity state, the
+//! rich-comparison protocol, and the satisfies/intersects/constrain algebra (implemented
+//! in `algebra.rs`); the Python subclass adds everything not yet ported.
 
 use pyo3::basic::CompareOp;
 use pyo3::gc::{PyTraverseError, PyVisit};
@@ -21,8 +22,8 @@ pub struct Spec {
     pub abstract_hash: Option<String>,
     #[pyo3(get, set)]
     pub _concrete: bool,
-    // Python-side containers, held as opaque handles until their algebra is ported:
-    // the Python subclass assigns and mutates them, the getters return them identically.
+    // Python-side containers, held as opaque handles: the Python subclass assigns and
+    // mutates them, the getters return them identically.
     /// A `spack.version.VersionList`.
     #[pyo3(get, set)]
     pub versions: Option<Py<PyAny>>,
@@ -123,6 +124,157 @@ impl Spec {
             CompareOp::Le => Ok(!Self::gt_impl(slf, other)?),
             CompareOp::Ge => Ok(!Self::lt_impl(slf, other)?),
         }
+    }
+
+    // ----------------------------------------------------------------------------------
+    // The satisfies/intersects/constrain algebra, ported in `algebra.rs`. Signatures
+    // mirror the Python reference methods deleted from the subclass in rust mode.
+    // ----------------------------------------------------------------------------------
+
+    /// Constrains self with other, and returns True if self changed, False otherwise.
+    #[pyo3(signature = (other, deps=true))]
+    fn constrain(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>, deps: bool) -> PyResult<bool> {
+        crate::algebra::spec_constrain(slf.as_any(), other, deps)
+    }
+
+    #[pyo3(signature = (other, deps=true))]
+    fn _constrain(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>, deps: bool) -> PyResult<bool> {
+        crate::algebra::spec_constrain(slf.as_any(), other, deps)
+    }
+
+    /// Return None when at least one concrete spec matches both self and other, otherwise
+    /// the reason the two are disjoint.
+    #[pyo3(signature = (other, deps))]
+    fn _disjoint_reason(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+        deps: bool,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        crate::algebra::disjoint_reason(slf.as_any(), other, deps)
+    }
+
+    /// Return None unless self and other conflict with each other, otherwise the reason.
+    fn _conflict_reason(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        crate::algebra::conflict_reason(slf.as_any(), other)
+    }
+
+    fn _disjoint_node_reason(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        crate::algebra::disjoint_node_reason(slf.as_any(), other)
+    }
+
+    fn _disjoint_node_content_reason(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        crate::algebra::disjoint_node_content_reason(slf.as_any(), other)
+    }
+
+    fn _disjoint_node_attributes_reason(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        crate::algebra::disjoint_node_attributes_reason(slf.as_any(), other)
+    }
+
+    fn _disjoint_dependencies_reason(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        crate::algebra::disjoint_dependencies_reason(slf.as_any(), other)
+    }
+
+    fn _conflicting_dependencies_reason(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        crate::algebra::conflicting_dependencies_reason(slf.as_any(), other)
+    }
+
+    /// Intersect self with other in place, and return True iff self changed.
+    #[pyo3(signature = (other, deps))]
+    fn _merge(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>, deps: bool) -> PyResult<bool> {
+        crate::algebra::spec_merge(slf.as_any(), other, deps)
+    }
+
+    fn _merge_variants(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<bool> {
+        crate::algebra::merge_variants(slf.as_any(), other)
+    }
+
+    fn _merge_dependencies(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<bool> {
+        crate::algebra::merge_dependencies(slf.as_any(), other)
+    }
+
+    fn _canonicalize_conditional_edges(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        crate::algebra::canonicalize_conditional_edges(slf.as_any())
+    }
+
+    /// Return a constrained copy without modifying this spec.
+    #[pyo3(signature = (other, deps=true))]
+    fn constrained(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+        deps: bool,
+    ) -> PyResult<Py<PyAny>> {
+        Ok(crate::algebra::spec_constrained(slf.as_any(), other, deps)?.unbind())
+    }
+
+    /// Used to convert arguments to specs: a spec passes through, a string is parsed.
+    fn _autospec(slf: &Bound<'_, Self>, spec_like: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
+        let _ = slf;
+        Ok(crate::algebra::autospec(spec_like)?.unbind())
+    }
+
+    /// Return True if there exists at least one concrete spec that matches both self and
+    /// other, otherwise False.
+    #[pyo3(signature = (other, deps=true))]
+    fn intersects(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>, deps: bool) -> PyResult<bool> {
+        crate::algebra::spec_intersects(slf.as_any(), other, deps)
+    }
+
+    /// Whether the when condition of an edge can hold for this spec.
+    fn _condition_can_hold(slf: &Bound<'_, Self>, when: &Bound<'_, PyAny>) -> PyResult<bool> {
+        crate::algebra::condition_can_hold(slf.as_any(), when)
+    }
+
+    /// Return True if all concrete specs matching self also match other, otherwise False.
+    #[pyo3(signature = (other, deps=true))]
+    fn satisfies(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>, deps: bool) -> PyResult<bool> {
+        crate::algebra::spec_satisfies(slf.as_any(), other, deps)
+    }
+
+    /// Return True if this spec provides the given virtual spec, using the provided
+    /// virtual versions frozen on the node.
+    fn _provides_virtual(slf: &Bound<'_, Self>, virtual_spec: &Bound<'_, PyAny>) -> PyResult<bool> {
+        crate::algebra::provides_virtual(slf.as_any(), virtual_spec)
+    }
+
+    /// Compares self and other without looking at dependencies.
+    fn _satisfies_node(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<bool> {
+        crate::algebra::satisfies_node(slf.as_any(), other)
+    }
+
+    fn _satisfies_variants(slf: &Bound<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<bool> {
+        crate::algebra::satisfies_variants(slf.as_any(), other)
+    }
+
+    fn _satisfies_variants_when_self_concrete(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
+        crate::algebra::satisfies_variants_when_self_concrete(slf.as_any(), other)
+    }
+
+    fn _satisfies_variants_when_self_abstract(
+        slf: &Bound<'_, Self>,
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
+        crate::algebra::satisfies_variants_when_self_abstract(slf.as_any(), other)
     }
 
     /// State held by the Rust struct, merged into the Python `__getstate__` dict.

@@ -143,6 +143,36 @@ _RUST_STATE_ATTRS = (
     "_dependencies",
 )
 
+#: Methods of the Python ``Spec`` class implemented by the Rust base class as well. In Rust
+#: mode they are deleted from the class after its body runs, so lookups fall through the MRO
+#: to the Rust implementation. Must track ``rust/spack-spec-py/src/algebra.rs``: a method
+#: listed here without a Rust counterpart would fall through to the base ``object``.
+_RUST_PORTED_NAMES = (
+    "constrain",
+    "_constrain",
+    "_disjoint_reason",
+    "_conflict_reason",
+    "_disjoint_node_reason",
+    "_disjoint_node_content_reason",
+    "_disjoint_node_attributes_reason",
+    "_disjoint_dependencies_reason",
+    "_conflicting_dependencies_reason",
+    "_merge",
+    "_merge_variants",
+    "_merge_dependencies",
+    "_canonicalize_conditional_edges",
+    "constrained",
+    "_autospec",
+    "intersects",
+    "_condition_can_hold",
+    "satisfies",
+    "_provides_virtual",
+    "_satisfies_node",
+    "_satisfies_variants",
+    "_satisfies_variants_when_self_concrete",
+    "_satisfies_variants_when_self_abstract",
+)
+
 SPEC_FORMAT_RE = re.compile(
     r"(?:"  # this is one big or, with matches ordered by priority
     # OPTION 1: escaped character (needs to be first to catch opening \{)
@@ -1007,9 +1037,9 @@ def _merged_when(lhs: "Spec", rhs: "Spec") -> "Spec":
 
 
 class _EdgeAlgebra:
-    """Algebra methods shared by both ``DependencySpec`` implementations. The edge state and
-    the pure state methods live in the implementation class: the Python class below, or the
-    Rust base class."""
+    """Algebra methods of the python-mode ``DependencySpec``; the edge state and the pure
+    state methods live in the implementation class. In Rust mode the extension implements
+    these methods on its base class, and the mixin is not attached."""
 
     if not TYPE_CHECKING:
         # Hidden from mypy: the state attributes assigned by `_merge` live in the
@@ -1117,7 +1147,7 @@ _DEPENDENCY_SPEC_DOC = """DependencySpecs represent an edge in the DAG, and cont
 
 if not TYPE_CHECKING and USE_RUST_SPEC:
 
-    class DependencySpec(_EdgeAlgebra, spack_spec.DependencySpec):
+    class DependencySpec(spack_spec.DependencySpec):
         __doc__ = _DEPENDENCY_SPEC_DOC
 
         __slots__ = ()
@@ -6664,10 +6694,28 @@ EMPTY_SPEC = _ImmutableSpec()
 
 if not TYPE_CHECKING and USE_RUST_SPEC:
     spack_spec.register_spec_class(Spec)
+    spack_spec.register_dependency_spec_class(DependencySpec)
     spack_spec.register_empty_spec(EMPTY_SPEC)
+    spack_spec.register_any_version(vn.any_version)
     spack_spec.register_arch_oracle(_ArchOracle())
     spack_spec.register_arch_errors(UnsatisfiableArchitectureSpecError)
     spack_spec.register_propagation_policy(PropagationPolicy)
     spack_spec.register_edge_errors(InvalidEdgeError)
+    spack_spec.register_algebra_errors(
+        spack.error.SpecError,
+        spack.error.UnsatisfiableSpecError,
+        UnsatisfiableSpecNameError,
+        UnsatisfiableVersionSpecError,
+        UnsatisfiableDependencySpecError,
+        InvalidHashError,
+    )
+
+    # Expose the Rust implementation of the ported algebra methods: deleting the Python
+    # methods makes attribute lookup fall through the MRO to the Rust base class.
+    for _ported_name in _RUST_PORTED_NAMES:
+        delattr(Spec, _ported_name)
+    del _ported_name
+
+    meet = spack_spec.meet
 
     ArchSpec = spack_spec.ArchSpec

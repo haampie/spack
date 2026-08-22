@@ -98,6 +98,52 @@ pub fn register_arch_errors(py: Python<'_>, unsatisfiable_arch_error: Py<PyAny>)
     let _ = UNSAT_ARCH_ERROR.set(py, unsatisfiable_arch_error);
 }
 
+pub static DEPENDENCY_SPEC_CLASS: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The Python `spack.spec.DependencySpec` subclass; the algebra constructs candidate and
+/// synthetic edges through it so they get the subclass behavior.
+#[pyfunction]
+pub fn register_dependency_spec_class(py: Python<'_>, cls: Py<PyAny>) {
+    let _ = DEPENDENCY_SPEC_CLASS.set(py, cls);
+}
+
+pub static ANY_VERSION: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The `spack.version.any_version` singleton, compared against by the edge satisfaction
+/// checks exactly like the reference implementation does.
+#[pyfunction]
+pub fn register_any_version(py: Python<'_>, any_version: Py<PyAny>) {
+    let _ = ANY_VERSION.set(py, any_version);
+}
+
+pub static SPEC_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static UNSATISFIABLE_SPEC_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static UNSAT_SPEC_NAME_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static UNSAT_VERSION_SPEC_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static UNSAT_DEPENDENCY_SPEC_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static INVALID_HASH_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// The exception classes the constrain/intersects/satisfies algebra returns and raises:
+/// `spack.error.SpecError`, `spack.error.UnsatisfiableSpecError`, and the `spack.spec`
+/// subclasses for name, version, dependency and hash mismatches.
+#[pyfunction]
+pub fn register_algebra_errors(
+    py: Python<'_>,
+    spec_error: Py<PyAny>,
+    unsatisfiable_spec_error: Py<PyAny>,
+    name_error: Py<PyAny>,
+    version_error: Py<PyAny>,
+    dependency_error: Py<PyAny>,
+    invalid_hash_error: Py<PyAny>,
+) {
+    let _ = SPEC_ERROR.set(py, spec_error);
+    let _ = UNSATISFIABLE_SPEC_ERROR.set(py, unsatisfiable_spec_error);
+    let _ = UNSAT_SPEC_NAME_ERROR.set(py, name_error);
+    let _ = UNSAT_VERSION_SPEC_ERROR.set(py, version_error);
+    let _ = UNSAT_DEPENDENCY_SPEC_ERROR.set(py, dependency_error);
+    let _ = INVALID_HASH_ERROR.set(py, invalid_hash_error);
+}
+
 pub static MULTIPLE_VALUES_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 pub static INVALID_VARIANT_VALUE_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 pub static UNSATISFIABLE_VARIANT_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();

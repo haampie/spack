@@ -2,6 +2,7 @@
 
 use pyo3::prelude::*;
 
+mod algebra;
 mod arch;
 mod edge;
 mod lazy;
@@ -28,7 +29,14 @@ fn spack_spec(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version::prev_version_py, m)?)?;
     m.add_class::<variant::VariantValue>()?;
     m.add_class::<arch::ArchSpec>()?;
+    m.add_function(wrap_pyfunction!(algebra::meet, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_spec_class, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        registry::register_dependency_spec_class,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(registry::register_any_version, m)?)?;
+    m.add_function(wrap_pyfunction!(registry::register_algebra_errors, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_empty_spec, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_arch_oracle, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_arch_errors, m)?)?;
