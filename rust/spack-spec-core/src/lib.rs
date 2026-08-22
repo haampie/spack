@@ -4,4 +4,8 @@
 //! Node-local algebra (versions, targets, variants, parsing, formatting) lives here;
 //! graph-level algebra over Python objects lives in the `spack-spec-py` binding crate.
 
+pub mod strutil;
+pub mod variant;
+#[cfg(test)]
+mod variant_tests;
 pub mod version;
