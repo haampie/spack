@@ -2,6 +2,8 @@
 
 //! String helpers shared by rendering and parsing, ported from `spack.spec_parser`.
 
+use std::borrow::Cow;
+
 /// `NO_QUOTES_NEEDED` in spec_parser.py: `^[a-zA-Z0-9,/_.\-\[\]]+$`.
 fn no_quotes_needed(value: &str) -> bool {
     !value.is_empty()
@@ -20,6 +22,122 @@ pub fn quote_if_needed(value: &str) -> String {
         json_escape(value)
     } else {
         format!("'{}'", value)
+    }
+}
+
+/// `strip_quotes_and_unescape` in spec_parser.py: remove surrounding single or double quotes,
+/// if present, and replace escaped quotes (`\'` or `\"`) with bare ones.
+///
+/// The quote match is `STRIP_QUOTES` = `^(['\"])(.*)\1$`: `.` does not cross a newline, and `$`
+/// also matches just before one final trailing newline, which is then dropped from the result.
+pub fn strip_quotes_and_unescape(value: &str) -> Cow<'_, str> {
+    fn quoted_inner(v: &str) -> Option<(char, &str)> {
+        let mut chars = v.chars();
+        let quote = chars.next()?;
+        if quote != '\'' && quote != '"' {
+            return None;
+        }
+        let rest = chars.as_str();
+        let inner = rest.strip_suffix(quote)?;
+        // `rest` empty means a lone quote character: `(.*)\1` needs a second quote.
+        if rest.is_empty() || inner.contains('\n') {
+            return None;
+        }
+        Some((quote, inner))
+    }
+
+    let (quote, inner) = match quoted_inner(value) {
+        Some(m) => m,
+        // `$` can also match before a single trailing newline.
+        None => match value.strip_suffix('\n').and_then(quoted_inner) {
+            Some(m) => m,
+            None => return Cow::Borrowed(value),
+        },
+    };
+    let escaped = ['\\', quote].iter().collect::<String>();
+    if inner.contains(&escaped) {
+        Cow::Owned(inner.replace(&escaped, &quote.to_string()))
+    } else {
+        Cow::Borrowed(inner)
+    }
+}
+
+/// `SPLIT_KVP` in spec_parser.py: `^({NAME})(:?==?)(.*)$`, splitting `key:==value` forms into
+/// (name, separator, value). `None` when the string is not a key-value pair (also when the
+/// value spans more than one line: `.` does not cross a newline, but `$` tolerates one final
+/// trailing newline, which is then dropped from the value).
+pub fn split_kvp(s: &str) -> Option<(&str, &str, &str)> {
+    let bytes = s.as_bytes();
+    if bytes.is_empty() || !(bytes[0].is_ascii_alphanumeric() || bytes[0] == b'_') {
+        return None;
+    }
+    let mut name_end = 1;
+    while name_end < bytes.len()
+        && (bytes[name_end].is_ascii_alphanumeric()
+            || matches!(bytes[name_end], b'_' | b'-' | b'.'))
+    {
+        name_end += 1;
+    }
+    let mut sep_end = name_end;
+    if bytes.get(sep_end) == Some(&b':') {
+        sep_end += 1;
+    }
+    if bytes.get(sep_end) != Some(&b'=') {
+        return None;
+    }
+    sep_end += 1;
+    if bytes.get(sep_end) == Some(&b'=') {
+        sep_end += 1;
+    }
+    let value = s[sep_end..].strip_suffix('\n').unwrap_or(&s[sep_end..]);
+    if value.contains('\n') {
+        return None;
+    }
+    Some((&s[..name_end], &s[name_end..sep_end], value))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{split_kvp, strip_quotes_and_unescape};
+
+    /// Expectations produced by the Python `strip_quotes_and_unescape`.
+    #[test]
+    fn strip_quotes_matches_python() {
+        let rows: &[(&str, &str)] = &[
+            ("'abc'", "abc"),
+            ("\"a\\\"b\"", "a\"b"),
+            ("'a\\'b'", "a'b"),
+            ("noquotes", "noquotes"),
+            ("''", ""),
+            ("'", "'"),
+            ("'a'\n", "a"),       // `$` matches before one final newline
+            ("'a\nb'", "'a\nb'"), // `.` does not cross a newline
+            ("\"mixed'", "\"mixed'"),
+            ("'''", "'"),
+        ];
+        for (input, expected) in rows {
+            assert_eq!(strip_quotes_and_unescape(input), *expected, "{input:?}");
+        }
+    }
+
+    /// Expectations produced by the Python `SPLIT_KVP` regex.
+    #[test]
+    fn split_kvp_matches_python() {
+        let rows: &[(&str, Option<(&str, &str, &str)>)] = &[
+            ("foo:==bar", Some(("foo", ":==", "bar"))),
+            ("a=b=c", Some(("a", "=", "b=c"))),
+            ("a==b", Some(("a", "==", "b"))),
+            ("a:=b", Some(("a", ":=", "b"))),
+            ("=x", None),
+            ("a", None),
+            ("k.e-y_2=v", Some(("k.e-y_2", "=", "v"))),
+            ("a=b\n", Some(("a", "=", "b"))),
+            ("a=b\nc", None),
+            ("a:b=c", None),
+        ];
+        for (input, expected) in rows {
+            assert_eq!(split_kvp(input), *expected, "{input:?}");
+        }
     }
 }
 
