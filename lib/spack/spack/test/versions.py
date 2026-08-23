@@ -12,9 +12,11 @@ import pathlib
 
 import pytest
 
+import spack.caches
 import spack.concretize
 import spack.package_base
 import spack.spec
+import spack.util.file_cache
 import spack.version
 from spack.util.filesystem import working_dir
 from spack.version import (
@@ -29,7 +31,7 @@ from spack.version import (
     is_git_version,
     ver,
 )
-from spack.version.git_ref_lookup import SEMVER_REGEX
+from spack.version.git_ref_lookup import SEMVER_REGEX, GitRefLookup
 
 
 def assert_ver_lt(a, b):
@@ -1129,3 +1131,22 @@ def test_semver_regex(tag, expected):
         assert result is None
     else:
         assert result.group() == expected
+
+
+def test_git_ref_lookup_data_stays_tuples_across_the_cache(mock_packages, tmp_path, monkeypatch):
+    """json has no tuples, so entries restored from the cache file have to be converted back to
+    the type a fresh lookup produces."""
+    monkeypatch.setattr(
+        spack.caches,
+        "MISC_CACHE",
+        spack.util.file_cache.FileCache(str(tmp_path), enable_lock=False),
+    )
+
+    lookup = GitRefLookup("git-ref-package")
+    lookup.data = {"abcdef": ("1.2", 3)}
+    lookup.save()
+
+    reloaded = GitRefLookup("git-ref-package")
+    reloaded.load_data()
+    assert reloaded.data == {"abcdef": ("1.2", 3)}
+    assert reloaded.get("abcdef") == ("1.2", 3)

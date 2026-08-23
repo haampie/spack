@@ -102,7 +102,8 @@ class GitRefLookup(AbstractRefLookup):
         """Load data if the path already exists."""
         with spack.caches.MISC_CACHE.read_transaction(self.cache_key) as cache_file:
             if cache_file is not None:
-                self.data = sjson.load(cache_file)
+                # json has no tuples, so restore the type the fresh lookup produces
+                self.data = {ref: tuple(value) for ref, value in sjson.load(cache_file).items()}
 
     def get(self, ref) -> Tuple[Optional[str], int]:
         if not self.data:
