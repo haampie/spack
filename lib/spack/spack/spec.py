@@ -772,7 +772,7 @@ class ArchSpec:
         other = self._autospec(other)
 
         if not other.intersects(self):
-            raise UnsatisfiableArchitectureSpecError(other, self)
+            raise UnsatisfiableArchitectureSpecError(self, other)
 
         constrained = False
         for attr in ("platform", "os"):
@@ -3392,7 +3392,7 @@ class Spec:
             ... except UnsatisfiableDependencySpecError as e:
             ...     print(e)
             ...
-            hdf5 ^mpi=openmpi does not satisfy hdf5 ^mpi@4
+            hdf5 ^mpi@4 does not satisfy hdf5 ^mpi=openmpi
             >>> s._constrain_symbolically(t)
             True
             >>> s
@@ -3498,7 +3498,7 @@ class Spec:
         # in violation. if this becomes a priority get rid of this
         # check and be more specific about what's wrong.
         if not other._intersects_dependencies(self, resolve_virtuals=resolve_virtuals):
-            raise UnsatisfiableDependencySpecError(other, self)
+            raise UnsatisfiableDependencySpecError(self, other)
 
         changed = False
         for other_edge in other.edges_to_dependencies():

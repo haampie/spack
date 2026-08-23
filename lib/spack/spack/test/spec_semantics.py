@@ -3390,3 +3390,16 @@ def test_copy_keeps_a_redundant_parallel_edge_and_its_subtree(mock_packages):
 
     assert copy == original
     assert copy.to_dict() == original.to_dict()
+
+
+def test_unsatisfiable_errors_report_self_as_provided(mock_packages):
+    """`self` is what is provided and `other` is what is required, so the message reads
+    "<self> does not satisfy <other>", consistently across the node attributes."""
+    # a package has at most one direct dependency per name, so these two conflict
+    with pytest.raises(UnsatisfiableSpecError) as exc_info:
+        Spec("pkg-a %pkg-b@1").constrain("pkg-a %pkg-b@2")
+    assert str(exc_info.value) == "pkg-a %pkg-b@1 does not satisfy pkg-a %pkg-b@2"
+
+    with pytest.raises(UnsatisfiableSpecError) as exc_info:
+        ArchSpec(("linux", None, "haswell")).constrain(ArchSpec(("linux", None, "ppc64le")))
+    assert str(exc_info.value).startswith("linux-None-haswell does not satisfy")
