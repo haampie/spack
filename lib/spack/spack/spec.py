@@ -3937,32 +3937,14 @@ class Spec:
         deps: Union[bool, dt.DepTypes, dt.DepFlag] = True,
         *,
         propagation: Optional[PropagationPolicy] = None,
-    ) -> bool:
+    ) -> None:
         """Copies "other" into self, by overwriting all attributes.
 
         Args:
             other: spec to be copied onto ``self``
             deps: if True copies all the dependencies. If False copies None.
                 If deptype, or depflag, copy matching types.
-
-        Returns:
-            True if ``self`` changed because of the copy operation, False otherwise.
         """
-        # We don't count dependencies as changes here
-        changed = True
-        if hasattr(self, "name"):
-            changed = (
-                self.name != other.name
-                and self.versions != other.versions
-                and self.architecture != other.architecture
-                and self.variants != other.variants
-                and self.concrete != other.concrete
-                and self.external_path != other.external_path
-                and self.external_modules != other.external_modules
-                and self.compiler_flags != other.compiler_flags
-                and self.abstract_hash != other.abstract_hash
-            )
-
         self._package = None
 
         # Local node attributes get copied first.
@@ -4013,8 +3995,6 @@ class Spec:
             self._dunder_hash = None
             for h in ht.HASHES:
                 setattr(self, h.attr, None)
-
-        return changed
 
     def _dup_deps(
         self, other, depflag: dt.DepFlag, propagation: Optional[PropagationPolicy] = None
@@ -4312,7 +4292,7 @@ class Spec:
 
             edge_list = []
             for edge in spack.traverse.traverse_edges(
-                l1_specs, order="breadth", cover="edges", root=False, visited=set([0])
+                l1_specs, order="breadth", cover="edges", root=False, visited=set()
             ):
                 # yield each node only once, and generate a consistent id for it the
                 # first time it's encountered.
