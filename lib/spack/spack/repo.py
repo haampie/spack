@@ -726,6 +726,8 @@ class RepoPath:
         self._patch_index: Optional[spack.patch.PatchCache] = None
         self._index_is_fresh: bool = False
         self._tag_index: Optional[spack.tag.TagIndex] = None
+        #: Package classes by name, dropped whenever the search path changes.
+        self._pkg_class_cache: Dict[str, Type["spack.package_base.PackageBase"]] = {}
 
         for repo in repos:
             self.put_last(repo)
@@ -778,6 +780,7 @@ class RepoPath:
 
         self.repos.insert(0, repo)
         self.by_namespace[repo.namespace] = repo
+        self._pkg_class_cache.clear()
 
     def put_last(self, repo):
         """Add repo last in the search path."""
@@ -787,6 +790,7 @@ class RepoPath:
             return
 
         self.repos.append(repo)
+        self._pkg_class_cache.clear()
 
         # don't mask any higher-precedence repos with same namespace
         if repo.namespace not in self.by_namespace:
@@ -796,6 +800,7 @@ class RepoPath:
         """Remove a repo from the search path."""
         if repo in self.repos:
             self.repos.remove(repo)
+            self._pkg_class_cache.clear()
 
     def get_repo(self, namespace: str) -> "Repo":
         """Get a repository by namespace."""
@@ -978,7 +983,16 @@ class RepoPath:
 
     def get_pkg_class(self, pkg_name: str) -> Type["spack.package_base.PackageBase"]:
         """Find a class for the spec's package and return the class object."""
-        return self.repo_for_pkg(pkg_name).get_pkg_class(pkg_name)
+        # Solver setup asks for the same handful of classes tens of thousands of times, and
+        # each miss costs a repo search, an exists() check and an import. The import itself is
+        # already cached process-wide by sys.modules, so the only thing that can change the
+        # answer is the search path, which clears this cache.
+        cls = self._pkg_class_cache.get(pkg_name)
+        if cls is None:
+            cls = self._pkg_class_cache[pkg_name] = self.repo_for_pkg(pkg_name).get_pkg_class(
+                pkg_name
+            )
+        return cls
 
     @autospec
     def dump_provenance(self, spec, path):
