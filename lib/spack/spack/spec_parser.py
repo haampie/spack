@@ -58,6 +58,7 @@ expansion when it is the first character in an id typed on the command line.
 """
 
 import json
+import os
 import pathlib
 import re
 import sys
@@ -783,3 +784,27 @@ def quote_if_needed(value: str) -> str:
         return value
 
     return json.dumps(value) if "'" in value else f"'{value}'"
+
+
+# Same toggle as spack.spec.USE_RUST_SPEC; read from the environment directly since importing
+# spack.spec here would be circular. The Rust parser replays its event stream through the same
+# Spec construction calls SpecParser makes, so only the entry point is rebound: SpecParser, the
+# tokenizer and the toolchain expansion above stay Python.
+if not TYPE_CHECKING and os.environ.get("SPACK_SPEC_IMPL", "python").lower() == "rust":
+    import spack_spec
+
+    _parse_one_or_raise_python = parse_one_or_raise
+
+    def parse_one_or_raise(  # noqa: F811
+        text: str,
+        initial_spec: Optional["spack.spec.Spec"] = None,
+        *,
+        toolchains: Optional[Dict] = None,
+    ) -> "spack.spec.Spec":
+        if toolchains:
+            return _parse_one_or_raise_python(text, initial_spec, toolchains=toolchains)
+        # The extension builds nodes through the Spec class spack.spec registers with it, the
+        # same lazy import SpecParser.parse does for the same reason.
+        import spack.spec  # noqa: F401
+
+        return spack_spec.parse_one_or_raise(text, initial_spec)

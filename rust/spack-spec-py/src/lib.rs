@@ -9,6 +9,7 @@ mod edge;
 mod fmt;
 mod graph;
 mod lazy;
+mod parser;
 mod registry;
 mod spec;
 mod variant;
@@ -55,5 +56,7 @@ fn spack_spec(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(registry::register_hash_descriptors, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_parser_helpers, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_format_helpers, m)?)?;
+    m.add_function(wrap_pyfunction!(registry::register_parse_callbacks, m)?)?;
+    m.add_function(wrap_pyfunction!(parser::parse_one_or_raise, m)?)?;
     Ok(())
 }

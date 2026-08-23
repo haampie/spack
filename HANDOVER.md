@@ -63,6 +63,8 @@ SPACK_SPEC_IMPL=rust python -m pytest lib/spack/spack/test/spec_semantics.py \
 # property harnesses (byte-identical output across modes is the bar)
 SPACK_SPEC_IMPL=rust PYTHONPATH=lib/spack python lib/spack/spack/test/spec_algebra_corpus.py
 SPACK_SPEC_IMPL=rust PYTHONPATH=lib/spack python lib/spack/spack/test/spec_algebra_properties.py --seed 0 --iterations 4000
+# parse differential: spawns one process per mode itself, Python is the oracle
+PYTHONPATH=lib/spack python lib/spack/spack/test/spec_parse_differential.py
 ```
 
 `requires_python_spec` pytest marker skips a test only under the toggle — so far
@@ -78,7 +80,7 @@ but the extension doesn't back `Spec`.
 | M2 variants (core + bindings) | done |
 | M3 targets/ArchSpec (core + bindings) | done — canonical strings byte-identical; ~30% faster than Python |
 | M4 lexer/event-parser core | done — all 114 golden token rows, 0/5597 differential |
-| M4 binding (Spec(str) via Rust parser) | **in flight** — a background agent is wiring `parse_one_spec_into`; if the tree has uncommitted rust/spack-spec-py/src/parser.rs + a small spec.py `__init__` change, that's it. Validate with the gate above + its differential script, then commit |
+| M4 binding (`Spec(str)` and `spec_parser.parse_one_or_raise` via Rust) | done — 0/293 on the parse differential |
 | M5a state migration, M5b algebra + construction/ordering/format | done |
 | ASP fact-string core (`spack-spec-core/src/asp.rs`) | done (groundwork for M7) |
 | M6 differential runner (`test/spec_differential.py`) | not started (see plan: two-process design, Python as oracle) |

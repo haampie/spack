@@ -2241,7 +2241,10 @@ class Spec(_SpecBase):
         self.annotations = SpecAnnotations()
 
         if isinstance(spec_like, str):
-            spack.spec_parser.parse_one_or_raise(spec_like, self)
+            if not TYPE_CHECKING and USE_RUST_SPEC:
+                spack_spec.parse_one_or_raise(spec_like, self)
+            else:
+                spack.spec_parser.parse_one_or_raise(spec_like, self)
 
         elif spec_like is not None:
             raise TypeError(f"Can't make spec out of {type(spec_like)}")
@@ -6723,6 +6726,40 @@ class _ImmutableSpec(Spec):
 EMPTY_SPEC = _ImmutableSpec()
 
 if not TYPE_CHECKING and USE_RUST_SPEC:
+
+    def _rust_tokenization_error(text: str) -> Exception:
+        """The exact ``SpecTokenizationError`` the Python parser raises for ``text``."""
+        tokens = list(spack.spec_parser.SPEC_TOKENIZER.tokenize(text))
+        return spack.spec_parser.SpecTokenizationError(tokens, text)
+
+    def _rust_parsing_error(
+        message: str, start: Optional[int], end: Optional[int], text: str
+    ) -> Exception:
+        """A ``SpecParsingError`` underlining ``[start, end)``; no span means no token."""
+        token = None
+        if start is not None:
+            token = spack.spec_parser.Token(
+                spack.spec_parser.SpecTokens.WS, text[start:end], start, end
+            )
+        return spack.spec_parser.SpecParsingError(message, token, text)
+
+    def _rust_more_specs_error(text: str, start: int, length: int) -> Exception:
+        """The ``parse_one_or_raise`` rejection of trailing text after a single spec."""
+        message = f"expected a single spec, but got more:\n{text}"
+        underline = f"\n{' ' * start}{'^' * length}"
+        return ValueError(message + clr.colorize(f"@*r{{{underline}}}"))
+
+    def _rust_parse_file(path: str, initial_spec: Spec) -> None:
+        """Load a ``.json``/``.yaml`` spec file through the Python ``FileParser``."""
+        ctx = spack.spec_parser.TokenContext(iter(()))
+        ctx.current_token = spack.spec_parser.Token(
+            spack.spec_parser.SpecTokens.FILENAME, path, 0, len(path)
+        )
+        spack.spec_parser.FileParser(ctx).parse(initial_spec)
+
+    spack_spec.register_parse_callbacks(
+        _rust_tokenization_error, _rust_parsing_error, _rust_more_specs_error, _rust_parse_file
+    )
     spack_spec.register_spec_class(Spec)
     spack_spec.register_dependency_spec_class(DependencySpec)
     spack_spec.register_empty_spec(EMPTY_SPEC)

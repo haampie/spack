@@ -67,6 +67,17 @@ branch state at the time of writing.
 - Tokenization is lazy relative to parsing: `x@1.2@2.3 =` reports a tokenization
   error but `x@1.2@2.3 y =` reports the duplicate-version parse error first, because
   the parser pulls tokens with one-token lookahead.
+- The same laziness makes edge attachment order observable. `next_spec` attaches a
+  dependency the moment its node is parsed, before the loop pulls another token, so
+  `x %[virtuals=c]gcc %[virtuals=c]clang %&` reports the `_add_dependency` conflict on
+  `clang` and never reaches the tokenization error on `&`. An event-replaying parser
+  has to mark that exact point (`SpecAction::EndDependencyNode`) to agree.
+- `_parse_node` refuses a dependent of a concrete root *before* legacy compiler
+  aliases are rewritten, so `<specfile>.json %clang` reports `^clang` while the same
+  edge on an abstract root would have become `llvm`.
+- Parsing a git-version literal only stores a lookup; the repository access happens
+  when the spec is *formatted*, so `str(Spec("git-test@git.foo/bar"))` can raise an
+  `AttributeError` out of `spack.util.hash` for a package with no `git` attribute.
 
 ## Spec graph and algebra (`spack/spec.py`)
 

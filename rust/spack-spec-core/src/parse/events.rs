@@ -101,6 +101,12 @@ pub enum SpecAction<'a> {
         name: &'a str,
         namespace: Option<&'a str>,
     },
+    /// The dependency node introduced by the last sigil is complete. This is the point where
+    /// `SpecParser.next_spec` runs its concrete-root check, rewrites legacy compiler aliases and
+    /// attaches the edge (or defers a `^` edge into `pending`) — before the loop pulls another
+    /// token, which is what makes an attach error beat a tokenization error later in the input.
+    /// The span is the node's last token, i.e. `ctx.current_token` where Python attaches.
+    EndDependencyNode,
     /// `*`: the current node is anonymous (Python leaves the name unset).
     Star,
     /// `@...` version list, git version, or `git-ref=version` pair: the token value without the
@@ -209,6 +215,37 @@ pub fn parse_events(input: &str) -> Result<Vec<SpecEvent<'_>>, SpecParseError<'_
         }
     }
     Ok(events)
+}
+
+/// The first spec in `input` as an event stream, plus, on success, the one-token lookahead
+/// left behind (`SpecParser.ctx.next_token` after `next_spec`), which `parse_one_or_raise`
+/// uses to reject trailing text. Tokens past the lookahead are never pulled, so an error there
+/// stays silent, exactly like the lazy Python tokenizer. Empty input yields no events, like
+/// `next_spec` returning its `initial_spec` untouched.
+///
+/// On error the events up to the offending token are returned with it: the parser and the
+/// Python original emit semantic actions in the same token order, so a binding that replays
+/// the partial stream before raising reproduces Python's interleaving of `Spec` mutation
+/// errors with parse errors (`x+debug+debug @1@2` is a duplicate-variant error, not a
+/// multiple-versions error). The partial stream ends mid-spec: the binding must not run its
+/// end-of-spec attachments before raising.
+pub fn parse_events_one(
+    input: &str,
+) -> (
+    Vec<SpecEvent<'_>>,
+    Result<Option<Token<'_>>, SpecParseError<'_>>,
+) {
+    let mut events = Vec::new();
+    let mut ctx = match Ctx::new(input) {
+        Ok(ctx) => ctx,
+        Err(e) => return (events, Err(e.into())),
+    };
+    if ctx.next.is_some() {
+        if let Err(e) = next_spec(&mut ctx, &mut events) {
+            return (events, Err(e));
+        }
+    }
+    (events, Ok(ctx.next))
 }
 
 /// `TokenContext`: one token of lookahead over the whitespace-filtered stream, with a pushback
@@ -342,6 +379,10 @@ fn next_spec<'a>(
             });
         }
         parse_node(ctx, events, direct)?;
+        events.push(SpecEvent {
+            action: SpecAction::EndDependencyNode,
+            span: Span::of(&ctx.current()),
+        });
     }
     Ok(())
 }

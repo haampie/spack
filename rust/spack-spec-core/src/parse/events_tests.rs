@@ -155,6 +155,7 @@ fn test_events_full_spec() {
                 value: false,
                 propagate: false
             },
+            A::EndDependencyNode,
             A::StartDependencyNode {
                 direct: true,
                 propagation: Propagation::None,
@@ -165,6 +166,7 @@ fn test_events_full_spec() {
                 namespace: None
             },
             A::NodeVersion { version: "12.1" },
+            A::EndDependencyNode,
             A::StartDependencyNode {
                 direct: false,
                 propagation: Propagation::None,
@@ -175,6 +177,7 @@ fn test_events_full_spec() {
                 namespace: None
             },
             A::NodeVersion { version: "8.1_1e" },
+            A::EndDependencyNode,
         ]
     );
 }
@@ -201,6 +204,7 @@ fn test_events_virtual_assignment_pushback() {
                 namespace: None
             },
             A::NodeVersion { version: "14.1" },
+            A::EndDependencyNode,
         ]
     );
     // Dotted substitutes become fully qualified names.
@@ -217,6 +221,7 @@ fn test_events_virtual_assignment_pushback() {
                 name: "openmpi",
                 namespace: Some("builtin")
             },
+            A::EndDependencyNode,
         ]
     );
 }
@@ -244,6 +249,7 @@ fn test_events_legacy_compiler_alias_on_direct_edges_only() {
                 name: "llvm",
                 namespace: None
             },
+            A::EndDependencyNode,
         ]
     );
     // ... but a root or `^` node named clang is not.
@@ -264,6 +270,7 @@ fn test_events_legacy_compiler_alias_on_direct_edges_only() {
                 name: "intel",
                 namespace: None
             },
+            A::EndDependencyNode,
         ]
     );
 }
@@ -294,6 +301,7 @@ fn test_events_edge_properties() {
                 name: "gcc",
                 namespace: None
             },
+            A::EndDependencyNode,
         ]
     );
     // A repeated key keeps the last value, and fused virtuals are appended to `virtuals=`.
@@ -312,6 +320,7 @@ fn test_events_edge_properties() {
                 name: "e",
                 namespace: None
             },
+            A::EndDependencyNode,
         ]
     );
 }
@@ -347,6 +356,7 @@ fn test_events_propagated_dependency_and_variants() {
                 propagate: true,
                 concrete: true,
             },
+            A::EndDependencyNode,
         ]
     );
 }
@@ -389,6 +399,7 @@ fn test_events_star_and_anonymous() {
                 value: true,
                 propagate: false
             },
+            A::EndDependencyNode,
         ]
     );
     assert_eq!(actions(""), vec![]);

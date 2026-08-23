@@ -76,10 +76,13 @@
 //!
 //! Errors that need package data or a Spec object stay in the binding: duplicate variants and
 //! architecture pieces (`Spec._add_flag`), propagation of reserved names, `_add_dependency`
-//! conflicts, missing spec files, and `when=` strings that fail to parse. One known ordering
-//! divergence: Python raises an `_add_dependency` error for edge *n* before parsing edge *n+1*,
-//! while this parser reports a parse error anywhere in the input before the binding replays any
-//! attach.
+//! conflicts, missing spec files, and `when=` strings that fail to parse. Both parsers emit
+//! their semantic actions in the same token order — including
+//! [`SpecAction::EndDependencyNode`], which marks the point where Python attaches an edge,
+//! before the loop pulls another token — so a binding that replays the partial event stream of
+//! [`events::parse_events_one`] before raising its error reproduces Python's interleaving of
+//! `Spec` mutation errors with parse errors, down to an attach error beating a tokenization
+//! error later in the input (`x %[virtuals=c]gcc %[virtuals=c]clang %&`).
 
 pub mod events;
 pub mod lexer;
@@ -89,5 +92,7 @@ mod events_tests;
 #[cfg(test)]
 mod lexer_tests;
 
-pub use events::{parse_events, ParsingError, ParsingErrorKind, SpecAction, SpecEvent};
+pub use events::{
+    parse_events, parse_events_one, ParsingError, ParsingErrorKind, SpecAction, SpecEvent,
+};
 pub use lexer::{tokenize, tokenize_all, SpecTokenizationError, Token, TokenKind};

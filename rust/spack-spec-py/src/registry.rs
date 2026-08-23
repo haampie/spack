@@ -205,6 +205,28 @@ pub fn register_format_helpers(
     let _ = LEGACY_COMPILER_ALIASES.set(py, legacy_compiler_aliases);
 }
 
+pub static TOKENIZATION_ERROR_FACTORY: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static PARSING_ERROR_FACTORY: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static MORE_SPECS_ERROR_FACTORY: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+pub static SPEC_FILE_PARSER: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+
+/// What `parse_one_spec_into` dispatches back to Python: factories building the exact
+/// `spack.spec_parser` exceptions (tokenization, parsing, trailing-text) and the
+/// `FileParser` entry point for `.json`/`.yaml` spec files.
+#[pyfunction]
+pub fn register_parse_callbacks(
+    py: Python<'_>,
+    tokenization_error: Py<PyAny>,
+    parsing_error: Py<PyAny>,
+    more_specs_error: Py<PyAny>,
+    parse_file: Py<PyAny>,
+) {
+    let _ = TOKENIZATION_ERROR_FACTORY.set(py, tokenization_error);
+    let _ = PARSING_ERROR_FACTORY.set(py, parsing_error);
+    let _ = MORE_SPECS_ERROR_FACTORY.set(py, more_specs_error);
+    let _ = SPEC_FILE_PARSER.set(py, parse_file);
+}
+
 pub static MULTIPLE_VALUES_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 pub static INVALID_VARIANT_VALUE_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 pub static UNSATISFIABLE_VARIANT_ERROR: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
