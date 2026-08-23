@@ -3,11 +3,16 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 """Low-level wrappers around clingo API and other basic functionality related to ASP"""
 
-from typing import Any, NamedTuple, Optional, Tuple
+import os
+from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Tuple
 
 from spack.util import lang
 
 from .compat import symbol_name, symbol_string
+
+#: Same toggle as spack.spec.USE_RUST_SPEC; read from the environment directly, since this
+#: module sits below spack.spec. Under it the fact strings are built in the extension.
+USE_RUST_SPEC = os.environ.get("SPACK_SPEC_IMPL", "python").lower() == "rust"
 
 
 class AspVar:
@@ -81,6 +86,15 @@ class AspFunction:
 
     def __repr__(self) -> str:
         return str(self)
+
+
+if not TYPE_CHECKING and USE_RUST_SPEC:
+    import spack_spec
+
+    # The extension renders an atom without building the argument strings in Python; the
+    # classes are otherwise interchangeable, down to the key_ordering comparisons.
+    AspVar = spack_spec.AspVar
+    AspFunction = spack_spec.AspFunction
 
 
 class _AspFunctionBuilder:

@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 
 mod algebra;
 mod arch;
+mod asp;
 mod cmp;
 mod edge;
 mod fmt;
@@ -33,6 +34,9 @@ fn spack_spec(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version::prev_version_py, m)?)?;
     m.add_class::<variant::VariantValue>()?;
     m.add_class::<arch::ArchSpec>()?;
+    m.add_class::<asp::AspVar>()?;
+    m.add_class::<asp::AspFunction>()?;
+    m.add_class::<asp::ProblemInstanceBuilder>()?;
     m.add_function(wrap_pyfunction!(algebra::meet, m)?)?;
     m.add_function(wrap_pyfunction!(registry::register_spec_class, m)?)?;
     m.add_function(wrap_pyfunction!(

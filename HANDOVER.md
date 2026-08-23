@@ -47,8 +47,9 @@ building dominate, `Spec.satisfies` is nearly irrelevant during setup).
 ## Build & test
 
 ```sh
-# build the extension into .venv (x86_64 rustup under Rosetta -> pass the target)
-cd rust/spack-spec-py && ../../.venv/bin/python -m maturin develop --target aarch64-apple-darwin
+# build the extension into .venv (x86_64 rustup under Rosetta -> pass the target).
+# --release for any timing: a debug build is ~2x slower than the Python it replaces.
+cd rust/spack-spec-py && ../../.venv/bin/python -m maturin develop --release --target aarch64-apple-darwin
 # native core tests
 cd rust && cargo test -p spack-spec-core
 # the gate (identical results expected in both modes; currently 1304 passed / 15 skipped)
@@ -65,6 +66,13 @@ SPACK_SPEC_IMPL=rust PYTHONPATH=lib/spack python lib/spack/spack/test/spec_algeb
 SPACK_SPEC_IMPL=rust PYTHONPATH=lib/spack python lib/spack/spack/test/spec_algebra_properties.py --seed 0 --iterations 4000
 # parse differential: spawns one process per mode itself, Python is the oracle
 PYTHONPATH=lib/spack python lib/spack/spack/test/spec_parse_differential.py
+# ASP facts: both classes in one process, so run it with the toggle unset
+PYTHONPATH=lib/spack python lib/spack/spack/test/asp_fact_differential.py
+# the ASP instance itself must not move a byte
+for pkg in zlib hdf5+mpi trilinos; do
+  diff <(bin/spack --color=never solve --show=asp $pkg) \
+       <(SPACK_SPEC_IMPL=rust bin/spack --color=never solve --show=asp $pkg)
+done
 ```
 
 `requires_python_spec` pytest marker skips a test only under the toggle — so far
@@ -84,11 +92,13 @@ but the extension doesn't back `Spec`.
 | M5a state migration, M5b algebra + construction/ordering/format | done |
 | ASP fact-string core (`spack-spec-core/src/asp.rs`) | done (groundwork for M7) |
 | M6 differential runner (`test/spec_differential.py`) | not started (see plan: two-process design, Python as oracle) |
-| M7 bulk fact emission (AspFunction/ProblemBuffer pyclasses + solver/core.py wiring) | not started; core exists |
+| M7 bulk fact emission (AspFunction/ProblemBuffer pyclasses + solver wiring) | done — ASP instance byte-identical on zlib/hdf5+mpi/trilinos; trilinos setup 2.02s -> 1.56s |
 | M8 bulk clause generation (`spec.clauses()`, interned directive specs, variant-def table in Rust, version-order table) | not started; requires M5 (done) |
 
 Perf acceptance: `spack solve --timers` setup line >=2.5x on trilinos (warm), byte-
-identical ASP problem instance vs the Python builder on zlib/hdf5+mpi/trilinos.
+identical ASP problem instance vs the Python builder on zlib/hdf5+mpi/trilinos. After M7 the
+warm trilinos setup is 2.02s -> 1.56s (1.29x); the rest is M8's, where `_spec_clauses`
+accessor traffic lives.
 
 ## Working method that has been effective
 

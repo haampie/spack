@@ -19,6 +19,7 @@ import time
 import warnings
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -73,7 +74,7 @@ from spack.util import tty
 from spack.util.lang import elide_list
 
 from .compat import default_clingo_control, make_error_control
-from .core import AspFunction, AspVar, NodeId, SourceContext, extract_args, fn
+from .core import USE_RUST_SPEC, AspFunction, AspVar, NodeId, SourceContext, extract_args, fn
 from .input_analysis import create_counter, create_graph_analyzer
 from .requirements import RequirementKind, RequirementOrigin, RequirementParser, RequirementRule
 from .reuse import ReusableSpecsSelector, SpecFiltersFactory
@@ -1121,21 +1122,20 @@ class PyclingoDriver:
 
         timer.start("ordering")
         # print the original ASP program if requested
-        problem = problem_builder.asp_problem
         if output.out is not None:
-            output.out.write("\n".join(problem))
+            output.out.write("\n".join(problem_builder.asp_problem))
 
         if output.setup_only:
             return Result(specs), None, None
 
         # strip and order the ASP problem for caching and deterministic solves
-        problem = _strip_asp_problem(problem)
         if "SPACK_SOLVER_RANDOMIZATION" in os.environ:
             # shuffling is used in benchmarking to rule out variability due to input ordering
+            problem = _strip_asp_problem(problem_builder.asp_problem)
             random.shuffle(problem)
+            problem_str = "\n".join(problem)
         else:
-            problem.sort()
-        problem_str = "\n".join(problem)
+            problem_str = problem_builder.stripped_sorted_str()
         timer.stop("ordering")
 
         timer.start("cache-check")
@@ -3492,6 +3492,19 @@ class ProblemInstanceBuilder:
 
     def newline(self):
         self.asp_problem.append("")
+
+    def stripped_sorted_str(self) -> str:
+        """The problem instance stripped of empty lines, sorted, and joined."""
+        problem = _strip_asp_problem(self.asp_problem)
+        problem.sort()
+        return "\n".join(problem)
+
+
+if not TYPE_CHECKING and USE_RUST_SPEC:
+    import spack_spec
+
+    # Same interface, but the lines never exist as Python strings unless asp_problem is read.
+    ProblemInstanceBuilder = spack_spec.ProblemInstanceBuilder
 
 
 def possible_compilers(*, configuration) -> Tuple[Set["spack.spec.Spec"], Set["spack.spec.Spec"]]:
