@@ -23,6 +23,12 @@ class AspVar:
         return str(self.name)
 
 
+def _quoted(arg: Any) -> str:
+    """Render an argument as a quoted ASP string, escaping what ASP treats specially."""
+    escaped = str(arg).replace("\\", r"\\").replace("\n", r"\n").replace('"', r"\"")
+    return f'"{escaped}"'
+
+
 @lang.key_ordering
 class AspFunction:
     """A term in the ASP logic program"""
@@ -64,19 +70,15 @@ class AspFunction:
         for arg in self.args:
             # exact type checks first, ordered by frequency
             if type(arg) is str:
-                arg = arg.replace("\\", r"\\").replace("\n", r"\n").replace('"', r"\"")
-                parts.append(f'"{arg}"')
+                parts.append(_quoted(arg))
             elif type(arg) is AspFunction or type(arg) is int or type(arg) is AspVar:
                 parts.append(str(arg))
             # subclasses miss the checks above: config values are syaml_str / syaml_int. bool is
             # an int subclass, but is not a number in ASP, so it is quoted below.
             elif isinstance(arg, int) and not isinstance(arg, bool):
                 parts.append(str(arg))
-            elif isinstance(arg, str):
-                arg = arg.replace("\\", r"\\").replace("\n", r"\n").replace('"', r"\"")
-                parts.append(f'"{arg}"')
             else:
-                parts.append(f'"{arg}"')
+                parts.append(_quoted(arg))
         return f"{self.name}({','.join(parts)})"
 
     def __repr__(self) -> str:

@@ -5697,6 +5697,15 @@ def test_asp_facts_with_config_values():
     assert str(fn.variant_value("x", True)) == 'variant_value("x","True")'
 
 
+def test_asp_facts_escape_non_string_arguments():
+    """Arguments that are neither str, int, AspFunction nor AspVar are rendered as ASP strings,
+    so they need the same escaping as strings."""
+    fn = spack.solver.core.fn
+    spec = spack.spec.Spec('foo cflags="-DX=\\"q\\""')
+    assert str(spec) == """foo cflags='-DX="q"'"""
+    assert str(fn.node(spec)) == r"""node("foo cflags='-DX=\"q\"'")"""
+
+
 def test_target_star_concretizes(mock_packages, config):
     """target=* is not a literal unknown target '*' but rather an unconstrained target"""
     concrete = spack.concretize.concretize_one("pkg-a target=*")
