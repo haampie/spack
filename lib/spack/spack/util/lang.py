@@ -455,6 +455,24 @@ class HashableMap(typing.MutableMapping[K, V]):
     def __delitem__(self, key: K) -> None:
         del self.dict[key]
 
+    # The Mapping mixins build a view object and then walk it through __iter__ and
+    # __getitem__, one Python call per entry. These maps are small and read constantly --
+    # solver setup iterates a spec's variants for every node of every clause set -- so they
+    # hand out the backing dict's own views instead. Safe as long as no subclass transforms
+    # values in __getitem__; neither FlagMap nor VariantMap does.
+
+    def __contains__(self, key: object) -> bool:
+        return key in self.dict
+
+    def keys(self) -> typing.KeysView[K]:
+        return self.dict.keys()
+
+    def values(self) -> typing.ValuesView[V]:
+        return self.dict.values()
+
+    def items(self) -> typing.ItemsView[K, V]:
+        return self.dict.items()
+
     def _cmp_iter(self):
         for _, v in sorted(self.dict.items()):
             yield v
