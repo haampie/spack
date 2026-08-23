@@ -3853,3 +3853,22 @@ def test_copy_keeps_a_redundant_parallel_edge_and_its_subtree(mock_packages):
 
     assert copy == original
     assert copy.to_dict() == original.to_dict()
+
+
+def test_interned_specs_refuse_mutation():
+    """A directive spec is shared by every package that names the same constraint, so mutating
+    one would corrupt packages that never mentioned it. The guard that catches this runs only
+    under pytest -- overriding ``__setattr__`` costs a Python frame per attribute assignment,
+    which is hundreds of thousands of them in a solve -- so this test is what keeps it wired up.
+    """
+    interned = spack.spec._ImmutableSpec("zlib@1.2")
+
+    assert str(interned) == "zlib@1.2"
+
+    with pytest.raises(AttributeError):
+        interned.name = "openssl"
+
+    with pytest.raises(AttributeError):
+        interned.add_dependency_edge(
+            Spec("gmake"), depflag=dt.BUILD, virtuals=(), direct=False, when=Spec()
+        )

@@ -58,6 +58,7 @@ import pathlib
 import platform
 import re
 import socket
+import sys
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -6686,11 +6687,33 @@ class MissingSpecHashError(spack.error.SpecError):
     """Raised when a serialized spec node references a hash not present in a node list."""
 
 
-class _ImmutableSpec(Spec):
-    """An immutable Spec that prevents a class of accidental mutations."""
+class _InternedSpec(Spec):
+    """A Spec that is shared rather than copied, and caches its string form.
+
+    Interning is what makes these worth a class of their own: the same handful of directive
+    specs are formatted over and over during a solve, so each one renders once.
+    """
+
+    _str_cache: str
+
+    def __str__(self) -> str:
+        try:
+            return self._str_cache
+        except AttributeError:
+            s = self._str(color=False)
+            object.__setattr__(self, "_str_cache", s)
+            return s
+
+
+class _GuardedInternedSpec(_InternedSpec):
+    """An interned Spec that refuses to be mutated.
+
+    Interned specs are shared by every package that names the same constraint, so mutating one
+    corrupts packages that have nothing to do with the caller. Freezing is expressed by
+    *deleting* ``_mutable``, so a mutation after construction raises AttributeError.
+    """
 
     _mutable: bool
-    _str_cache: str
 
     def __init__(self, spec_like: Optional[str] = None) -> None:
         object.__setattr__(self, "_mutable", True)
@@ -6714,15 +6737,6 @@ class _ImmutableSpec(Spec):
         assert self._mutable
         return super().add_dependency_edge(*args, **kwargs)
 
-    def __str__(self) -> str:
-        # Cache the str value of immutable specs as an optimization
-        try:
-            return self._str_cache
-        except AttributeError:
-            s = self._str(color=False)
-            object.__setattr__(self, "_str_cache", s)
-            return s
-
     def __setattr__(self, name, value) -> None:
         assert self._mutable
         super().__setattr__(name, value)
@@ -6730,6 +6744,14 @@ class _ImmutableSpec(Spec):
     def __delattr__(self, name) -> None:
         assert self._mutable
         object.__delattr__(self, name)
+
+
+#: Interned specs, guarded against mutation only under pytest. The guard overrides
+#: ``__setattr__``, so it costs a Python frame for every attribute any Spec assigns -- 360k of
+#: them per trilinos solve. No test mutates an interned spec today, so it catches nothing now; it
+#: is here to fail loudly in CI the first time somebody writes that bug, which is worth a frame
+#: in a test run and not worth one in a solve.
+_ImmutableSpec = _GuardedInternedSpec if "pytest" in sys.modules else _InternedSpec
 
 
 #: Immutable empty spec, for fast comparisons and reduced memory usage.
