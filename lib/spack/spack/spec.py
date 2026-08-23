@@ -5890,6 +5890,16 @@ class VariantMap(lang.HashableMap[str, vt.VariantValue]):
         return bool_keys, kv_keys
 
 
+if not TYPE_CHECKING and USE_RUST_SPEC:
+    # Rendering the map is a per-node cost of formatting a spec; the extension reads the backing
+    # dict once instead of paying the Mapping ABC and a str() call per entry. The Rust formatter
+    # calls the same function directly, so this wrapper is only for Python-side callers.
+    def _render_variant_map(self: VariantMap) -> str:
+        return spack_spec.render_variant_map(self)
+
+    VariantMap.__str__ = _render_variant_map
+
+
 if not USE_RUST_SPEC:
     # In Rust mode the base class implements the rich comparisons natively.
     lang.lazy_lexicographic_ordering(set_hash=False)(Spec)

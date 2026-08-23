@@ -594,3 +594,62 @@ impl VariantValue {
         Ok(())
     }
 }
+
+// ---------------------------------------------------------------------------
+// VariantMap rendering
+// ---------------------------------------------------------------------------
+
+/// `VariantMap.__str__`, without a Python frame per entry.
+///
+/// Formatting a spec asks for this once per node, and the Python version pays the `Mapping` ABC
+/// for `keys()`, a lambda per key and a `str()` call per value. Here the map's backing dict is
+/// read once and every value renders through [`VariantData::render`] directly.
+///
+/// PY: boolean variants come first, with no separator, so a spec never starts a token with
+/// ` ~foo` (which zsh eats); key-value variants each get a leading space. Both groups keep
+/// sorted key order, and Rust orders `str` by UTF-8 bytes exactly as Python orders by code
+/// point.
+#[pyfunction]
+pub fn render_variant_map(map: &Bound<'_, PyAny>) -> PyResult<String> {
+    let dict = map.getattr("dict")?;
+    let dict = dict.downcast::<PyDict>()?;
+    if dict.is_empty() {
+        return Ok(String::new());
+    }
+
+    let mut entries: Vec<(String, Bound<'_, PyAny>)> = Vec::with_capacity(dict.len());
+    for (key, value) in dict.iter() {
+        entries.push((key.extract()?, value));
+    }
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut bools = String::new();
+    let mut pairs = String::new();
+    for (_, value) in &entries {
+        // A value that is not backed by the extension (nothing in spack does this today) still
+        // renders, through its own __str__.
+        let (is_bool, rendered) = match value.downcast::<VariantValue>() {
+            Ok(variant) => {
+                let variant = variant.borrow();
+                (
+                    variant.inner.kind == VariantKind::Bool,
+                    variant.inner.render(),
+                )
+            }
+            Err(_) => (
+                value
+                    .getattr("type")?
+                    .eq(kind_to_py(map.py(), VariantKind::Bool)?)?,
+                value.str()?.to_cow()?.into_owned(),
+            ),
+        };
+        if is_bool {
+            bools.push_str(&rendered);
+        } else {
+            pairs.push(' ');
+            pairs.push_str(&rendered);
+        }
+    }
+    bools.push_str(&pairs);
+    Ok(bools)
+}

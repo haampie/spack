@@ -68,7 +68,7 @@ pub(crate) fn format_default(slf: &Bound<'_, PyAny>) -> PyResult<String> {
         parts.push(compiler_flags_str);
     }
 
-    let variants_str = str_of(&spec_variants(slf)?)?;
+    let variants_str = crate::variant::render_variant_map(&spec_variants(slf)?)?;
     if !variants_str.is_empty() {
         parts.push(variants_str);
     }

@@ -33,6 +33,7 @@ fn spack_spec(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version::next_version_py, m)?)?;
     m.add_function(wrap_pyfunction!(version::prev_version_py, m)?)?;
     m.add_class::<variant::VariantValue>()?;
+    m.add_function(wrap_pyfunction!(variant::render_variant_map, m)?)?;
     m.add_class::<arch::ArchSpec>()?;
     m.add_class::<asp::AspVar>()?;
     m.add_class::<asp::AspFunction>()?;
