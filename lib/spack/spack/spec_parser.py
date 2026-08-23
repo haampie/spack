@@ -404,7 +404,17 @@ class SpecParser:
 
     def all_specs(self) -> List["spack.spec.Spec"]:
         """Return all the specs that remain to be parsed"""
-        return list(iter(self.next_spec, None))
+        specs: List["spack.spec.Spec"] = []
+        while self.ctx.next_token:
+            token = self.ctx.next_token
+            spec = self.next_spec()
+            if spec is None:
+                break
+            # No production consumes this token: returning would loop forever.
+            if self.ctx.next_token is token:
+                raise SpecParsingError("unexpected token", token, self.literal_str)
+            specs.append(spec)
+        return specs
 
 
 class SpecNodeParser:

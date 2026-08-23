@@ -1589,6 +1589,13 @@ def test_error_conditions(text, match_string):
         SpecParser(text).next_spec()
 
 
+@pytest.mark.parametrize("text", ["]", "foo ]", "] c=gcc", "foo ] bar"])
+def test_unconsumed_token_is_an_error(text):
+    """A token no production consumes must error out, instead of looping forever."""
+    with pytest.raises(SpecParsingError, match="unexpected token"):
+        SpecParser(text).all_specs()
+
+
 @pytest.mark.parametrize(
     "text,exc_cls",
     [
