@@ -11,6 +11,7 @@ import spack.concretize
 import spack.error
 import spack.operating_systems
 import spack.platforms
+import spack.spec
 from spack.spec import ArchSpec, Spec
 
 
@@ -132,6 +133,31 @@ def test_constrain_is_atomic_when_targets_are_disjoint():
     with pytest.raises(spack.error.UnsatisfiableSpecError):
         architecture.constrain(ArchSpec((None, "ubuntu18.04", "ppc64le")))
     assert architecture == ArchSpec(("linux", None, "haswell"))
+
+
+@pytest.mark.parametrize("bad_argument", [42, None, ["linux", "None", "x86_64"]])
+def test_arch_spec_rejects_unsupported_argument_types(bad_argument):
+    with pytest.raises(TypeError, match="cannot construct an ArchSpec"):
+        ArchSpec(bad_argument)
+
+
+@pytest.mark.parametrize("bad_tuple", [("linux", "x86_64"), ("a", "b", "c", "d")])
+def test_arch_spec_rejects_tuples_of_the_wrong_length(bad_tuple):
+    with pytest.raises(ValueError, match="cannot construct an ArchSpec"):
+        ArchSpec(bad_tuple)
+
+
+@pytest.mark.parametrize(
+    "lhs,rhs", [(":neoverse_v1", ":neoverse_v2"), (":cannonlake", ":cascadelake")]
+)
+def test_target_intersection_order_is_deterministic(lhs, rhs):
+    """The maximal lower bounds are computed from a set of Microarchitecture, which hash by name,
+    so the result has to be sorted to not depend on PYTHONHASHSEED."""
+    result = ArchSpec._target_intersection(
+        spack.spec._make_microarchitecture(lhs), spack.spec._make_microarchitecture(rhs)
+    )
+    assert len(result) > 1
+    assert result == sorted(result)
 
 
 @pytest.mark.parametrize(

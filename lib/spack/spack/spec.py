@@ -436,7 +436,8 @@ def _maximal_lower_bounds(
         return [a]
     if b < a:
         return [b]
-    below = set(a.ancestors) & set(b.ancestors)
+    # Microarchitecture hashes by name, so sort to keep the order independent of PYTHONHASHSEED.
+    below = sorted(set(a.ancestors) & set(b.ancestors), key=lambda t: t.name)
     return [t for t in below if not any(t < other for other in below)]
 
 
@@ -575,12 +576,17 @@ class ArchSpec:
             # Normalize the string to a tuple
             if isinstance(spec_or_platform_tuple, str):
                 spec_fields = spec_or_platform_tuple.split("-")
-                if len(spec_fields) != 3:
-                    msg = "cannot construct an ArchSpec from {0!s}"
-                    raise ValueError(msg.format(spec_or_platform_tuple))
+
+            if len(spec_fields) != 3:
+                msg = "cannot construct an ArchSpec from {0!s}"
+                raise ValueError(msg.format(spec_or_platform_tuple))
 
             platform, operating_system, target = spec_fields
             platform_tuple = (_string_or_none(platform), _string_or_none(operating_system), target)
+
+        else:
+            msg = "cannot construct an ArchSpec from {0!s} of type {1}"
+            raise TypeError(msg.format(spec_or_platform_tuple, type(spec_or_platform_tuple)))
 
         self.platform, self.os, self.target = platform_tuple
 
