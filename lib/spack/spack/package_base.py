@@ -568,6 +568,10 @@ class PackageBase(WindowsRPath, PackageViewMixin, metaclass=PackageMeta):
     patches: Dict[spack.spec.Spec, List[spack.patch.Patch]]
     #: Class level dictionary populated by :func:`~spack.directives.variant` directives
     variants: Dict[spack.spec.Spec, Dict[str, spack.variant.Variant]]
+    #: :meth:`~spack.package_base.PackageBase._variant_definitions` resolved for this class
+    _variant_definitions_cache: Optional[
+        Dict[str, List[Tuple[spack.spec.Spec, spack.variant.Variant]]]
+    ] = None
     #: Class level dictionary populated by :func:`~spack.directives.license` directives
     licenses: Dict[spack.spec.Spec, str]
     #: Class level dictionary populated by :func:`~spack.directives.can_splice` directives
@@ -736,12 +740,32 @@ class PackageBase(WindowsRPath, PackageViewMixin, metaclass=PackageMeta):
     # External code working with Variants should go through the methods below
 
     @classmethod
+    def _variant_definitions(
+        cls,
+    ) -> Dict[str, List[Tuple["spack.spec.Spec", "spack.variant.Variant"]]]:
+        """All variant definitions of this class, by name, resolved once.
+
+        ``cls.variants`` is keyed by when-spec, so answering "what are the definitions of
+        variant X" means scanning every when-spec, sorting by precedence and dropping
+        overridden definitions. The table is frozen once the directives behind ``cls.variants``
+        have run, and solver setup asks the same questions tens of thousands of times, so it is
+        resolved once per class. The cache lives in this class' own ``__dict__``, never a base
+        class', because each package class has its own table.
+        """
+        cache = cls.__dict__.get("_variant_definitions_cache")
+        if cache is None:
+            variants = cls.variants
+            cache = {name: _definitions(variants, name) for name in _subkeys(variants)}
+            cls._variant_definitions_cache = cache
+        return cache
+
+    @classmethod
     def variant_names(cls) -> List[str]:
-        return _subkeys(cls.variants)
+        return list(cls._variant_definitions())
 
     @classmethod
     def has_variant(cls, name) -> bool:
-        return _has_subkey(cls.variants, name)
+        return name in cls._variant_definitions()
 
     @classmethod
     def num_variant_definitions(cls) -> int:
@@ -751,7 +775,7 @@ class PackageBase(WindowsRPath, PackageViewMixin, metaclass=PackageMeta):
     @classmethod
     def variant_definitions(cls, name: str) -> List[Tuple[spack.spec.Spec, spack.variant.Variant]]:
         """Iterator over (when_spec, Variant) for all variant definitions for a particular name."""
-        return _definitions(cls.variants, name)
+        return cls._variant_definitions().get(name, [])
 
     @classmethod
     def variant_items(cls) -> Iterable[Tuple[spack.spec.Spec, Dict[str, spack.variant.Variant]]]:
