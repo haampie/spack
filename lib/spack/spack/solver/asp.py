@@ -3590,8 +3590,9 @@ class SpecBuilder:
     def node(self, node):
         if node not in self._specs:
             self._specs[node] = spack.spec.Spec(node.pkg)
+            flags = self._specs[node].writable_compiler_flags()
             for flag_type in spack.spec.FlagMap.valid_compiler_flags():
-                self._specs[node].writable_compiler_flags()[flag_type] = []
+                flags[flag_type] = spack.spec._EMPTY_FLAG_LIST
 
     def _arch(self, node):
         arch = self._specs[node].architecture

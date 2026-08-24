@@ -29,12 +29,12 @@ The available directives are:
 * ``requires``
 * ``redistribute``
 
-They're implemented as functions that return partial functions that are later executed with a
-package class as first argument::
+They're implemented as functions that return a Directive holding the arguments, which is
+later executed with a package class as first argument::
 
     @directive("example")
     def example_directive(arg1, arg2):
-        return partial(_execute_example_directive, arg1=arg1, arg2=arg2)
+        return Directive((_execute_example_directive, arg1, arg2))
 
     def _execute_example_directive(pkg, arg1, arg2):
         # modify pkg.example based on arg1 and arg2
@@ -45,8 +45,7 @@ import collections.abc
 import os
 import re
 import warnings
-from functools import partial
-from typing import Any, Callable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type, Union
 
 import spack.deptypes as dt
 import spack.error
@@ -57,8 +56,8 @@ import spack.spec
 import spack.util.crypto
 import spack.util.tty.color
 import spack.variant
-from spack.dependency import Dependency
-from spack.directives_meta import DirectiveError, directive, get_spec
+from spack.dependency import Dependency, intern_dependency
+from spack.directives_meta import Directive, DirectiveError, directive, get_spec
 from spack.resource import Resource
 from spack.spec import EMPTY_SPEC
 from spack.version import StandardVersion, VersionChecksumError, VersionError
@@ -89,8 +88,7 @@ SpecType = str
 DepType = Union[Tuple[str, ...], str]
 WhenType = Optional[Union[spack.spec.Spec, str, bool]]
 PackageType = Type[spack.package_base.PackageBase]
-Patcher = Callable[[Union[PackageType, Dependency]], None]
-PatchesType = Union[Patcher, str, List[Union[Patcher, str]]]
+PatchesType = Union[Directive, str, List[Union[Directive, str]]]
 
 
 def _make_when_spec(value: Union[WhenType, Tuple[str, ...]]) -> Optional[spack.spec.Spec]:
@@ -130,10 +128,13 @@ def _make_when_spec(value: Union[WhenType, Tuple[str, ...]]) -> Optional[spack.s
         # avoid a copy when there's only one condition
         if len(value) == 1:
             return get_spec(value[0])
-        # reduce the when-stack to a single spec by combining all constraints.
-        combined_spec = spack.spec.Spec(value[0])
-        for cond in value[1:]:
-            combined_spec._constrain_symbolically(get_spec(cond))
+        combined_spec = _WHEN_STACK_CACHE.get(value)
+        if combined_spec is None:
+            # reduce the when-stack to a single spec by combining all constraints.
+            combined_spec = spack.spec.Spec(value[0])
+            for cond in value[1:]:
+                combined_spec._constrain_symbolically(get_spec(cond))
+            _WHEN_STACK_CACHE[value] = combined_spec
         return combined_spec
 
     # Unsatisfiable conditions are discarded by the caller, and never
@@ -149,6 +150,12 @@ def _make_when_spec(value: Union[WhenType, Tuple[str, ...]]) -> Optional[spack.s
 
     # This is conditional on the spec
     return get_spec(value)
+
+
+#: Nested `with when(...)` blocks reduce to the same spec over and over: a trilinos solve combines
+#: 6057 condition stacks drawn from 991 distinct ones. Combined when-specs are only ever used as
+#: keys of the package class dictionaries, like the single-condition ones `get_spec` shares.
+_WHEN_STACK_CACHE: Dict[Tuple[str, ...], spack.spec.Spec] = {}
 
 
 SubmoduleCallback = Callable[[spack.package_base.PackageBase], Union[str, List[str], bool]]
@@ -238,7 +245,7 @@ def version(
         )
         if value is not None
     }
-    return partial(_execute_version, ver=ver, kwargs=kwargs)
+    return Directive((_execute_version, ver, kwargs))
 
 
 def _execute_version(pkg: PackageType, ver: Union[str, int], kwargs: dict):
@@ -280,7 +287,7 @@ def conflicts(conflict_spec: SpecType, when: WhenType = None, msg: Optional[str]
         when: optional condition that triggers the conflict
         msg: optional user defined message
     """
-    return partial(_execute_conflicts, conflict_spec=conflict_spec, when=when, msg=msg)
+    return Directive((_execute_conflicts, conflict_spec, when, msg))
 
 
 def _execute_conflicts(pkg: PackageType, conflict_spec, when, msg):
@@ -317,13 +324,12 @@ def depends_on(
         patches: single result of :py:func:`patch` directive, a
             ``str`` to be passed to ``patch``, or a list of these
     """
-    return partial(_execute_depends_on, spec=spec, when=when, type=type, patches=patches)
+    return Directive((_execute_depends_on, spec, when, type, patches))
 
 
 def _execute_depends_on(
     pkg: PackageType,
     spec: Union[str, spack.spec.Spec],
-    *,
     when: WhenType = None,
     type: DepType = dt.DEFAULT_TYPES,
     patches: Optional[PatchesType] = None,
@@ -357,11 +363,15 @@ def _execute_depends_on(
     # if patches and spec.virtual:
     #     raise DependencyPatchError("Cannot patch a virtual dependency.")
 
-    # ensure patches is a list
+    # a single patch, given as a filename or as the result of the patch directive, stands for a
+    # one-element list. Directive is a tuple, so it has to be matched before the list check.
+    patch_list: Sequence[Union[Directive, str]]
     if patches is None:
-        patches = []
-    elif not isinstance(patches, (list, tuple)):
-        patches = [patches]
+        patch_list = ()
+    elif isinstance(patches, (str, Directive)):
+        patch_list = (patches,)
+    else:
+        patch_list = patches
 
     # this is where we actually add the dependency to this package
     deps_by_name = pkg.dependencies.setdefault(when_spec, {})
@@ -377,20 +387,25 @@ def _execute_depends_on(
 
     if not dependency:
         dependency = Dependency(pkg, spec, depflag=depflag)
-        deps_by_name[spec.name] = dependency
     else:
-        copy = dependency.spec.copy()
-        copy.constrain(spec, deps=False)
-        dependency.spec = copy
-        dependency.depflag |= depflag
+        merged_spec = dependency.spec.copy()
+        merged_spec.constrain(spec, deps=False)
+        # an existing Dependency may be shared with other packages, so build a new one
+        merged = Dependency(pkg, merged_spec, depflag=dependency.depflag | depflag)
+        merged.patches = dependency.patches
+        dependency = merged
+    deps_by_name[spec.name] = dependency
 
     # apply patches to the dependency
-    for patch in patches:
+    for patch in patch_list:
         if isinstance(patch, str):
             _execute_patch(dependency, url_or_filename=patch)
         else:
             assert callable(patch), f"Invalid patch argument: {patch!r}"
             patch(dependency)
+
+    if dependency.patches is None:
+        deps_by_name[spec.name] = intern_dependency(dependency)
 
 
 @directive("disable_redistribute")
@@ -402,7 +417,7 @@ def redistribute(
     By default, packages allow source/binary distribution (in mirrors/build caches resp.).
     This directive allows users to explicitly disable redistribution for specs.
     """
-    return partial(_execute_redistribute, source=source, binary=binary, when=when)
+    return Directive((_execute_redistribute, source, binary, when))
 
 
 def _execute_redistribute(
@@ -456,7 +471,7 @@ def extends(
        Notice that the default ``type`` is ``("build", "run")``, which is different from
        :func:`depends_on` where the default is ``("build", "link")``."""
 
-    return partial(_execute_extends, spec=spec, when=when, type=type, patches=patches)
+    return Directive((_execute_extends, spec, when, type, patches))
 
 
 def _execute_extends(
@@ -490,7 +505,7 @@ def provides(*specs: SpecType, when: WhenType = None):
         when: condition when this provides clause needs to be considered
     """
 
-    return partial(_execute_provides, specs=specs, when=when)
+    return Directive((_execute_provides, specs, when))
 
 
 def _execute_provides(pkg: PackageType, specs: Tuple[SpecType, ...], when: WhenType):
@@ -530,7 +545,7 @@ def can_splice(
             be applied to multi-valued variants and multi-valued variants will be skipped by ``*``.
     """
 
-    return partial(_execute_can_splice, target=target, when=when, match_variants=match_variants)
+    return Directive((_execute_can_splice, target, when, match_variants))
 
 
 def _execute_can_splice(
@@ -557,7 +572,7 @@ def patch(
     reverse: bool = False,
     sha256: Optional[str] = None,
     archive_sha256: Optional[str] = None,
-) -> Patcher:
+) -> Directive:
     """Declare a patch to apply to package sources. A when spec can be provided to indicate that a
     particular patch should only be applied when the package's spec meets certain conditions.
 
@@ -577,15 +592,17 @@ def patch(
             compressed URL patches)
     """
 
-    return partial(
-        _execute_patch,
-        when=when,
-        url_or_filename=url_or_filename,
-        level=level,
-        working_dir=working_dir,
-        reverse=reverse,
-        sha256=sha256,
-        archive_sha256=archive_sha256,
+    return Directive(
+        (
+            _execute_patch,
+            url_or_filename,
+            level,
+            when,
+            working_dir,
+            reverse,
+            sha256,
+            archive_sha256,
+        )
     )
 
 
@@ -684,16 +701,8 @@ def variant(
     Raises:
         spack.directives_meta.DirectiveError: If arguments passed to the directive are invalid
     """
-    return partial(
-        _execute_variant,
-        name=name,
-        default=default,
-        description=description,
-        values=values,
-        multi=multi,
-        validator=validator,
-        when=when,
-        sticky=sticky,
+    return Directive(
+        (_execute_variant, name, default, description, values, multi, validator, when, sticky)
     )
 
 
@@ -830,14 +839,7 @@ def resource(
 
     """
 
-    return partial(
-        _execute_resource,
-        name=name,
-        destination=destination,
-        placement=placement,
-        when=when,
-        kwargs=kwargs,
-    )
+    return Directive((_execute_resource, name, destination, placement, when, kwargs))
 
 
 def _execute_resource(
@@ -900,7 +902,7 @@ def maintainers(*names: str):
     Args:
         names: GitHub username for the maintainer
     """
-    return partial(_execute_maintainer, names=names)
+    return Directive((_execute_maintainer, names))
 
 
 def _execute_maintainer(pkg: PackageType, names: Tuple[str, ...]):
@@ -925,7 +927,7 @@ def license(
         when: A spec specifying when the license applies.
     """
 
-    return partial(_execute_license, license_identifier=license_identifier, when=when)
+    return Directive((_execute_license, license_identifier, when))
 
 
 def _execute_license(pkg: PackageType, license_identifier: str, when: Optional[Union[str, bool]]):
@@ -979,9 +981,7 @@ def requires(
         msg: optional user defined message
     """
 
-    return partial(
-        _execute_requires, requirement_specs=requirement_specs, policy=policy, when=when, msg=msg
-    )
+    return Directive((_execute_requires, requirement_specs, policy, when, msg))
 
 
 def _execute_requires(

@@ -1143,6 +1143,10 @@ class CompilerFlag(str):
 
 _valid_compiler_flags = ["cflags", "cxxflags", "fflags", "ldflags", "ldlibs", "cppflags"]
 
+#: A concrete spec records every flag type, and nearly all of them are empty. They share this list,
+#: so FlagMap never mutates a flag list in place.
+_EMPTY_FLAG_LIST: List["CompilerFlag"] = []
+
 
 class FlagMap(lang.HashableMap[str, List[CompilerFlag]]):
     __slots__ = ()
@@ -1162,7 +1166,10 @@ class FlagMap(lang.HashableMap[str, List[CompilerFlag]]):
         for flag_type in other:
             if flag_type not in self:
                 # copy the list and its flags, so that self and other share no mutable state
-                self[flag_type] = [f.copy() for f in other[flag_type]]
+                other_flags = other[flag_type]
+                self[flag_type] = (
+                    [f.copy() for f in other_flags] if other_flags else _EMPTY_FLAG_LIST
+                )
                 changed = True
                 continue
 
@@ -1207,7 +1214,7 @@ class FlagMap(lang.HashableMap[str, List[CompilerFlag]]):
     def copy(self):
         clone = FlagMap()
         for flag_type, flags in self.items():
-            clone[flag_type] = [f.copy() for f in flags]
+            clone[flag_type] = [f.copy() for f in flags] if flags else _EMPTY_FLAG_LIST
         return clone
 
     def add_flag(self, flag_type, value, propagation, flag_group=None, source=None):
@@ -1224,10 +1231,8 @@ class FlagMap(lang.HashableMap[str, List[CompilerFlag]]):
         flag_group = flag_group or value
         flag = CompilerFlag(value, propagate=propagation, flag_group=flag_group, source=source)
 
-        if flag_type not in self:
-            self[flag_type] = [flag]
-        else:
-            self[flag_type].append(flag)
+        flags = self.get(flag_type)
+        self[flag_type] = [flag] if not flags else [*flags, flag]
 
     def yaml_entry(self, flag_type):
         """Returns the flag type and a list of the flag values since the
@@ -1680,13 +1685,13 @@ class SpecAnnotations:
         result = SpecAnnotations()
         result.original_spec_format = spec_format
         result.compiler_node_attribute = self.compiler_node_attribute
-        return result
+        return _intern_annotations(result)
 
     def with_compiler(self, compiler: "Spec") -> "SpecAnnotations":
         result = SpecAnnotations()
         result.original_spec_format = self.original_spec_format
         result.compiler_node_attribute = compiler
-        return result
+        return _intern_annotations(result)
 
     def __repr__(self) -> str:
         result = f"SpecAnnotations().with_spec_format({self.original_spec_format})"
@@ -1698,6 +1703,20 @@ class SpecAnnotations:
 #: Annotations of a Spec that has neither been read from a specfile nor assigned a compiler.
 #: Shared by every such spec, which is the large majority of them.
 DEFAULT_ANNOTATIONS = SpecAnnotations()
+
+#: Specs read from a specfile carry one of a handful of distinct annotations.
+_ANNOTATION_CACHE: Dict[Tuple[int, Optional[str]], SpecAnnotations] = {}
+
+
+def _intern_annotations(annotations: SpecAnnotations) -> SpecAnnotations:
+    """Return the shared SpecAnnotations equal to ``annotations``."""
+    compiler = annotations.compiler_node_attribute
+    key = (annotations.original_spec_format, str(compiler) if compiler is not None else None)
+    cached = _ANNOTATION_CACHE.get(key)
+    if cached is not None:
+        return cached
+    _ANNOTATION_CACHE[key] = annotations
+    return annotations
 
 
 def _anonymous_star(dep: DependencySpec, dep_format: str) -> str:
@@ -2050,14 +2069,14 @@ class Spec:
     def writable_variants(self) -> "VariantMap":
         """This spec's variants, ready to be mutated. Specs without variants share one empty map,
         so a private map is swapped in on the first write."""
-        if self.variants is _EMPTY_VARIANTS:
-            self.variants = VariantMap()
+        if isinstance(self.variants, _FrozenVariantMap):
+            self.variants = VariantMap(self.variants)
         return self.variants
 
     def writable_compiler_flags(self) -> "FlagMap":
         """This spec's compiler flags, ready to be mutated; see :meth:`writable_variants`."""
-        if self.compiler_flags is _EMPTY_FLAGS:
-            self.compiler_flags = FlagMap()
+        if isinstance(self.compiler_flags, _FrozenFlagMap):
+            self.compiler_flags = FlagMap(self.compiler_flags)
         return self.compiler_flags
 
     def detach(self, deptype="all"):
@@ -5577,6 +5596,24 @@ class _FrozenFlagMap(FlagMap):
 _EMPTY_VARIANTS = _FrozenVariantMap()
 _EMPTY_FLAGS = _FrozenFlagMap()
 
+#: Whole variant maps repeat across the nodes of a solve: 25k maps hold 2.7k distinct values.
+_VARIANT_MAP_CACHE: Dict[tuple, VariantMap] = {}
+
+
+def _intern_variant_map(variants: VariantMap) -> VariantMap:
+    """Return the shared, frozen VariantMap equal to ``variants``."""
+    if not variants:
+        return _EMPTY_VARIANTS
+    if "patches" in variants:
+        return variants.copy()
+    key = tuple(sorted((name, id(value)) for name, value in variants.items()))
+    cached = _VARIANT_MAP_CACHE.get(key)
+    if cached is not None:
+        return cached
+    shared = _FrozenVariantMap(variants)
+    _VARIANT_MAP_CACHE[key] = shared
+    return shared
+
 
 def substitute_abstract_variants(spec: Spec):
     """Uses the information in ``spec.package`` to turn any variant that needs
@@ -5600,7 +5637,7 @@ def substitute_abstract_variants(spec: Spec):
                 coerced = v.copy()
                 coerced.type = vt.VariantType.SINGLE
                 coerced.concrete = True
-                spec.variants[name] = vt.intern_variant_value(coerced)
+                spec.writable_variants().set(coerced)
             continue
         elif name in vt.RESERVED_NAMES:
             continue
@@ -5771,7 +5808,7 @@ class SpecfileReaderBase(abc.ABC):
             if name in _valid_compiler_flags:
                 if name in spec.compiler_flags:
                     continue
-                spec.writable_compiler_flags()[name] = []
+                spec.writable_compiler_flags()[name] = _EMPTY_FLAG_LIST
                 for val in values:
                     spec.writable_compiler_flags().add_flag(name, val, propagate)
             else:
@@ -6414,6 +6451,8 @@ class _ImmutableSpec(Spec):
     def __init__(self, spec_like: Optional[str] = None) -> None:
         object.__setattr__(self, "_mutable", True)
         super().__init__(spec_like)
+        # a directive spec never changes after parsing, so share its whole variant map
+        self.variants = _intern_variant_map(self.variants)
         object.__delattr__(self, "_mutable")
 
     def __setstate__(self, state) -> None:

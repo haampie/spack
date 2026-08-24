@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 """Data structures that represent Spack's dependency relationships."""
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type
 
 import spack.deptypes as dt
 import spack.spec
@@ -11,6 +11,26 @@ import spack.spec
 if TYPE_CHECKING:
     import spack.package_base
     import spack.patch
+
+
+#: Recipes declare the same requirement over and over: a trilinos solve holds 24.7k Dependency
+#: objects with 11.4k distinct (spec, depflag) pairs.
+_DEPENDENCY_CACHE: Dict[Tuple[str, dt.DepFlag], "Dependency"] = {}
+
+
+def intern_dependency(dependency: "Dependency") -> "Dependency":
+    """Return the shared Dependency equal to ``dependency``.
+
+    Only unpatched dependencies are shared. ``pkg`` on a shared Dependency is whichever package
+    declared it first, and only its repr reads that; the patch directive, which needs the real
+    owner, runs on unshared dependencies.
+    """
+    key = (str(dependency.spec), dependency.depflag)
+    cached = _DEPENDENCY_CACHE.get(key)
+    if cached is not None:
+        return cached
+    _DEPENDENCY_CACHE[key] = dependency
+    return dependency
 
 
 class Dependency:
