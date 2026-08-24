@@ -1656,6 +1656,9 @@ def tree(
 
 
 class SpecAnnotations:
+    """Annotations of a Spec. Instances are shared between specs and treated as immutable: the
+    ``with_*`` methods return a new instance instead of mutating in place."""
+
     __slots__ = ("original_spec_format", "compiler_node_attribute")
 
     def __init__(self) -> None:
@@ -1663,18 +1666,27 @@ class SpecAnnotations:
         self.compiler_node_attribute: Optional["Spec"] = None
 
     def with_spec_format(self, spec_format: int) -> "SpecAnnotations":
-        self.original_spec_format = spec_format
-        return self
+        result = SpecAnnotations()
+        result.original_spec_format = spec_format
+        result.compiler_node_attribute = self.compiler_node_attribute
+        return result
 
     def with_compiler(self, compiler: "Spec") -> "SpecAnnotations":
-        self.compiler_node_attribute = compiler
-        return self
+        result = SpecAnnotations()
+        result.original_spec_format = self.original_spec_format
+        result.compiler_node_attribute = compiler
+        return result
 
     def __repr__(self) -> str:
         result = f"SpecAnnotations().with_spec_format({self.original_spec_format})"
         if self.compiler_node_attribute:
             result += f".with_compiler({str(self.compiler_node_attribute)})"
         return result
+
+
+#: Annotations of a Spec that has neither been read from a specfile nor assigned a compiler.
+#: Shared by every such spec, which is the large majority of them.
+DEFAULT_ANNOTATIONS = SpecAnnotations()
 
 
 def _anonymous_star(dep: DependencySpec, dep_format: str) -> str:
@@ -1970,7 +1982,7 @@ class Spec:
         # is deployed "as built."
         # Build spec should be the actual build spec unless marked dirty.
         self._build_spec = None
-        self.annotations = SpecAnnotations()
+        self.annotations = DEFAULT_ANNOTATIONS
 
         if isinstance(spec_like, str):
             spack.spec_parser.parse_one_or_raise(spec_like, self)
@@ -5720,13 +5732,17 @@ class SpecfileReaderBase(abc.ABC):
         # Annotate the compiler spec, might be used later
         if "annotations" not in node:
             # Specfile v4 and earlier
-            spec.annotations.with_spec_format(cls.SPEC_VERSION)
+            spec.annotations = spec.annotations.with_spec_format(cls.SPEC_VERSION)
             if "compiler" in node:
-                spec.annotations.with_compiler(cls.legacy_compiler(node))
+                spec.annotations = spec.annotations.with_compiler(cls.legacy_compiler(node))
         else:
-            spec.annotations.with_spec_format(node["annotations"]["original_specfile_version"])
+            spec.annotations = spec.annotations.with_spec_format(
+                node["annotations"]["original_specfile_version"]
+            )
             if "compiler" in node["annotations"]:
-                spec.annotations.with_compiler(Spec(f"{node['annotations']['compiler']}"))
+                spec.annotations = spec.annotations.with_compiler(
+                    Spec(f"{node['annotations']['compiler']}")
+                )
 
         # Don't read dependencies here; from_dict() is used by
         # from_yaml() and from_json() to read the root *and* each dependency
