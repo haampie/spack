@@ -430,15 +430,15 @@ class TestVariantMapTest:
     def test_satisfies_and_constrain(self) -> None:
         # foo=bar foobar=fee feebar=foo
         a = Spec()
-        a.variants["foo"] = MultiValuedVariant("foo", ("bar",))
-        a.variants["foobar"] = SingleValuedVariant("foobar", "fee")
-        a.variants["feebar"] = SingleValuedVariant("feebar", "foo")
+        a.writable_variants()["foo"] = MultiValuedVariant("foo", ("bar",))
+        a.writable_variants()["foobar"] = SingleValuedVariant("foobar", "fee")
+        a.writable_variants()["feebar"] = SingleValuedVariant("feebar", "foo")
 
         # foo=bar,baz foobar=fee shared=True
         b = Spec()
-        b.variants["foo"] = MultiValuedVariant("foo", ("bar", "baz"))
-        b.variants["foobar"] = SingleValuedVariant("foobar", "fee")
-        b.variants["shared"] = BoolValuedVariant("shared", True)
+        b.writable_variants()["foo"] = MultiValuedVariant("foo", ("bar", "baz"))
+        b.writable_variants()["foobar"] = SingleValuedVariant("foobar", "fee")
+        b.writable_variants()["shared"] = BoolValuedVariant("shared", True)
 
         # concrete, different values do not intersect / satisfy each other
         assert not a.intersects(b) and not b.intersects(a)
@@ -446,10 +446,10 @@ class TestVariantMapTest:
 
         # foo=bar,baz foobar=fee feebar=foo shared=True
         c = Spec()
-        c.variants["foo"] = MultiValuedVariant("foo", ("bar", "baz"))
-        c.variants["foobar"] = SingleValuedVariant("foobar", "fee")
-        c.variants["feebar"] = SingleValuedVariant("feebar", "foo")
-        c.variants["shared"] = BoolValuedVariant("shared", True)
+        c.writable_variants()["foo"] = MultiValuedVariant("foo", ("bar", "baz"))
+        c.writable_variants()["foobar"] = SingleValuedVariant("foobar", "fee")
+        c.writable_variants()["feebar"] = SingleValuedVariant("feebar", "foo")
+        c.writable_variants()["shared"] = BoolValuedVariant("shared", True)
 
         # concrete values cannot be constrained
         with pytest.raises(spack.variant.UnsatisfiableVariantSpecError):

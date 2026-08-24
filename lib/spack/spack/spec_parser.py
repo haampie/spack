@@ -474,8 +474,10 @@ class SpecNodeParser:
                 if self.has_version:
                     raise_parsing_error("Spec cannot have multiple versions")
 
-                initial_spec.versions = spack.version.VersionList(
-                    [spack.version.from_string(self.ctx.current_token.value[1:])]
+                initial_spec.versions = spack.version.intern_version_list(
+                    spack.version.VersionList(
+                        [spack.version.from_string(self.ctx.current_token.value[1:])]
+                    )
                 )
                 initial_spec.attach_git_version_lookup()
                 self.has_version = True

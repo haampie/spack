@@ -298,7 +298,7 @@ def test_sbom_checksums_include_both_sha256_and_git_commit(
     git_commit = "b" * 40  # Typical SHA1 length
 
     monkeypatch.setattr(spec.package, "git", git_url, raising=False)
-    spec.variants["commit"] = spack.variant.SingleValuedVariant("commit", git_commit)
+    spec.writable_variants()["commit"] = spack.variant.SingleValuedVariant("commit", git_commit)
 
     generate_spdx_2_3(spec)
 
@@ -330,7 +330,7 @@ def test_sbom_checksums_git_commit_only(mock_packages, install_mockery, monkeypa
     git_commit = "c" * 40  # Typical SHA1 length
 
     monkeypatch.setattr(spec.package, "git", git_url, raising=False)
-    spec.variants["commit"] = spack.variant.SingleValuedVariant("commit", git_commit)
+    spec.writable_variants()["commit"] = spack.variant.SingleValuedVariant("commit", git_commit)
 
     generate_spdx_2_3(spec)
 

@@ -90,7 +90,7 @@ def complete_architecture(node: spack.spec.Spec) -> None:
 
     node.namespace = spack.repo.PATH.repo_for_pkg(node.name).namespace
     for flag_type in spack.spec.FlagMap.valid_compiler_flags():
-        node.compiler_flags.setdefault(flag_type, [])
+        node.writable_compiler_flags().setdefault(flag_type, [])
 
 
 def complete_variants_and_architecture(node: spack.spec.Spec) -> None:
@@ -115,7 +115,7 @@ def complete_variants_and_architecture(node: spack.spec.Spec) -> None:
             for name, vdef in variants_by_name.items():
                 if name not in node.variants:
                     # Cannot use Spec.constrain, because we lose information on the variant type
-                    node.variants.set(vdef.make_default())
+                    node.writable_variants().set(vdef.make_default())
                 elif (
                     node.variants[name].type != vdef.variant_type
                     and len(node.variants[name].values) == 1
@@ -124,7 +124,7 @@ def complete_variants_and_architecture(node: spack.spec.Spec) -> None:
                     # using the package definition, preserving the user-specified value.
                     existing = node.variants[name]
                     corrected = vdef.make_variant(*existing.values)
-                    node.variants.set(corrected)
+                    node.writable_variants().set(corrected)
             changed = True
 
 

@@ -1667,7 +1667,7 @@ class Environment:
                 variant = vt.SingleValuedVariant("dev_path", path)
             else:
                 variant = vt.VariantValueRemoval("dev_path")
-            mutator.variants.set(variant)
+            mutator.writable_variants().set(variant)
 
             msg = (
                 f"Develop spec '{spec}' conflicts with concrete specs in environment."

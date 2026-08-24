@@ -4455,10 +4455,10 @@ def test_commit_variant_enters_the_hash(mutable_config, mock_packages, monkeypat
 
     def _mock_resolve(spec) -> None:
         if first_call:
-            spec.variants["commit"] = vt.SingleValuedVariant("commit", f"{'b' * 40}")
+            spec.writable_variants()["commit"] = vt.SingleValuedVariant("commit", f"{'b' * 40}")
             return
 
-        spec.variants["commit"] = vt.SingleValuedVariant("commit", f"{'a' * 40}")
+        spec.writable_variants()["commit"] = vt.SingleValuedVariant("commit", f"{'a' * 40}")
 
     monkeypatch.setattr(spack.package_base.PackageBase, "_resolve_git_provenance", _mock_resolve)
 

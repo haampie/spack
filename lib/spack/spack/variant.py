@@ -16,6 +16,7 @@ from typing import (
     Any,
     Callable,
     Collection,
+    Dict,
     Iterable,
     List,
     Optional,
@@ -269,6 +270,27 @@ ValueType = Tuple[Union[bool, str], ...]
 
 #: Type of variant value when output for JSON, YAML, etc.
 SerializedValueType = Union[str, bool, List[Union[str, bool]]]
+
+
+#: Variant values repeat heavily across recipes and across the nodes of a solve: 38k live values
+#: for a trilinos solve hold 1.9k distinct ones. Interned values are treated as immutable; specs
+#: replace them instead of mutating in place.
+_VARIANT_VALUE_CACHE: Dict[tuple, "VariantValue"] = {}
+
+
+def intern_variant_value(value: "VariantValue") -> "VariantValue":
+    """Return the shared VariantValue equal to ``value``."""
+    # "patches" carries a per-spec ordering attribute set after concretization, so it is never
+    # shared between specs.
+    if value.name == "patches":
+        return value
+
+    key = (value.type, value.name, value.propagate, value.concrete, value._values)
+    cached = _VARIANT_VALUE_CACHE.get(key)
+    if cached is not None:
+        return cached
+    _VARIANT_VALUE_CACHE[key] = value
+    return value
 
 
 @lang.lazy_lexicographic_ordering

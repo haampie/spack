@@ -1675,7 +1675,7 @@ class SpackSolverSetup:
 
             # make a spec indicating whether the variant has this conditional value
             variant_has_value = spack.spec.Spec()
-            variant_has_value.variants.set(
+            variant_has_value.writable_variants().set(
                 vt.VariantValue(vt.VariantType.MULTI, name, (value.value,))
             )
 
@@ -3591,7 +3591,7 @@ class SpecBuilder:
         if node not in self._specs:
             self._specs[node] = spack.spec.Spec(node.pkg)
             for flag_type in spack.spec.FlagMap.valid_compiler_flags():
-                self._specs[node].compiler_flags[flag_type] = []
+                self._specs[node].writable_compiler_flags()[flag_type] = []
 
     def _arch(self, node):
         arch = self._specs[node].architecture
@@ -3616,19 +3616,24 @@ class SpecBuilder:
         spec = self._specs[node]
         variant = spec.variants.get(name)
         if not variant:
-            spec.variants.set(vt.VariantValue.from_concretizer(name, value, variant_type))
+            spec.writable_variants().set(
+                vt.VariantValue.from_concretizer(name, value, variant_type)
+            )
         else:
             assert variant_type == "multi", (
                 f"Can't have multiple values for single-valued variant: "
                 f"{node}, {name}, {value}, {variant_type}, {variant_id}"
             )
-            variant.append(value)
+            # stored values are shared between specs, so extend a copy
+            extended = variant.copy()
+            extended.append(value)
+            spec.writable_variants().set(extended)
 
     def version(self, node, version):
-        self._specs[node].versions = vn.VersionList([vn.Version(version)])
+        self._specs[node].versions = vn.intern_version_list(vn.VersionList([vn.Version(version)]))
 
     def node_flag(self, node, node_flag):
-        self._specs[node].compiler_flags.add_flag(
+        self._specs[node].writable_compiler_flags().add_flag(
             node_flag.flag_type, node_flag.flag, False, node_flag.flag_group, node_flag.source
         )
 
@@ -3824,7 +3829,7 @@ def reorder_flags(specs: SpecDict) -> None:
             msg = f"{set(compiler_flags)} does not equal {set(ordered_flags)}"
             assert set(compiler_flags) == set(ordered_flags), msg
 
-            spec.compiler_flags.update({flag_type: ordered_flags})
+            spec.writable_compiler_flags().update({flag_type: ordered_flags})
 
 
 def post_process_fresh_solve(specs: SpecDict, splices: Optional[SpliceDict]) -> None:
@@ -3963,7 +3968,7 @@ def _specs_with_commits(spec):
 
     if isinstance(spec.version, vn.GitVersion):
         if "commit" not in spec.variants and spec.version.commit_sha:
-            spec.variants.set(vt.SingleValuedVariant("commit", spec.version.commit_sha))
+            spec.writable_variants().set(vt.SingleValuedVariant("commit", spec.version.commit_sha))
 
     pkg_class._resolve_git_provenance(spec)
 
@@ -4035,7 +4040,7 @@ def _develop_specs_from_env(spec, env):
 
         assert spec.variants["dev_path"].value == path, error_msg
     else:
-        spec.variants.setdefault("dev_path", vt.SingleValuedVariant("dev_path", path))
+        spec.writable_variants().setdefault("dev_path", vt.SingleValuedVariant("dev_path", path))
 
     assert spec.satisfies(dev_info["spec"])
 
