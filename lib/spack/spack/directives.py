@@ -56,7 +56,7 @@ import spack.spec
 import spack.util.crypto
 import spack.util.tty.color
 import spack.variant
-from spack.dependency import Dependency
+from spack.dependency import Dependency, intern_dependency
 from spack.directives_meta import Directive, DirectiveError, directive, get_spec
 from spack.resource import Resource
 from spack.spec import EMPTY_SPEC
@@ -378,12 +378,14 @@ def _execute_depends_on(
 
     if not dependency:
         dependency = Dependency(pkg, spec, depflag=depflag)
-        deps_by_name[spec.name] = dependency
     else:
-        copy = dependency.spec.copy()
-        copy.constrain(spec, deps=False)
-        dependency.spec = copy
-        dependency.depflag |= depflag
+        merged_spec = dependency.spec.copy()
+        merged_spec.constrain(spec, deps=False)
+        # an existing Dependency may be shared with other packages, so build a new one
+        merged = Dependency(pkg, merged_spec, depflag=dependency.depflag | depflag)
+        merged.patches = dependency.patches
+        dependency = merged
+    deps_by_name[spec.name] = dependency
 
     # apply patches to the dependency
     for patch in patch_list:
@@ -392,6 +394,9 @@ def _execute_depends_on(
         else:
             assert callable(patch), f"Invalid patch argument: {patch!r}"
             patch(dependency)
+
+    if dependency.patches is None:
+        deps_by_name[spec.name] = intern_dependency(dependency)
 
 
 @directive("disable_redistribute")
