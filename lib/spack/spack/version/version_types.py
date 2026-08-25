@@ -411,9 +411,10 @@ class StandardVersion(ConcreteVersion):
 
     def isdevelop(self) -> bool:
         """Triggers on the special case of the ``@develop-like`` version."""
-        return any(
-            isinstance(p, VersionStrComponent) and isinstance(p.data, int) for p in self.version[0]
-        )
+        for p in self.version[0]:
+            if isinstance(p, VersionStrComponent) and isinstance(p.data, int):
+                return True
+        return False
 
     def is_prerelease(self) -> bool:
         return self.version[1][0] != FINAL
@@ -857,7 +858,7 @@ class ClosedOpenRange(VersionType):
 
     def __eq__(self, other):
         if isinstance(other, ClosedOpenRange):
-            return (self.lo, self.hi) == (other.lo, other.hi)
+            return self.lo == other.lo and self.hi == other.hi
         if isinstance(other, StandardVersion):
             return False
         return NotImplemented
@@ -866,12 +867,14 @@ class ClosedOpenRange(VersionType):
         if isinstance(other, StandardVersion):
             return True
         if isinstance(other, ClosedOpenRange):
-            return (self.lo, self.hi) != (other.lo, other.hi)
+            return self.lo != other.lo or self.hi != other.hi
         return NotImplemented
 
     def __lt__(self, other):
         if isinstance(other, ClosedOpenRange):
-            return (self.lo, self.hi) < (other.lo, other.hi)
+            if self.lo != other.lo:
+                return self.lo < other.lo
+            return self.hi < other.hi
         if isinstance(other, StandardVersion):
             return other > self
         return NotImplemented
@@ -880,21 +883,27 @@ class ClosedOpenRange(VersionType):
         if isinstance(other, StandardVersion):
             return other >= self
         if isinstance(other, ClosedOpenRange):
-            return (self.lo, self.hi) <= (other.lo, other.hi)
+            if self.lo != other.lo:
+                return self.lo < other.lo
+            return self.hi <= other.hi
         return NotImplemented
 
     def __ge__(self, other):
         if isinstance(other, StandardVersion):
             return other <= self
         if isinstance(other, ClosedOpenRange):
-            return (self.lo, self.hi) >= (other.lo, other.hi)
+            if self.lo != other.lo:
+                return self.lo > other.lo
+            return self.hi >= other.hi
         return NotImplemented
 
     def __gt__(self, other):
         if isinstance(other, StandardVersion):
             return other < self
         if isinstance(other, ClosedOpenRange):
-            return (self.lo, self.hi) > (other.lo, other.hi)
+            if self.lo != other.lo:
+                return self.lo > other.lo
+            return self.hi > other.hi
         return NotImplemented
 
     def __contains__(rhs, lhs):
@@ -962,6 +971,11 @@ class ClosedOpenRange(VersionType):
             return other if self.intersects(other) else VersionList()
 
         raise TypeError(f"'intersection()' not supported for instances of {type(other)}")
+
+
+#: shared isinstance tuples for hot solver paths, where a literal is allocated per call
+_VERSION_OR_RANGE = (StandardVersion, ClosedOpenRange)
+_CONCRETE_OR_RANGE = (ConcreteVersion, ClosedOpenRange)
 
 
 class VersionList(VersionType):
@@ -1082,14 +1096,17 @@ class VersionList(VersionType):
         if isinstance(other, VersionList):
             return all(any(lhs.satisfies(rhs) for rhs in other) for lhs in self)
 
-        if isinstance(other, (ConcreteVersion, ClosedOpenRange)):
+        if isinstance(other, _CONCRETE_OR_RANGE):
             return all(lhs.satisfies(other) for lhs in self)
 
         raise TypeError(f"'satisfies()' not supported for instances of {type(other)}")
 
     def intersects(self, other: VersionType) -> bool:
-        if isinstance(other, (ClosedOpenRange, StandardVersion)):
-            return any(v.intersects(other) for v in self)
+        if isinstance(other, _VERSION_OR_RANGE):
+            for v in self.versions:
+                if v.intersects(other):
+                    return True
+            return False
 
         if isinstance(other, VersionList):
             s = o = 0
@@ -1224,7 +1241,9 @@ class VersionList(VersionType):
         if not self.versions:
             return ""
 
-        return ",".join(f"={v}" if type(v) is StandardVersion else str(v) for v in self.versions)
+        return ",".join(
+            [f"={v}" if type(v) is StandardVersion else str(v) for v in self.versions]
+        )
 
     def __repr__(self) -> str:
         return str(self.versions)
@@ -1418,8 +1437,9 @@ def intern_version_list(version_list: VersionList) -> VersionList:
     ref lookup for the package it belongs to and caches the version that lookup resolves to, so two
     packages that name the same git ref need a list each.
     """
-    if not all(isinstance(v, (StandardVersion, ClosedOpenRange)) for v in version_list.versions):
-        return version_list
+    for v in version_list.versions:
+        if not isinstance(v, _VERSION_OR_RANGE):
+            return version_list
 
     key = str(version_list)
     cached = _VERSION_LIST_CACHE.get(key)
