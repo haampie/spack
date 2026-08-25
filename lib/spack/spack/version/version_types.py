@@ -1241,9 +1241,7 @@ class VersionList(VersionType):
         if not self.versions:
             return ""
 
-        return ",".join(
-            [f"={v}" if type(v) is StandardVersion else str(v) for v in self.versions]
-        )
+        return ",".join([f"={v}" if type(v) is StandardVersion else str(v) for v in self.versions])
 
     def __repr__(self) -> str:
         return str(self.versions)
