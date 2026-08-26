@@ -182,8 +182,9 @@ class FilePatch(Patch):
         # patches may be defined by relative paths to parent classes
         # search mro to look for the file
         abs_path: Optional[str] = None
-        # At different times we call FilePatch on instances and classes
-        pkg_cls = pkg if isinstance(pkg, type) else pkg.__class__
+        # At different times we call FilePatch on instances and (possibly static) classes;
+        # anything with an mro is class-like, including StaticPackage stand-ins
+        pkg_cls = pkg if hasattr(pkg, "__mro__") else pkg.__class__
         for cls in pkg_cls.__mro__:  # type: ignore
             if not hasattr(cls, "module"):
                 # We've gone too far up the MRO

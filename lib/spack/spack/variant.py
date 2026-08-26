@@ -89,7 +89,7 @@ class Variant:
     description: str
     values: Optional[Collection]  #: if None, valid values are defined only by validators
     multi: bool
-    single_value_validator: Callable
+    values_filter: Optional[Callable]  #: type or predicate passed as ``values``
     group_validator: Optional[Callable]
     sticky: bool
     precedence: int
@@ -125,35 +125,37 @@ class Variant:
         self.description = str(description)
 
         self.values = None
+        self.values_filter = None
         if values == "*":
             # wildcard is a special case to make it easy to say any value is ok
-            self.single_value_validator = lambda v: True
-
-        elif isinstance(values, type):
-            # supplying a type means any value *of that type*
-            def isa_type(v):
-                try:
-                    values(v)
-                    return True
-                except ValueError:
-                    return False
-
-            self.single_value_validator = isa_type
-
-        elif callable(values):
-            # If 'values' is a callable, assume it is a single value
-            # validator and reset the values to be explicit during debug
-            self.single_value_validator = values
+            pass
+        elif isinstance(values, type) or callable(values):
+            # a type means any value of that type; any other callable is a predicate
+            self.values_filter = values
         else:
             # Otherwise, assume values is the set of allowed explicit values
-            values = _flatten(values)
-            self.values = values
-            self.single_value_validator = lambda v: v in values
+            self.values = _flatten(values)
 
         self.multi = multi
         self.group_validator = validator
         self.sticky = sticky
         self.precedence = precedence
+
+    def single_value_validator(self, v) -> bool:
+        """Whether ``v`` is an allowed value for this variant."""
+        f = self.values_filter
+        if f is not None:
+            if isinstance(f, type):
+                # a type validates any value it can construct
+                try:
+                    f(v)
+                    return True
+                except ValueError:
+                    return False
+            return bool(f(v))
+        if self.values is None:
+            return True
+        return v in self.values
 
     def values_defined_by_validator(self) -> bool:
         return self.values is None
@@ -211,9 +213,9 @@ class Variant:
             return ", ".join(v)
         # In case we were given a single-value validator
         # print the docstring
-        docstring = inspect.getdoc(self.single_value_validator)
-        v = docstring if docstring else ""
-        return v
+        if self.values_filter is None:
+            return ""
+        return inspect.getdoc(self.values_filter) or ""
 
     def make_default(self) -> "VariantValue":
         """Factory that creates a variant holding the default value(s)."""
@@ -240,7 +242,7 @@ class Variant:
             f"description='{self.description}', "
             f"values={self.values}, "
             f"multi={self.multi}, "
-            f"single_value_validator={self.single_value_validator}, "
+            f"values_filter={self.values_filter}, "
             f"group_validator={self.group_validator}, "
             f"sticky={self.sticky}, "
             f"precedence={self.precedence})"
@@ -664,19 +666,20 @@ class DisjointSetsOfValues(collections.abc.Sequence):
     def __len__(self):
         return sum(len(x) for x in self.sets)
 
+    def _validate_disjoint(self, pkg_name, variant_name, values):
+        # If for any of the sets, all the values are in it return True
+        if any(all(x in s for x in values) for s in self.sets):
+            return
+
+        format_args = {"variant": variant_name, "package": pkg_name, "values": values}
+        msg = self.error_fmt + " @*r{{[{package}, variant '{variant}']}}"
+        msg = spack.util.tty.color.colorize(msg.format(**format_args))
+        raise spack.error.SpecError(msg)
+
     @property
     def validator(self):
-        def _disjoint_set_validator(pkg_name, variant_name, values):
-            # If for any of the sets, all the values are in it return True
-            if any(all(x in s for x in values) for s in self.sets):
-                return
-
-            format_args = {"variant": variant_name, "package": pkg_name, "values": values}
-            msg = self.error_fmt + " @*r{{[{package}, variant '{variant}']}}"
-            msg = spack.util.tty.color.colorize(msg.format(**format_args))
-            raise spack.error.SpecError(msg)
-
-        return _disjoint_set_validator
+        # a bound method, so that the validator pickles with its DisjointSetsOfValues
+        return self._validate_disjoint
 
 
 def _a_single_value_or_a_combination(single_value: str, *values: str) -> DisjointSetsOfValues:

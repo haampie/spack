@@ -1228,6 +1228,9 @@ class Repo:
         self._repo_index: Optional[RepoIndex] = None
         self._cache = cache
 
+        # Static metadata snapshot (name -> StaticPackage); False = disabled/not yet decided
+        self._static_snapshot: Any = False
+
     @property
     def package_api_str(self) -> str:
         return f"v{self.package_api[0]}.{self.package_api[1]}"
@@ -1409,6 +1412,28 @@ class Repo:
         pkg_dir = self.dirname_for_package_name(pkg_name)
         return os.path.join(pkg_dir, package_file_name)
 
+    def _static_packages(self) -> Optional[Dict[str, Any]]:
+        """The static metadata snapshot for this repo, or None when disabled.
+
+        On the first call with static metadata enabled, loads (or builds) the snapshot.
+        When the snapshot was loaded fresh -- without importing a single package module --
+        package module imports for this repo are blocked from then on.
+        """
+        if self._static_snapshot is False:
+            import spack.package_metadata_cache as pmc
+
+            if not pmc.static_metadata_enabled():
+                self._static_snapshot = None
+            else:
+                self._static_snapshot = None  # imports during build go through get_pkg_class
+                snapshot, was_fresh = pmc.load_or_build_snapshot(self)
+                self._static_snapshot = snapshot
+                if was_fresh:
+                    if pmc.IMPORT_GUARD not in sys.meta_path:
+                        sys.meta_path.insert(0, pmc.IMPORT_GUARD)
+                    pmc.IMPORT_GUARD.add_namespace(self.full_namespace)
+        return self._static_snapshot
+
     @property
     def _pkg_checker(self) -> FastPackageChecker:
         if self._fast_package_checker is None:
@@ -1486,6 +1511,14 @@ class Repo:
         according to Spack's naming convention.
         """
         _, pkg_name = self.partition_package_name(pkg_name)
+
+        static = self._static_packages()
+        if static is not None:
+            try:
+                return static[pkg_name]  # type: ignore[return-value]
+            except KeyError:
+                raise UnknownPackageError(pkg_name, self) from None
+
         fullname = f"{self.full_namespace}.{self.naming_scheme.pkg_name_to_pkg_dir(pkg_name)}"
         if self.package_api >= (2, 0):
             fullname += ".package"

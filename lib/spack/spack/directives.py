@@ -754,7 +754,7 @@ def _execute_variant(
         ):
             values = (True, False)
         else:
-            values = lambda x: True
+            values = "*"
 
     # The object defining variant values might supply its own defaults for
     # all the other arguments. Ensure we have no conflicting definitions
