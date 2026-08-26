@@ -22,6 +22,7 @@ def test_snapshot_round_trip(mock_packages, mutable_config, tmp_path):
     real = repo.get_pkg_class("mpileaks")
     static = snapshot2["mpileaks"]
     assert isinstance(static, pmc.StaticPackage)
+    assert snapshot2["mpileaks"] is static  # lazily materialized once, then cached
     assert static.name == real.name
     assert static.fullname == real.fullname
     assert set(static.versions) == set(real.versions)

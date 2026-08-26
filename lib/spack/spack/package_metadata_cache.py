@@ -16,14 +16,17 @@ import hashlib
 import marshal
 import os
 import pickle
+import struct
 import sys
 import types
+import zlib
+from collections.abc import Mapping
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import spack.error
 
 #: bump when the snapshot format or the captured surface changes
-SNAPSHOT_VERSION = 2
+SNAPSHOT_VERSION = 3
 
 #: simple class attributes captured for ``version_or_package_attr`` and fetcher construction
 _CAPTURED_CLASS_ATTRS = (
@@ -511,7 +514,55 @@ def _newest_source_mtime(repo) -> float:
     return newest
 
 
-def load_or_build_snapshot(repo) -> Tuple[Dict[str, StaticPackage], bool]:
+class LazySnapshot(Mapping):
+    """Mapping of package name to :class:`StaticPackage`, read from the snapshot file
+    on first access.
+
+    The snapshot file is an index followed by one compressed pickle blob per package,
+    so a process only reads, materializes (and later deallocates) the packages it
+    actually looks up.
+    """
+
+    __slots__ = ("_file", "_index", "_data_start", "_loaded")
+
+    def __init__(self, file, index: Dict[str, Tuple[int, int]], data_start: int) -> None:
+        self._file = file
+        self._index = index
+        self._data_start = data_start
+        self._loaded: Dict[str, StaticPackage] = {}
+
+    def __getitem__(self, name: str) -> StaticPackage:
+        try:
+            return self._loaded[name]
+        except KeyError:
+            offset, length = self._index[name]
+            self._file.seek(self._data_start + offset)
+            pkg = pickle.loads(zlib.decompress(self._file.read(length)))
+            self._loaded[name] = pkg
+            return pkg
+
+    def __contains__(self, name) -> bool:
+        return name in self._index
+
+    def __iter__(self):
+        return iter(self._index)
+
+    def __len__(self) -> int:
+        return len(self._index)
+
+
+def _open_snapshot(path: str) -> LazySnapshot:
+    f = open(path, "rb")
+    try:
+        (index_length,) = struct.unpack("<Q", f.read(8))
+        index = pickle.loads(f.read(index_length))
+        return LazySnapshot(f, index, 8 + index_length)
+    except Exception:
+        f.close()
+        raise
+
+
+def load_or_build_snapshot(repo) -> Tuple[LazySnapshot, bool]:
     """Return ``(snapshot, was_fresh)`` for a repo; builds and saves when stale.
 
     ``was_fresh`` is True when the snapshot was loaded without importing any package
@@ -522,20 +573,32 @@ def load_or_build_snapshot(repo) -> Tuple[Dict[str, StaticPackage], bool]:
     try:
         st = os.stat(path)
         if st.st_mtime > _newest_source_mtime(repo):
-            with open(path, "rb") as f:
-                snapshot = pickle.load(f)
+            snapshot = _open_snapshot(path)
             if set(snapshot) == names:
                 return snapshot, True
-    except (OSError, pickle.UnpicklingError, EOFError):
+    except (OSError, pickle.UnpicklingError, EOFError, struct.error):
         pass
 
-    snapshot = {name: static_package_from_class(repo.get_pkg_class(name)) for name in names}
+    blobs = [
+        (name, zlib.compress(sanitized_dumps(static_package_from_class(repo.get_pkg_class(name)))))
+        for name in sorted(names)
+    ]
+    index: Dict[str, Tuple[int, int]] = {}
+    offset = 0
+    for name, blob in blobs:
+        index[name] = (offset, len(blob))
+        offset += len(blob)
+    index_bytes = pickle.dumps(index, protocol=pickle.HIGHEST_PROTOCOL)
+
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = f"{path}.tmp.{os.getpid()}"
     with open(tmp, "wb") as f:
-        _SanitizingPickler(f, protocol=pickle.HIGHEST_PROTOCOL).dump(snapshot)
+        f.write(struct.pack("<Q", len(index_bytes)))
+        f.write(index_bytes)
+        for _, blob in blobs:
+            f.write(blob)
     os.replace(tmp, path)
-    return snapshot, False
+    return _open_snapshot(path), False
 
 
 def static_metadata_enabled() -> bool:

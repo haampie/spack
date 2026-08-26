@@ -1412,7 +1412,7 @@ class Repo:
         pkg_dir = self.dirname_for_package_name(pkg_name)
         return os.path.join(pkg_dir, package_file_name)
 
-    def _static_packages(self) -> Optional[Dict[str, Any]]:
+    def _static_packages(self) -> Optional[Mapping[str, Any]]:
         """The static metadata snapshot for this repo, or None when disabled.
 
         On the first call with static metadata enabled, loads (or builds) the snapshot.
